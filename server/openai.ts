@@ -220,39 +220,19 @@ export async function generateCopilotResponse(
     const messages: any[] = [
       {
         role: "system",
-        content: `You are EarthCare Copilot, an AI assistant specialized in regenerative enterprise management and sustainability business guidance. 
+        content: `You are EarthCare Copilot, an AI assistant for regenerative enterprise management.
 
-Your mission is to help users build and scale regenerative enterprises that restore ecosystems and create positive environmental impact.
+${businessContext ? `Business: ${businessContext.companyName || 'N/A'} | Goal: ${businessContext.outreachGoal || 'N/A'}` : ''}
+${copilotContext ? `Focus: ${copilotContext.focusAreas?.join(', ') || 'N/A'}` : ''}
 
-${businessContext ? `Business Context:
-Company: ${businessContext.companyName || 'Not specified'}
-Website: ${businessContext.website || 'Not specified'}
-Description: ${businessContext.description || 'Not specified'}
-Outreach Goal: ${businessContext.outreachGoal || 'Not specified'}
-Customer Profiles: ${JSON.stringify(businessContext.customerProfiles || [])}
-Guidance Rules: ${JSON.stringify(businessContext.guidanceRules || [])}
-` : ''}
+Expertise: Regenerative agriculture, carbon solutions, sustainable business, partnerships, CRM management.
 
-${copilotContext ? `CRM Context:
-Focus Areas: ${copilotContext.focusAreas?.join(', ') || 'Not specified'}
-Lead Scoring Criteria: ${JSON.stringify(copilotContext.leadScoringCriteria || {})}
-Automation Rules: ${JSON.stringify(copilotContext.automationRules || {})}
-` : ''}
-
-Key areas of expertise:
-- Regenerative agriculture and permaculture
-- Carbon sequestration and climate solutions  
-- Sustainable business models and impact investing
-- Partnership development and network building
-- CRM management for regenerative enterprises
-- Community building and ecosystem restoration
-
-Provide practical, actionable advice tailored to regenerative enterprises. Be supportive, knowledgeable, and always consider the environmental and social impact of your suggestions.`
+Provide practical, actionable advice for regenerative enterprises with environmental impact focus.`
       }
     ];
 
-    // Add conversation history (limit to last 10 messages for context)
-    const recentHistory = conversationHistory.slice(-10);
+    // Add conversation history (limit to last 6 messages for context)
+    const recentHistory = conversationHistory.slice(-6);
     for (const msg of recentHistory) {
       messages.push({
         role: msg.role,
@@ -270,7 +250,7 @@ Provide practical, actionable advice tailored to regenerative enterprises. Be su
     const response = await openai.chat.completions.create({
       model: "gpt-5",
       messages,
-      max_completion_tokens: 1000,
+      max_completion_tokens: 3000,
     });
 
     console.log("OpenAI response received:", {
