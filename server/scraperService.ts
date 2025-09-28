@@ -73,10 +73,11 @@ export async function scrapeUrl(url: string): Promise<ScrapingResult> {
     };
   } catch (error) {
     console.error(`Error scraping ${url}:`, error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,
       url,
-      error: error.message,
+      error: errorMessage,
     };
   }
 }
@@ -119,7 +120,8 @@ export async function importScrapedEnterprises(results: ScrapingResult[]): Promi
         imported++;
       } catch (error) {
         failed++;
-        errors.push(`Failed to import ${result.url}: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        errors.push(`Failed to import ${result.url}: ${errorMessage}`);
       }
     } else {
       failed++;
@@ -171,6 +173,7 @@ export async function scrapeRegenerativeSources(): Promise<string[]> {
     }
   }
   
-  // Remove duplicates
-  return [...new Set(enterpriseUrls)];
+  // Remove duplicates and convert Set to Array properly
+  const uniqueUrls = new Set(enterpriseUrls);
+  return Array.from(uniqueUrls);
 }

@@ -209,7 +209,9 @@ export class DatabaseStorage implements IStorage {
     
     const byStatus: Record<string, number> = {};
     statusStats.forEach(stat => {
-      byStatus[stat.status] = stat.count;
+      if (stat.status) {
+        byStatus[stat.status] = stat.count;
+      }
     });
     
     return {
@@ -274,7 +276,9 @@ export class DatabaseStorage implements IStorage {
     
     const byStatus: Record<string, number> = {};
     statusStats.forEach(stat => {
-      byStatus[stat.status] = stat.count;
+      if (stat.status) {
+        byStatus[stat.status] = stat.count;
+      }
     });
     
     return {
@@ -336,7 +340,9 @@ export class DatabaseStorage implements IStorage {
     
     const byStatus: Record<string, number> = {};
     statusStats.forEach(stat => {
-      byStatus[stat.status] = stat.count;
+      if (stat.status) {
+        byStatus[stat.status] = stat.count;
+      }
     });
     
     return {

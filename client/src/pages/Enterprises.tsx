@@ -91,9 +91,9 @@ export default function Enterprises() {
     },
   });
 
-  const { data: enterprises = [], isLoading } = useQuery({
+  const { data: enterprises = [], isLoading, error: enterprisesError } = useQuery({
     queryKey: ["/api/enterprises", selectedCategory, searchQuery],
-    queryFn: async () => {
+    queryFn: async (): Promise<Enterprise[]> => {
       const params = new URLSearchParams();
       if (selectedCategory) params.append("category", selectedCategory);
       if (searchQuery) params.append("search", searchQuery);
@@ -101,23 +101,25 @@ export default function Enterprises() {
 
       const response = await fetch(`/api/enterprises?${params}`);
       if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json() as Enterprise[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
   });
+
+  // Handle enterprises error
+  useEffect(() => {
+    if (enterprisesError && isUnauthorizedError(enterprisesError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [enterprisesError, toast]);
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertEnterprise) => {
@@ -372,6 +374,7 @@ export default function Enterprises() {
                             placeholder="Describe the enterprise mission and activities"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ""}
                             data-testid="textarea-enterprise-description"
                           />
                         </FormControl>
@@ -391,6 +394,7 @@ export default function Enterprises() {
                             <Input
                               placeholder="City, Country"
                               {...field}
+                              value={field.value || ""}
                               data-testid="input-enterprise-location"
                             />
                           </FormControl>
@@ -409,6 +413,7 @@ export default function Enterprises() {
                             <Input
                               placeholder="https://example.com"
                               {...field}
+                              value={field.value || ""}
                               data-testid="input-enterprise-website"
                             />
                           </FormControl>
@@ -429,6 +434,7 @@ export default function Enterprises() {
                             type="email"
                             placeholder="contact@example.com"
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-enterprise-email"
                           />
                         </FormControl>

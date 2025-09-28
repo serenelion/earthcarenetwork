@@ -106,41 +106,45 @@ export default function Copilot() {
     },
   });
 
-  const { data: suggestions = [], isLoading: suggestionsLoading, refetch: refetchSuggestions } = useQuery({
+  const { data: suggestions = [], isLoading: suggestionsLoading, refetch: refetchSuggestions, error: suggestionsError } = useQuery({
     queryKey: ["/api/crm/ai/suggestions"],
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
   });
+
+  // Handle suggestions error
+  useEffect(() => {
+    if (suggestionsError && isUnauthorizedError(suggestionsError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [suggestionsError, toast]);
 
   const { data: context, isLoading: contextLoading } = useQuery({
     queryKey: ["/api/crm/ai/context"],
     enabled: isAuthenticated,
     retry: false,
-    onSuccess: (data) => {
-      if (data) {
-        contextForm.reset({
-          focusAreas: data.focusAreas || [],
-          leadScoringCriteria: data.leadScoringCriteria || {},
-          automationRules: data.automationRules || {},
-          focusAreasText: data.focusAreas?.join(', ') || "",
-          leadScoringText: JSON.stringify(data.leadScoringCriteria || {}, null, 2),
-          automationText: JSON.stringify(data.automationRules || {}, null, 2),
-        });
-      }
-    },
   });
+
+  // Handle context data update
+  useEffect(() => {
+    if (context) {
+      contextForm.reset({
+        focusAreas: context.focusAreas || [],
+        leadScoringCriteria: context.leadScoringCriteria || {},
+        automationRules: context.automationRules || {},
+        focusAreasText: context.focusAreas?.join(', ') || "",
+        leadScoringText: JSON.stringify(context.leadScoringCriteria || {}, null, 2),
+        automationText: JSON.stringify(context.automationRules || {}, null, 2),
+      });
+    }
+  }, [context, contextForm]);
 
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],

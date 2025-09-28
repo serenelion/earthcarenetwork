@@ -30,24 +30,25 @@ export default function Dashboard() {
     retry: false,
   });
 
-  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
+  const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useQuery({
     queryKey: ["/api/crm/ai/suggestions"],
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-    },
   });
+
+  // Handle suggestions error using useEffect
+  useEffect(() => {
+    if (suggestionsError && isUnauthorizedError(suggestionsError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [suggestionsError, toast]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

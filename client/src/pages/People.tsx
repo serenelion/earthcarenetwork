@@ -101,39 +101,41 @@ export default function People() {
     },
   });
 
-  const { data: people = [], isLoading } = useQuery({
+  const { data: people = [], isLoading, error: peopleError } = useQuery({
     queryKey: ["/api/crm/people", searchQuery],
-    queryFn: async () => {
+    queryFn: async (): Promise<Person[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
       const response = await fetch(`/api/crm/people?${params}`);
       if (!response.ok) throw new Error("Failed to fetch people");
-      return response.json() as Person[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
   });
+
+  // Handle people error
+  useEffect(() => {
+    if (peopleError && isUnauthorizedError(peopleError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [peopleError, toast]);
 
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Enterprise[]> => {
       const response = await fetch("/api/enterprises?limit=200");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json() as Enterprise[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,

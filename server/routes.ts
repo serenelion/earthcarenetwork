@@ -27,12 +27,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch user", error: errorMessage });
     }
   });
 
@@ -49,7 +53,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enterprises);
     } catch (error) {
       console.error("Error fetching enterprises:", error);
-      res.status(500).json({ message: "Failed to fetch enterprises" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch enterprises", error: errorMessage });
     }
   });
 
@@ -62,7 +67,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enterprise);
     } catch (error) {
       console.error("Error fetching enterprise:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch enterprise", error: errorMessage });
     }
   });
 
@@ -84,7 +90,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching CRM stats:", error);
-      res.status(500).json({ message: "Failed to fetch CRM stats" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch CRM stats", error: errorMessage });
     }
   });
 
@@ -96,7 +103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(enterprise);
     } catch (error) {
       console.error("Error creating enterprise:", error);
-      res.status(400).json({ message: "Failed to create enterprise", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create enterprise", error: errorMessage });
     }
   });
 
@@ -106,7 +114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enterprise);
     } catch (error) {
       console.error("Error updating enterprise:", error);
-      res.status(400).json({ message: "Failed to update enterprise", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update enterprise", error: errorMessage });
     }
   });
 
@@ -116,7 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting enterprise:", error);
-      res.status(500).json({ message: "Failed to delete enterprise" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to delete enterprise", error: errorMessage });
     }
   });
 
@@ -132,7 +142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(people);
     } catch (error) {
       console.error("Error fetching people:", error);
-      res.status(500).json({ message: "Failed to fetch people" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch people", error: errorMessage });
     }
   });
 
@@ -143,7 +154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(person);
     } catch (error) {
       console.error("Error creating person:", error);
-      res.status(400).json({ message: "Failed to create person", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create person", error: errorMessage });
     }
   });
 
@@ -153,7 +165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(person);
     } catch (error) {
       console.error("Error updating person:", error);
-      res.status(400).json({ message: "Failed to update person", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update person", error: errorMessage });
     }
   });
 
@@ -273,7 +286,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Enterprise not found" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const context = await storage.getCopilotContext(userId);
       
       const leadScore = await generateLeadScore(enterprise, person, context);
@@ -289,7 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(leadScore);
     } catch (error) {
       console.error("Error generating lead score:", error);
-      res.status(500).json({ message: "Failed to generate lead score", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to generate lead score", error: errorMessage });
     }
   });
 
@@ -302,7 +319,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getEnterpriseStats(),
       ]);
 
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const context = await storage.getCopilotContext(userId);
 
       const recentActivity = [
@@ -314,24 +334,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(suggestions);
     } catch (error) {
       console.error("Error generating suggestions:", error);
-      res.status(500).json({ message: "Failed to generate suggestions", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to generate suggestions", error: errorMessage });
     }
   });
 
   app.get('/api/crm/ai/context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const context = await storage.getCopilotContext(userId);
       res.json(context || { focusAreas: [], leadScoringCriteria: {}, automationRules: {} });
     } catch (error) {
       console.error("Error fetching copilot context:", error);
-      res.status(500).json({ message: "Failed to fetch copilot context" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch copilot context", error: errorMessage });
     }
   });
 
   app.post('/api/crm/ai/context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const validatedData = insertCopilotContextSchema.parse({
         ...req.body,
         userId,
@@ -341,7 +369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(context);
     } catch (error) {
       console.error("Error updating copilot context:", error);
-      res.status(400).json({ message: "Failed to update copilot context", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update copilot context", error: errorMessage });
     }
   });
 
@@ -365,7 +394,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error bulk importing URLs:", error);
-      res.status(500).json({ message: "Failed to bulk import URLs", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to bulk import URLs", error: errorMessage });
     }
   });
 
@@ -398,7 +428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error importing from regenerative sources:", error);
-      res.status(500).json({ message: "Failed to import from regenerative sources", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to import from regenerative sources", error: errorMessage });
     }
   });
 
@@ -414,7 +445,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("Error scraping URL:", error);
-      res.status(500).json({ message: "Failed to scrape URL", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to scrape URL", error: errorMessage });
     }
   });
 

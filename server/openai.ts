@@ -67,7 +67,11 @@ Respond with JSON in this exact format:
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content received from OpenAI");
+    }
+    const result = JSON.parse(content);
     
     return {
       score: Math.max(0, Math.min(100, Math.round(result.score))),
@@ -77,7 +81,8 @@ Respond with JSON in this exact format:
     };
   } catch (error) {
     console.error("Error generating lead score:", error);
-    throw new Error("Failed to generate lead score: " + error.message);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error("Failed to generate lead score: " + errorMessage);
   }
 }
 
@@ -131,11 +136,16 @@ Respond with JSON array in this exact format:
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content received from OpenAI");
+    }
+    const result = JSON.parse(content);
     return result.suggestions || result || [];
   } catch (error) {
     console.error("Error generating copilot suggestions:", error);
-    throw new Error("Failed to generate suggestions: " + error.message);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error("Failed to generate suggestions: " + errorMessage);
   }
 }
 
@@ -187,9 +197,14 @@ Respond with JSON in this exact format:
       response_format: { type: "json_object" },
     });
 
-    return JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content received from OpenAI");
+    }
+    return JSON.parse(content);
   } catch (error) {
     console.error("Error extracting enterprise data:", error);
-    throw new Error("Failed to extract enterprise data: " + error.message);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error("Failed to extract enterprise data: " + errorMessage);
   }
 }
