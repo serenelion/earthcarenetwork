@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Spatial Network by terralux - Join the Future</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #ffffff;
+            color: #333333;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        
+        /* Main Container */
+        .slideshow-container {
+            height: 100vh;
+            width: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+        
+        /* Individual Slides */
+        .slide {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 2vh 120px 2vh 40px;
+            overflow: hidden;
+        }
+        
+        .slide-inner {
+            max-width: 1200px;
+            width: 100%;
+            max-height: 96vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(217, 181, 113, 0.3) transparent;
+        }
+        
+        .slide-inner::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .slide-inner::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .slide-inner::-webkit-scrollbar-thumb {
+            background: rgba(217, 181, 113, 0.3);
+            border-radius: 3px;
+        }
+        
+        .slide-inner::-webkit-scrollbar-thumb:hover {
+            background: rgba(217, 181, 113, 0.5);
+        }
+        
+        /* Compact Content Mode for Small Heights */
+        @media (max-height: 700px) {
+            .slide {
+                padding: 1vh 100px 1vh 30px;
+            }
+            
+            .slide-inner {
+                padding: 10px 0;
+            }
+        }
+        
+        /* Navigation Sidebar */
+        .nav-sidebar {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 8px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            min-height: 12px;
+            border-radius: 50%;
+            background: rgba(217, 181, 113, 0.3);
+            border: 2px solid transparent;
+            margin: 6px 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .nav-dot:hover {
+            background: rgba(217, 181, 113, 0.6);
+            transform: scale(1.2);
+        }
+        
+        .nav-dot.active {
+            background: rgb(217, 181, 113);
+            border-color: rgb(217, 181, 113);
+            transform: scale(1.3);
+        }
+        
+        /* Slide Title Tooltips */
+        .nav-dot .slide-label {
+            position: absolute;
+            right: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            white-space: nowrap;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-dot .slide-label::after {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-left-color: rgba(0, 0, 0, 0.95);
+        }
+        
+        .nav-dot:hover .slide-label {
+            opacity: 1;
+            visibility: visible;
+            right: 32px;
+        }
+        
+        /* Progress Indicator */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(217, 181, 113, 0.2);
+            z-index: 1001;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, rgb(217, 181, 113), rgb(230, 200, 140));
+            width: 0;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Special Slide Styles */
+        .slide.title-slide {
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            text-align: center;
+        }
+        
+        .slide.pricing-slide {
+            background: linear-gradient(135deg, #ffffff 0%, rgb(250, 248, 245) 100%);
+            text-align: center;
+        }
+        
+        .slide.final-slide {
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            text-align: center;
+        }
+        
+        /* Typography - Responsive Scaling */
+        h1 {
+            font-family: 'Lato', sans-serif;
+            font-size: clamp(2.25rem, 7vw, 4rem);
+            color: #000000;
+            margin-bottom: clamp(20px, 3vh, 35px);
+            font-weight: 700;
+            text-transform: lowercase;
+            line-height: 1.1;
+            letter-spacing: -1px;
+        }
+        
+        h2 {
+            font-family: 'Lato', sans-serif;
+            font-size: clamp(1.75rem, 5vw, 3rem);
+            color: #000000;
+            margin-bottom: clamp(20px, 3vh, 30px);
+            font-weight: 700;
+            text-transform: lowercase;
+            letter-spacing: -0.5px;
+        }
+        
+        h3 {
+            font-family: 'Lato', sans-serif;
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            color: #000000;
+            margin-bottom: clamp(12px, 2vh, 20px);
+            font-weight: 700;
+            text-transform: lowercase;
+        }
+        
+        p {
+            font-family: 'Open Sans', sans-serif;
+            font-size: clamp(1rem, 2vw, 1.15rem);
+            line-height: 1.6;
+            color: #666666;
+            margin-bottom: clamp(12px, 2vh, 20px);
+            font-weight: 400;
+        }
+        
+        .lead-text {
+            font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+            color: #333333;
+            font-weight: 500;
+            line-height: 1.5;
+            margin-bottom: clamp(20px, 3vh, 30px);
+        }
+        
+        .subtitle {
+            font-family: 'Open Sans', sans-serif;
+            font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+            color: #666666;
+            font-weight: 300;
+            margin: clamp(15px, 2vh, 25px) 0;
+        }
+        
+        .sub-header {
+            font-family: 'Open Sans', sans-serif;
+            font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+            color: #666666;
+            font-weight: 400;
+            margin-top: -10px;
+            margin-bottom: clamp(20px, 3vh, 35px);
+        }
+        
+        /* Utility Classes */
+        .gold-text {
+            color: rgb(217, 181, 113);
+            font-weight: 600;
+        }
+        
+        strong {
+            color: #333333;
+            font-weight: 600;
+        }
+        
+        /* Feature Grid - Compact */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: clamp(10px, 2vh, 20px);
+            margin: clamp(15px, 3vh, 30px) 0;
+        }
+        
+        .feature-card {
+            background: rgba(250, 250, 250, 0.8);
+            padding: clamp(15px, 2.5vh, 25px);
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(217, 181, 113, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card h3 {
+            font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+            margin-bottom: clamp(10px, 2vh, 15px);
+        }
+        
+        .feature-card p {
+            font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 0;
+            background: rgb(217, 181, 113);
+            transition: height 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(217, 181, 113, 0.15);
+            background: white;
+        }
+        
+        .feature-card:hover::before {
+            height: 100%;
+        }
+        
+        /* Buttons - Compact */
+        .cta-button {
+            display: inline-block;
+            padding: clamp(14px, 2.5vh, 18px) clamp(35px, 5vw, 50px);
+            background: linear-gradient(135deg, rgb(217, 181, 113), rgb(230, 200, 140));
+            color: #000000;
+            text-decoration: none;
+            border-radius: 50px;
+            font-family: 'Lato', sans-serif;
+            font-weight: 700;
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: clamp(20px, 3vh, 30px);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(217, 181, 113, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(217, 181, 113, 0.4);
+        }
+        
+        .secondary-button {
+            background: transparent;
+            border: 2px solid rgb(217, 181, 113);
+            color: #000000;
+            box-shadow: none;
+            padding: clamp(12px, 2vh, 16px) clamp(25px, 4vw, 40px);
+            font-size: clamp(0.9rem, 1.8vw, 1.05rem);
+        }
+        
+        .secondary-button:hover {
+            background: rgba(217, 181, 113, 0.1);
+        }
+        
+        /* Price Box - Compact */
+        .price-box {
+            background: white;
+            border-radius: 16px;
+            padding: clamp(20px, 3vh, 35px);
+            margin: clamp(15px, 2.5vh, 30px) auto;
+            max-width: 500px;
+            text-align: center;
+            border: 2px solid rgb(217, 181, 113);
+            box-shadow: 0 8px 25px rgba(217, 181, 113, 0.1);
+        }
+        
+        .price-amount {
+            font-family: 'Lato', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 3.5rem);
+            font-weight: 900;
+            color: rgb(217, 181, 113);
+            margin: clamp(15px, 2vh, 25px) 0;
+        }
+        
+        .price-note {
+            background: rgba(217, 181, 113, 0.1);
+            color: #333;
+            padding: clamp(10px, 2vh, 14px) clamp(18px, 3vw, 24px);
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: clamp(12px, 2vh, 18px);
+            font-weight: 600;
+            font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+        }
+        
+        /* Info Boxes - Compact */
+        .info-box {
+            background: rgba(250, 250, 250, 0.9);
+            padding: clamp(15px, 2.5vh, 25px);
+            border-radius: 12px;
+            margin: clamp(15px, 2vh, 25px) 0;
+            border-left: 3px solid rgb(217, 181, 113);
+        }
+        
+        .info-box h3 {
+            font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+            margin-bottom: clamp(12px, 2vh, 18px);
+        }
+        
+        .story-box {
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            border-left: 3px solid rgb(217, 181, 113);
+            padding: clamp(15px, 2.5vh, 25px);
+            margin: clamp(15px, 2vh, 25px) 0;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        /* Lists - Compact */
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: clamp(12px, 2vh, 20px) 0;
+        }
+        
+        ul li {
+            color: #666666;
+            margin-bottom: clamp(10px, 2vh, 18px);
+            padding-left: 32px;
+            position: relative;
+            font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+            line-height: 1.6;
+        }
+        
+        ul li::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: 9px;
+            width: 6px;
+            height: 6px;
+            background: rgb(217, 181, 113);
+            border-radius: 50%;
+        }
+        
+        /* Benefit List - Compact */
+        .benefit-list {
+            display: flex;
+            justify-content: space-around;
+            margin: clamp(15px, 2.5vh, 25px) 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .benefit-item {
+            text-align: center;
+            padding: clamp(10px, 1.5vh, 15px);
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .benefit-item p {
+            font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+            margin: 0;
+        }
+        
+        .benefit-icon {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            margin-bottom: 5px;
+        }
+        
+        /* Links */
+        .terralux-link {
+            color: rgb(217, 181, 113);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .terralux-link:hover {
+            border-bottom-color: rgb(217, 181, 113);
+        }
+        
+        /* Keyboard Hint */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 12px;
+            z-index: 1000;
+            animation: fadeInOut 4s ease-in-out;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            20%, 80% { opacity: 1; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .slide {
+                padding: 2vh 80px 2vh 25px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .slide {
+                padding: 2vh 60px 2vh 15px;
+            }
+            
+            .nav-sidebar {
+                right: 10px;
+                padding: 10px 6px;
+            }
+            
+            .nav-dot {
+                width: 10px;
+                height: 10px;
+                min-height: 10px;
+                margin: 5px 0;
+            }
+            
+            .price-box {
+                padding: 20px;
+            }
+            
+            .info-box, .story-box {
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .slide {
+                padding: 2vh 50px 2vh 10px;
+            }
+            
+            .nav-sidebar {
+                right: 5px;
+                padding: 8px 5px;
+            }
+            
+            .nav-dot {
+                width: 8px;
+                height: 8px;
+                min-height: 8px;
+                margin: 4px 0;
+            }
+            
+            .feature-card {
+                padding: 15px;
+            }
+        }
+        
+        /* Landscape Mode Adjustments */
+        @media (max-height: 600px) and (orientation: landscape) {
+            .slide-inner {
+                max-height: 94vh;
+            }
+            
+            h1 {
+                font-size: clamp(1.5rem, 5vw, 2.5rem);
+                margin-bottom: 10px;
+            }
+            
+            h2 {
+                font-size: clamp(1.2rem, 4vw, 2rem);
+                margin-bottom: 10px;
+            }
+            
+            .lead-text {
+                margin-bottom: 10px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .feature-card {
+                padding: 10px 12px;
+            }
+            
+            .info-box, .story-box {
+                padding: 12px 15px;
+                margin: 10px 0;
+            }
+            
+            ul li {
+                margin-bottom: 5px;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Very Small Heights */
+        @media (max-height: 500px) {
+            .nav-sidebar {
+                top: 10px;
+                transform: none;
+                max-height: calc(100vh - 20px);
+            }
+            
+            .slide {
+                padding: 1vh 60px 1vh 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+    
+    <!-- Navigation Sidebar -->
+    <nav class="nav-sidebar" id="navSidebar"></nav>
+    
+    <!-- Keyboard Hint -->
+    <div class="keyboard-hint">Navigate with ↑↓ keys or scroll • Click dots to explore</div>
+    
+    <!-- Slideshow Container -->
+    <div class="slideshow-container" id="slideshowContainer">
+        
+        <!-- Slide 1: Title -->
+        <div class="slide title-slide" data-slide="0">
+            <div class="slide-inner">
+                <h1>what's your vision?</h1>
+                <p class="subtitle">your land has a story that could inspire the world.<br>let's share it.</p>
+                <div style="margin-top: clamp(30px, 5vh, 50px);">
+                    <p style="font-family: 'Lato', sans-serif; font-size: clamp(1.15rem, 2.5vw, 1.4rem); color: #333;">the spatial network</p>
+                    <p style="font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: #999; margin-top: 10px; font-weight: 500;">
+                        showcase your land online
+                    </p>
+                    <p style="font-size: clamp(0.95rem, 2vw, 1.1rem); color: #999; margin-top: 20px;">
+                        by <a href="https://terra-lux.org/terraluxtech/" class="terralux-link" target="_blank">terralux</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Our Story -->
+        <div class="slide" data-slide="1">
+            <div class="slide-inner">
+                <h2>our story</h2>
+                <div class="story-box">
+                    <p class="lead-text">We're <span class="gold-text">terralux</span> – a collective of land stewards, technologists, and creative visionaries building the future of humanity.</p>
+                    <p>Our journey began with a simple question: <strong>how can we bridge the gap between the digital and physical world?</strong></p>
+                    <p>Today, The Spatial Network is the answer – a platform where you can showcase your land online, connect with investors, and build a community around your vision.</p>
+                </div>
+                <a href="https://terra-lux.org/terraluxtech/" class="secondary-button cta-button" target="_blank">LEARN ABOUT TERRALUX TECH</a>
+            </div>
+        </div>
+        
+        <!-- Slide 3: What We Do -->
+        <div class="slide" data-slide="2">
+            <div class="slide-inner">
+                <h2>grow the new earth</h2>
+                <p class="lead-text">We help visionary land developers <strong>showcase your vision for the next level</strong>.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>digitize</h3>
+                        <p>Put your land online with interactive 3D maps and virtual tours</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>monetize</h3>
+                        <p>Create new income streams from carbon credits to online experiences</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>gamify</h3>
+                        <p>Make your land exciting for the next generation with interactive features</p>
+                    </div>
+                </div>
+                
+                <p style="text-align: center; margin-top: clamp(20px, 3vh, 30px); font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: #333;">
+                    <span class="gold-text">The Spatial Network</span> – showcase your land<br>
+                    <strong>in harmony with nature while yielding profit with purpose</strong>.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Slide 4: Business Plan -->
+        <div class="slide" data-slide="3">
+            <div class="slide-inner">
+                <h2>showcase your vision for the future</h2>
+                <p class="lead-text">Turn your land into an interactive online experience that attracts investors, partners, and customers.</p>
+                
+                <div class="info-box">
+                    <h3>the ultimate way to showcase your story</h3>
+                    <ul>
+                        <li><strong>Show, don't tell</strong> - Let investors explore your vision in 3D</li>
+                        <li><strong>Connect & collaborate</strong> - Find partners who share your values</li>
+                        <li><strong>Track your impact</strong> - Share real results and progress</li>
+                        <li><strong>Attract aligned funding</strong> - Draw investors who believe in your mission</li>
+                        <li><strong>Build your legacy</strong> - Create something that inspires for generations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 5: Your Priorities -->
+        <div class="slide" data-slide="4">
+            <div class="slide-inner">
+                <h2>what matters most to you?</h2>
+                <p class="lead-text">You're not just building a business – you're creating a legacy that transforms land and lives.</p>
+                
+                <div style="margin: clamp(15px, 2vh, 25px) 0;">
+                    <h3>your vision deserves:</h3>
+                    <ul>
+                        <li><strong class="gold-text">Powerful Storytelling</strong> - Share your impact in ways that inspire action</li>
+                        <li><strong class="gold-text">Connected Community</strong> - Collaborate with pioneers who share your mission</li>
+                        <li><strong class="gold-text">Future-Ready Tools</strong> - Technology that grows with your ambitions</li>
+                        <li><strong class="gold-text">Measurable Impact</strong> - Show your success with real data</li>
+                    </ul>
+                    <p style="margin-top: clamp(15px, 2vh, 20px); text-align: center; font-weight: 600; color: #333; font-size: clamp(1rem, 2vw, 1.15rem);">
+                        The Spatial Network brings your vision online where it can truly make an impact.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 6: Your Opportunity -->
+        <div class="slide" data-slide="5">
+            <div class="slide-inner">
+                <h2>seize your opportunity</h2>
+                <p class="lead-text">The world is ready for your vision. Now you have a platform to share it.</p>
+                
+                <div class="info-box" style="background: linear-gradient(135deg, rgba(217, 181, 113, 0.05) 0%, rgba(217, 181, 113, 0.1) 100%);">
+                    <h3 style="color: rgb(217, 181, 113);">with the spatial network, you will:</h3>
+                    <ul>
+                        <li><strong>Captivate investors</strong> - Show your vision in interactive 3D</li>
+                        <li><strong>Build your network</strong> - Connect with like-minded land stewards</li>
+                        <li><strong>Attract top talent</strong> - Draw passionate people to your mission</li>
+                        <li><strong>Make better decisions</strong> - Use data to guide your growth</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box">
+                    <h3>become the visionary who:</h3>
+                    <ul>
+                        <li>Shows the world what regenerative success looks like</li>
+                        <li>Creates the model others want to follow</li>
+                        <li>Builds a lasting legacy on your land</li>
+                        <li>Proves what's truly possible</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 7: Ready to Start -->
+        <div class="slide" data-slide="6">
+            <div class="slide-inner">
+                <h2>how the spatial network works</h2>
+                <p class="lead-text">Transform your land and community in 3 powerful steps</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3 style="color: rgb(217, 181, 113); font-size: clamp(1.3rem, 2.8vw, 1.6rem);">step 1</h3>
+                        <h3>start your journey</h3>
+                        <p>Launch your free month with Build Pro. Create your interactive land showcase and bring your regenerative vision online where it can inspire action.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 style="color: rgb(217, 181, 113); font-size: clamp(1.3rem, 2.8vw, 1.6rem);">step 2</h3>
+                        <h3>unite your ecosystem</h3>
+                        <p>Invite your team, neighbors, and fellow land stewards. Together, you're not just sharing land – you're building the future of humanity through connected regenerative projects.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 style="color: rgb(217, 181, 113); font-size: clamp(1.3rem, 2.8vw, 1.6rem);">step 3</h3>
+                        <h3>grow your new earth enterprise</h3>
+                        <p>Watch your regenerative business flourish. As your network strengthens, every success multiplies – creating abundance for your land, community, and the planet.</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center;">
+                    <p style="margin-top: clamp(30px, 5vh, 40px); font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: #666;">
+                        This isn't just about your land – it's about creating a movement.<br>
+                        <strong style="color: #333;">When visionaries unite, the new earth grows.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 8: Referral Program -->
+        <div class="slide" data-slide="7">
+            <div class="slide-inner">
+                <h2>grow the movement together</h2>
+                <p class="lead-text">Start free • Share with peers • Earn up to 12 months free</p>
+                
+                <div class="info-box" style="text-align: center; background: linear-gradient(135deg, rgba(217, 181, 113, 0.1) 0%, rgba(217, 181, 113, 0.05) 100%);">
+                    <h3 style="color: rgb(217, 181, 113);">how the referral program works</h3>
+                    <p style="font-size: clamp(1.2rem, 2.8vw, 1.5rem); color: #333; margin: 15px 0;">
+                        <strong>You start with: 1 FREE month of Build Pro</strong>
+                    </p>
+                    <p style="font-size: clamp(1.05rem, 2.3vw, 1.25rem); color: #666;">
+                        When you share → Friends get 1 month free<br>
+                        When they join Build Pro → You get another month free<br>
+                        <strong style="color: rgb(217, 181, 113);">Share with 12 friends = Get your whole first year FREE!</strong>
+                    </p>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>1. start build pro free</h3>
+                        <p>Get your first month free to showcase your land online</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>2. share with peers</h3>
+                        <p>Invite other visionary land stewards to join Build Pro</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>3. unlock free months</h3>
+                        <p>Each peer who joins Build Pro = 1 more month free for you (up to 12)</p>
+                    </div>
+                </div>
+                
+                <div class="info-box" style="text-align: center; background: white;">
+                    <h3 style="font-size: clamp(1.15rem, 2.5vw, 1.4rem);">simple math:</h3>
+                    <p style="font-size: clamp(1.05rem, 2.2vw, 1.2rem); margin: 10px 0;">
+                        1 friend joins = 1 month free for you<br>
+                        12 friends join = 12 months free for you
+                    </p>
+                    <p style="font-size: clamp(1.1rem, 2.4vw, 1.3rem); color: rgb(217, 181, 113); font-weight: 700; margin-top: 15px;">
+                        That's your entire first year of Build Pro FREE!
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 9: Pricing - Final CTA -->
+        <div class="slide pricing-slide final-slide" data-slide="8">
+            <div class="slide-inner">
+                <h2>make your vision irresistible</h2>
+                <p class="sub-header">Join land developers already showcasing their vision online</p>
+                
+                <div class="price-box">
+                    <h3 style="font-size: clamp(1.1rem, 2.5vw, 1.5rem); text-transform: uppercase; color: rgb(217, 181, 113); letter-spacing: 2px; margin-bottom: 10px;">BUILD PRO</h3>
+                    <p style="font-size: clamp(1.4rem, 3vw, 1.8rem); color: rgb(217, 181, 113); font-weight: 700;">1 MONTH FREE TRIAL</p>
+                    <p style="font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: #333; margin: 10px 0;">Then showcase your vision for</p>
+                    <div class="price-amount">$99<span style="font-size: 0.6em; font-weight: 400;">/mo</span></div>
+                    <div class="price-note">
+                        Soon: $179/mo • Today: $99/mo forever<br>
+                        Lock in your Build Pro rate today
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 40px;">
+                    <a href="https://thespatialnetwork.net" class="cta-button" style="font-size: clamp(1.05rem, 2.2vw, 1.3rem); padding: 22px 65px;">GET STARTED TODAY</a>
+                    
+                    <p style="margin-top: clamp(30px, 4vh, 40px); font-size: clamp(0.9rem, 1.8vw, 1rem); color: #999;">
+                        powered by <a href="https://terra-lux.org/terraluxtech/" class="terralux-link" target="_blank">terralux</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Slide configuration
+        const slideInfo = [
+            { title: "Your Vision", id: "title" },
+            { title: "Our Story", id: "story" },
+            { title: "Grow the New Earth", id: "services" },
+            { title: "Showcase Future", id: "plan" },
+            { title: "What Matters", id: "priorities" },
+            { title: "Seize Opportunity", id: "opportunity" },
+            { title: "How It Works", id: "process" },
+            { title: "Earn Free Months", id: "referral" },
+            { title: "Make It Irresistible", id: "pricing" }
+        ];
+        
+        // Initialize elements
+        const container = document.getElementById('slideshowContainer');
+        const slides = document.querySelectorAll('.slide');
+        const navSidebar = document.getElementById('navSidebar');
+        const progressFill = document.getElementById('progressFill');
+        
+        let currentSlide = 0;
+        let isScrolling = false;
+        
+        // Create navigation dots
+        slideInfo.forEach((slide, index) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot';
+            dot.setAttribute('aria-label', `Go to slide: ${slide.title}`);
+            if (index === 0) dot.classList.add('active');
+            
+            const label = document.createElement('span');
+            label.className = 'slide-label';
+            label.textContent = slide.title;
+            dot.appendChild(label);
+            
+            dot.addEventListener('click', () => navigateToSlide(index));
+            navSidebar.appendChild(dot);
+        });
+        
+        const navDots = document.querySelectorAll('.nav-dot');
+        
+        // Navigation function
+        function navigateToSlide(index) {
+            if (index >= 0 && index < slides.length && index !== currentSlide) {
+                currentSlide = index;
+                slides[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updateUI();
+            }
+        }
+        
+        // Update UI elements
+        function updateUI() {
+            // Update active dot
+            navDots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+            
+            // Update progress bar
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            progressFill.style.width = `${progress}%`;
+        }
+        
+        // Handle scroll events
+        function handleScroll() {
+            if (!isScrolling) {
+                window.requestAnimationFrame(() => {
+                    const scrollPosition = container.scrollTop;
+                    const windowHeight = window.innerHeight;
+                    const newSlide = Math.round(scrollPosition / windowHeight);
+                    
+                    if (newSlide !== currentSlide && newSlide >= 0 && newSlide < slides.length) {
+                        currentSlide = newSlide;
+                        updateUI();
+                    }
+                    
+                    isScrolling = false;
+                });
+                isScrolling = true;
+            }
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowDown':
+                case 'PageDown':
+                case ' ':
+                    e.preventDefault();
+                    if (currentSlide < slides.length - 1) {
+                        navigateToSlide(currentSlide + 1);
+                    }
+                    break;
+                case 'ArrowUp':
+                case 'PageUp':
+                    e.preventDefault();
+                    if (currentSlide > 0) {
+                        navigateToSlide(currentSlide - 1);
+                    }
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    navigateToSlide(0);
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    navigateToSlide(slides.length - 1);
+                    break;
+                default:
+                    // Number keys 1-9
+                    if (e.key >= '1' && e.key <= '9') {
+                        const slideNum = parseInt(e.key) - 1;
+                        if (slideNum < slides.length) {
+                            navigateToSlide(slideNum);
+                        }
+                    }
+            }
+        });
+        
+        // Touch handling for mobile
+        let touchStartY = 0;
+        let touchEndY = 0;
+        
+        container.addEventListener('touchstart', (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+        
+        container.addEventListener('touchend', (e) => {
+            touchEndY = e.changedTouches[0].screenY;
+            const diff = touchStartY - touchEndY;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0 && currentSlide < slides.length - 1) {
+                    navigateToSlide(currentSlide + 1);
+                } else if (diff < 0 && currentSlide > 0) {
+                    navigateToSlide(currentSlide - 1);
+                }
+            }
+        });
+        
+        // Mouse wheel handling with debounce
+        let wheelTimeout;
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            clearTimeout(wheelTimeout);
+            
+            wheelTimeout = setTimeout(() => {
+                if (e.deltaY > 0 && currentSlide < slides.length - 1) {
+                    navigateToSlide(currentSlide + 1);
+                } else if (e.deltaY < 0 && currentSlide > 0) {
+                    navigateToSlide(currentSlide - 1);
+                }
+            }, 50);
+        }, { passive: false });
+        
+        // Event listeners
+        container.addEventListener('scroll', handleScroll);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            slides[currentSlide].scrollIntoView({ behavior: 'auto', block: 'start' });
+        });
+        
+        // Initialize
+        updateUI();
+        
+        // Prevent default scroll behaviors
+        window.addEventListener('keydown', function(e) {
+            if(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].indexOf(e.key) > -1) {
+                e.preventDefault();
+            }
+        }, false);
+    </script>
+</body>
+</html>
