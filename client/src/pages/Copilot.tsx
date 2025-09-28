@@ -596,14 +596,14 @@ export default function Copilot() {
                   <div>
                     <label className="text-sm font-medium">Select Contact (Optional)</label>
                     <Select 
-                      value={leadScoreTarget?.personId || ""} 
-                      onValueChange={(value) => setLeadScoreTarget(prev => ({ ...prev!, personId: value }))}
+                      value={leadScoreTarget?.personId || "none"} 
+                      onValueChange={(value) => setLeadScoreTarget(prev => ({ ...prev!, personId: value === "none" ? undefined : value }))}
                     >
                       <SelectTrigger data-testid="select-lead-person">
                         <SelectValue placeholder="Choose primary contact" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No specific contact</SelectItem>
+                        <SelectItem value="none">No specific contact</SelectItem>
                         {people.map((person: any) => (
                           <SelectItem key={person.id} value={person.id}>
                             {person.firstName} {person.lastName}

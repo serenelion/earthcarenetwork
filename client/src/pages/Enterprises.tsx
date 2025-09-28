@@ -482,13 +482,13 @@ export default function Enterprises() {
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={selectedCategory || ""} onValueChange={(value) => setSelectedCategory(value || null)}>
+                <Select value={selectedCategory || "all"} onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}>
                   <SelectTrigger className="w-48" data-testid="filter-category">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.value} value={category.value}>
                         {category.label}

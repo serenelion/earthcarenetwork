@@ -494,14 +494,14 @@ export default function Opportunities() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Enterprise</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-opportunity-enterprise">
                                 <SelectValue placeholder="Select enterprise" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Enterprise</SelectItem>
+                              <SelectItem value="none">No Enterprise</SelectItem>
                               {enterprises.map((enterprise) => (
                                 <SelectItem key={enterprise.id} value={enterprise.id}>
                                   {enterprise.name}
@@ -520,14 +520,14 @@ export default function Opportunities() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Primary Contact</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-opportunity-contact">
                                 <SelectValue placeholder="Select contact" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Contact</SelectItem>
+                              <SelectItem value="none">No Contact</SelectItem>
                               {people.map((person) => (
                                 <SelectItem key={person.id} value={person.id}>
                                   {person.firstName} {person.lastName}
@@ -619,13 +619,13 @@ export default function Opportunities() {
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+                <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}>
                   <SelectTrigger className="w-48" data-testid="filter-status">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     {opportunityStatuses.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}

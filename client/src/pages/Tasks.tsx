@@ -490,14 +490,14 @@ export default function Tasks() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assigned To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={(value) => field.onChange(value === "unassigned" ? null : value)} value={field.value || "unassigned"}>
                           <FormControl>
                             <SelectTrigger data-testid="select-task-assignee">
                               <SelectValue placeholder="Select assignee" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {user && (
                               <SelectItem value={user.id}>
                                 {user.firstName || user.email} (Me)
@@ -517,14 +517,14 @@ export default function Tasks() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Enterprise</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-enterprise">
                                 <SelectValue placeholder="Select enterprise" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Enterprise</SelectItem>
+                              <SelectItem value="none">No Enterprise</SelectItem>
                               {enterprises.map((enterprise) => (
                                 <SelectItem key={enterprise.id} value={enterprise.id}>
                                   {enterprise.name}
@@ -543,14 +543,14 @@ export default function Tasks() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Person</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-person">
                                 <SelectValue placeholder="Select person" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Person</SelectItem>
+                              <SelectItem value="none">No Person</SelectItem>
                               {people.map((person) => (
                                 <SelectItem key={person.id} value={person.id}>
                                   {person.firstName} {person.lastName}
@@ -569,14 +569,14 @@ export default function Tasks() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Opportunity</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-opportunity">
                                 <SelectValue placeholder="Select opportunity" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Opportunity</SelectItem>
+                              <SelectItem value="none">No Opportunity</SelectItem>
                               {opportunities.map((opportunity) => (
                                 <SelectItem key={opportunity.id} value={opportunity.id}>
                                   {opportunity.title}
@@ -629,13 +629,13 @@ export default function Tasks() {
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+                <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}>
                   <SelectTrigger className="w-40" data-testid="filter-status">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     {taskStatuses.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
@@ -643,13 +643,13 @@ export default function Tasks() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={priorityFilter || ""} onValueChange={(value) => setPriorityFilter(value || null)}>
+                <Select value={priorityFilter || "all"} onValueChange={(value) => setPriorityFilter(value === "all" ? null : value)}>
                   <SelectTrigger className="w-40" data-testid="filter-priority">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All Priorities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Priorities</SelectItem>
+                    <SelectItem value="all">All Priorities</SelectItem>
                     {taskPriorities.map((priority) => (
                       <SelectItem key={priority.value} value={priority.value}>
                         {priority.label}

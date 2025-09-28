@@ -453,14 +453,14 @@ export default function People() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Enterprise</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-enterprise">
                                 <SelectValue placeholder="Select enterprise" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Enterprise</SelectItem>
+                              <SelectItem value="none">No Enterprise</SelectItem>
                               {enterprises.map((enterprise) => (
                                 <SelectItem key={enterprise.id} value={enterprise.id}>
                                   {enterprise.name}
@@ -627,13 +627,13 @@ export default function People() {
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+                <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}>
                   <SelectTrigger className="w-48" data-testid="filter-status">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     {[...invitationStatuses, ...claimStatuses, ...buildProStatuses].map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
