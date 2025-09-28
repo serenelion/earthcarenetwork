@@ -171,6 +171,41 @@ export const copilotContext = pgTable("copilot_context", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Business context for AI copilot
+export const businessContext = pgTable("business_context", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  companyName: varchar("company_name"),
+  website: varchar("website"),
+  description: text("description"),
+  awards: text("awards"),
+  outreachGoal: text("outreach_goal"),
+  customerProfiles: jsonb("customer_profiles"), // Array of customer profile objects
+  guidanceRules: text("guidance_rules").array(), // Array of guidance rules
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat conversations for copilot
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  title: varchar("title"), // Auto-generated or user-set title
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat messages within conversations
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").references(() => conversations.id).notNull(),
+  role: varchar("role").notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"), // For storing additional context, attachments, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -202,6 +237,23 @@ export const insertCopilotContextSchema = createInsertSchema(copilotContext).omi
   updatedAt: true,
 });
 
+export const insertBusinessContextSchema = createInsertSchema(businessContext).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -215,3 +267,9 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertCopilotContext = z.infer<typeof insertCopilotContextSchema>;
 export type CopilotContext = typeof copilotContext.$inferSelect;
+export type InsertBusinessContext = z.infer<typeof insertBusinessContextSchema>;
+export type BusinessContext = typeof businessContext.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;

@@ -208,3 +208,88 @@ Respond with JSON in this exact format:
     throw new Error("Failed to extract enterprise data: " + errorMessage);
   }
 }
+
+export async function generateCopilotResponse(
+  userMessage: string,
+  conversationHistory: any[],
+  businessContext?: any,
+  copilotContext?: any
+): Promise<string> {
+  try {
+    // Build conversation history for AI context
+    const messages: any[] = [
+      {
+        role: "system",
+        content: `You are EarthCare Copilot, an AI assistant specialized in regenerative enterprise management and sustainability business guidance. 
+
+Your mission is to help users build and scale regenerative enterprises that restore ecosystems and create positive environmental impact.
+
+${businessContext ? `Business Context:
+Company: ${businessContext.companyName || 'Not specified'}
+Website: ${businessContext.website || 'Not specified'}
+Description: ${businessContext.description || 'Not specified'}
+Outreach Goal: ${businessContext.outreachGoal || 'Not specified'}
+Customer Profiles: ${JSON.stringify(businessContext.customerProfiles || [])}
+Guidance Rules: ${JSON.stringify(businessContext.guidanceRules || [])}
+` : ''}
+
+${copilotContext ? `CRM Context:
+Focus Areas: ${copilotContext.focusAreas?.join(', ') || 'Not specified'}
+Lead Scoring Criteria: ${JSON.stringify(copilotContext.leadScoringCriteria || {})}
+Automation Rules: ${JSON.stringify(copilotContext.automationRules || {})}
+` : ''}
+
+Key areas of expertise:
+- Regenerative agriculture and permaculture
+- Carbon sequestration and climate solutions  
+- Sustainable business models and impact investing
+- Partnership development and network building
+- CRM management for regenerative enterprises
+- Community building and ecosystem restoration
+
+Provide practical, actionable advice tailored to regenerative enterprises. Be supportive, knowledgeable, and always consider the environmental and social impact of your suggestions.`
+      }
+    ];
+
+    // Add conversation history (limit to last 10 messages for context)
+    const recentHistory = conversationHistory.slice(-10);
+    for (const msg of recentHistory) {
+      messages.push({
+        role: msg.role,
+        content: msg.content
+      });
+    }
+
+    // Add current user message
+    messages.push({
+      role: "user",
+      content: userMessage
+    });
+
+    console.log("Sending OpenAI request with messages:", messages.length);
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages,
+      max_completion_tokens: 1000,
+    });
+
+    console.log("OpenAI response received:", {
+      id: response.id,
+      choices: response.choices?.length,
+      firstChoice: response.choices?.[0] || "No choices",
+      content: response.choices?.[0]?.message?.content || "No content"
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      console.error("OpenAI returned empty content. Full response:", JSON.stringify(response, null, 2));
+      throw new Error("No content received from OpenAI");
+    }
+
+    return content;
+  } catch (error) {
+    console.error("Error generating copilot response:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error("Failed to generate copilot response: " + errorMessage);
+  }
+}

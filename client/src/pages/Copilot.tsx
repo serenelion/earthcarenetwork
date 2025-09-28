@@ -59,6 +59,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
+import ChatInterface from "@/components/ChatInterface";
 import { insertCopilotContextSchema, type CopilotContext, type InsertCopilotContext } from "@shared/schema";
 import { z } from "zod";
 
@@ -446,7 +447,10 @@ export default function Copilot() {
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Chat Interface */}
+        <ChatInterface className="mb-8" />
+
+        {/* Additional AI Tools */}
         <Tabs defaultValue="insights" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="insights" data-testid="tab-insights">

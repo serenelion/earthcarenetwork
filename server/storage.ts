@@ -5,6 +5,9 @@ import {
   opportunities,
   tasks,
   copilotContext,
+  businessContext,
+  conversations,
+  chatMessages,
   type User,
   type UpsertUser,
   type Enterprise,
@@ -17,6 +20,12 @@ import {
   type InsertTask,
   type CopilotContext,
   type InsertCopilotContext,
+  type BusinessContext,
+  type InsertBusinessContext,
+  type Conversation,
+  type InsertConversation,
+  type ChatMessage,
+  type InsertChatMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql } from "drizzle-orm";
@@ -61,6 +70,22 @@ export interface IStorage {
   // Copilot context operations
   getCopilotContext(userId: string): Promise<CopilotContext | undefined>;
   upsertCopilotContext(context: InsertCopilotContext): Promise<CopilotContext>;
+  
+  // Business context operations
+  getBusinessContext(userId: string): Promise<BusinessContext | undefined>;
+  upsertBusinessContext(context: InsertBusinessContext): Promise<BusinessContext>;
+  
+  // Chat conversation operations
+  getConversations(userId: string, limit?: number, offset?: number): Promise<Conversation[]>;
+  getConversation(id: string): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<Conversation>;
+  deleteConversation(id: string): Promise<void>;
+  
+  // Chat message operations
+  getChatMessages(conversationId: string, limit?: number, offset?: number): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  deleteChatMessage(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -384,6 +409,89 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return result;
+  }
+
+  // Business context operations
+  async getBusinessContext(userId: string): Promise<BusinessContext | undefined> {
+    const [context] = await db.select().from(businessContext).where(eq(businessContext.userId, userId));
+    return context;
+  }
+
+  async upsertBusinessContext(context: InsertBusinessContext): Promise<BusinessContext> {
+    const [result] = await db
+      .insert(businessContext)
+      .values(context)
+      .onConflictDoUpdate({
+        target: businessContext.userId,
+        set: {
+          ...context,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  // Chat conversation operations
+  async getConversations(userId: string, limit = 50, offset = 0): Promise<Conversation[]> {
+    return await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.userId, userId))
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getConversation(id: string): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation;
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const [result] = await db.insert(conversations).values(conversation).returning();
+    return result;
+  }
+
+  async updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<Conversation> {
+    const [updated] = await db
+      .update(conversations)
+      .set({ ...conversation, updatedAt: new Date() })
+      .where(eq(conversations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteConversation(id: string): Promise<void> {
+    // Delete all messages first, then the conversation
+    await db.delete(chatMessages).where(eq(chatMessages.conversationId, id));
+    await db.delete(conversations).where(eq(conversations.id, id));
+  }
+
+  // Chat message operations
+  async getChatMessages(conversationId: string, limit = 100, offset = 0): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt)
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    // Update conversation's lastMessageAt when creating a message
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(conversations.id, message.conversationId));
+
+    const [result] = await db.insert(chatMessages).values(message).returning();
+    return result;
+  }
+
+  async deleteChatMessage(id: string): Promise<void> {
+    await db.delete(chatMessages).where(eq(chatMessages.id, id));
   }
 }
 

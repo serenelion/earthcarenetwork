@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   generateLeadScore, 
   generateCopilotSuggestions,
+  generateCopilotResponse,
 } from "./openai";
 import { 
   scrapeUrl, 
@@ -17,7 +18,10 @@ import {
   insertPersonSchema,
   insertOpportunitySchema,
   insertTaskSchema,
-  insertCopilotContextSchema 
+  insertCopilotContextSchema,
+  insertBusinessContextSchema,
+  insertConversationSchema,
+  insertChatMessageSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -383,6 +387,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating copilot context:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(400).json({ message: "Failed to update copilot context", error: errorMessage });
+    }
+  });
+
+  // Business context routes
+  app.get('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const context = await storage.getBusinessContext(userId);
+      res.json(context || { companyName: '', website: '', description: '', awards: '', outreachGoal: '', customerProfiles: [], guidanceRules: [] });
+    } catch (error) {
+      console.error("Error fetching business context:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch business context", error: errorMessage });
+    }
+  });
+
+  app.post('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const validatedData = insertBusinessContextSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const context = await storage.upsertBusinessContext(validatedData);
+      res.json(context);
+    } catch (error) {
+      console.error("Error updating business context:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update business context", error: errorMessage });
+    }
+  });
+
+  // Chat conversation routes
+  app.get('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const { limit = 50, offset = 0 } = req.query;
+      const conversations = await storage.getConversations(
+        userId,
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch conversations", error: errorMessage });
+    }
+  });
+
+  app.post('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const validatedData = insertConversationSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const conversation = await storage.createConversation(validatedData);
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create conversation", error: errorMessage });
+    }
+  });
+
+  app.get('/api/crm/ai/conversations/:id/messages', isAuthenticated, async (req, res) => {
+    try {
+      const { limit = 100, offset = 0 } = req.query;
+      const messages = await storage.getChatMessages(
+        req.params.id,
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch messages", error: errorMessage });
+    }
+  });
+
+  app.post('/api/crm/ai/chat', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { message, conversationId } = req.body;
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      let conversation;
+      let messages: any[] = [];
+
+      // If conversationId provided, get existing conversation and messages
+      if (conversationId) {
+        conversation = await storage.getConversation(conversationId);
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+        messages = await storage.getChatMessages(conversationId);
+      } else {
+        // Create new conversation
+        conversation = await storage.createConversation({
+          userId,
+          title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+        });
+      }
+
+      // Save user message
+      const userMessage = await storage.createChatMessage({
+        conversationId: conversation.id,
+        role: 'user',
+        content: message,
+      });
+
+      // Get business context for AI
+      const businessContext = await storage.getBusinessContext(userId);
+      const copilotContext = await storage.getCopilotContext(userId);
+
+      // Generate AI response using OpenAI
+      const aiResponse = await generateCopilotResponse(
+        message,
+        messages,
+        businessContext,
+        copilotContext
+      );
+
+      // Save AI response
+      const assistantMessage = await storage.createChatMessage({
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: aiResponse,
+      });
+
+      res.json({
+        conversation,
+        userMessage,
+        assistantMessage,
+        response: aiResponse,
+      });
+    } catch (error) {
+      console.error("Error in chat:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to process chat", error: errorMessage });
     }
   });
 
