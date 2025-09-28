@@ -551,8 +551,8 @@ export default function Opportunities() {
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? field.value.split('T')[0] : ''}
-                            onChange={(e) => field.onChange(e.target.value || null)}
+                            value={field.value ? (field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value.split('T')[0]) : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                             data-testid="input-opportunity-close-date"
                           />
                         </FormControl>

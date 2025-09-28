@@ -198,7 +198,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/crm/opportunities', isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertOpportunitySchema.parse(req.body);
+      // Transform date string to Date object if present
+      const body = { ...req.body };
+      if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
+        body.expectedCloseDate = new Date(body.expectedCloseDate);
+      }
+      
+      const validatedData = insertOpportunitySchema.parse(body);
       const opportunity = await storage.createOpportunity(validatedData);
       res.status(201).json(opportunity);
     } catch (error) {
@@ -209,7 +215,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/crm/opportunities/:id', isAuthenticated, async (req, res) => {
     try {
-      const opportunity = await storage.updateOpportunity(req.params.id, req.body);
+      // Transform date string to Date object if present
+      const body = { ...req.body };
+      if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
+        body.expectedCloseDate = new Date(body.expectedCloseDate);
+      }
+      
+      const opportunity = await storage.updateOpportunity(req.params.id, body);
       res.json(opportunity);
     } catch (error) {
       console.error("Error updating opportunity:", error);
