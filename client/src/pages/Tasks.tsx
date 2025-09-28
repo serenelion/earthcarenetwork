@@ -51,8 +51,10 @@ import {
   Filter,
   Clock,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
 import { insertTaskSchema, type Task, type InsertTask, type Enterprise, type Person, type Opportunity } from "@shared/schema";
 
@@ -73,6 +75,7 @@ const taskStatuses = [
 export default function Tasks() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
@@ -93,39 +96,41 @@ export default function Tasks() {
     },
   });
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: tasks = [], isLoading, error: tasksError } = useQuery({
     queryKey: ["/api/crm/tasks", searchQuery],
-    queryFn: async () => {
+    queryFn: async (): Promise<Task[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
       const response = await fetch(`/api/crm/tasks?${params}`);
       if (!response.ok) throw new Error("Failed to fetch tasks");
-      return response.json() as Task[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
   });
+
+  // Handle tasks error
+  useEffect(() => {
+    if (tasksError && isUnauthorizedError(tasksError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [tasksError, toast]);
 
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Enterprise[]> => {
       const response = await fetch("/api/enterprises?limit=200");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json() as Enterprise[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
@@ -133,10 +138,10 @@ export default function Tasks() {
 
   const { data: people = [] } = useQuery({
     queryKey: ["/api/crm/people"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Person[]> => {
       const response = await fetch("/api/crm/people?limit=200");
       if (!response.ok) throw new Error("Failed to fetch people");
-      return response.json() as Person[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
@@ -144,10 +149,10 @@ export default function Tasks() {
 
   const { data: opportunities = [] } = useQuery({
     queryKey: ["/api/crm/opportunities"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Opportunity[]> => {
       const response = await fetch("/api/crm/opportunities?limit=200");
       if (!response.ok) throw new Error("Failed to fetch opportunities");
-      return response.json() as Opportunity[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
@@ -294,7 +299,7 @@ export default function Tasks() {
       relatedEnterpriseId: task.relatedEnterpriseId || "",
       relatedPersonId: task.relatedPersonId || "",
       relatedOpportunityId: task.relatedOpportunityId || "",
-      dueDate: task.dueDate ? task.dueDate.split('T')[0] : null,
+      dueDate: task.dueDate ? (task.dueDate instanceof Date ? task.dueDate.toISOString().split('T')[0] : String(task.dueDate).split('T')[0]) : null,
     });
     setIsDialogOpen(true);
   };
@@ -404,6 +409,7 @@ export default function Tasks() {
                             placeholder="Describe the task"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ""}
                             data-testid="textarea-task-description"
                           />
                         </FormControl>
@@ -419,7 +425,7 @@ export default function Tasks() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Priority</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-priority">
                                 <SelectValue placeholder="Select priority" />
@@ -444,7 +450,7 @@ export default function Tasks() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-status">
                                 <SelectValue placeholder="Select status" />
@@ -473,7 +479,7 @@ export default function Tasks() {
                             <Input
                               type="date"
                               {...field}
-                              value={field.value || ''}
+                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : (field.value || '')}
                               onChange={(e) => field.onChange(e.target.value || null)}
                               data-testid="input-task-due-date"
                             />
@@ -498,9 +504,9 @@ export default function Tasks() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {user && (
-                              <SelectItem value={user.id}>
-                                {user.firstName || user.email} (Me)
+                            {user && (user as any).id && (
+                              <SelectItem value={(user as any).id}>
+                                {(user as any).firstName || (user as any).email} (Me)
                               </SelectItem>
                             )}
                           </SelectContent>
@@ -791,7 +797,7 @@ export default function Tasks() {
                         </div>
                       )}
 
-                      {task.assignedToId && user && task.assignedToId === user.id && (
+                      {task.assignedToId && user && (user as any).id && task.assignedToId === (user as any).id && (
                         <div className="flex items-center text-sm text-muted-foreground">
                           <User className="w-3 h-3 mr-2" />
                           Assigned to me
@@ -821,7 +827,7 @@ export default function Tasks() {
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      Created {new Date(task.createdAt).toLocaleDateString()}
+                      Created {task.createdAt ? new Date(task.createdAt).toLocaleDateString() : 'Unknown'}
                     </div>
                   </CardContent>
                 </Card>

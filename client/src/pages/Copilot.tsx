@@ -57,8 +57,10 @@ import {
   Edit,
   Trash2,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import ChatInterface from "@/components/ChatInterface";
 import { insertCopilotContextSchema, type CopilotContext, type InsertCopilotContext } from "@shared/schema";
 import { z } from "zod";
@@ -91,6 +93,7 @@ type ContextFormData = z.infer<typeof contextFormSchema>;
 export default function Copilot() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isMobile = useIsMobile();
   const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<CopilotSuggestion | null>(null);
   const [leadScoreTarget, setLeadScoreTarget] = useState<{ enterpriseId: string; personId?: string } | null>(null);
@@ -136,13 +139,14 @@ export default function Copilot() {
   // Handle context data update
   useEffect(() => {
     if (context) {
+      const ctx = context as any;
       contextForm.reset({
-        focusAreas: context.focusAreas || [],
-        leadScoringCriteria: context.leadScoringCriteria || {},
-        automationRules: context.automationRules || {},
-        focusAreasText: context.focusAreas?.join(', ') || "",
-        leadScoringText: JSON.stringify(context.leadScoringCriteria || {}, null, 2),
-        automationText: JSON.stringify(context.automationRules || {}, null, 2),
+        focusAreas: ctx.focusAreas || [],
+        leadScoringCriteria: ctx.leadScoringCriteria || {},
+        automationRules: ctx.automationRules || {},
+        focusAreasText: ctx.focusAreas?.join(', ') || "",
+        leadScoringText: JSON.stringify(ctx.leadScoringCriteria || {}, null, 2),
+        automationText: JSON.stringify(ctx.automationRules || {}, null, 2),
       });
     }
   }, [context, contextForm]);
@@ -202,9 +206,10 @@ export default function Copilot() {
     },
   });
 
-  const generateLeadScoreMutation = useMutation({
-    mutationFn: async (data: { enterpriseId: string; personId?: string }) => {
-      return apiRequest("POST", "/api/crm/ai/lead-score", data);
+  const generateLeadScoreMutation = useMutation<LeadScoringResult, Error, { enterpriseId: string; personId?: string }>({
+    mutationFn: async (data: { enterpriseId: string; personId?: string }): Promise<LeadScoringResult> => {
+      const response = await apiRequest("POST", "/api/crm/ai/lead-score", data);
+      return response as unknown as LeadScoringResult;
     },
     onSuccess: (result: LeadScoringResult) => {
       toast({
@@ -248,7 +253,7 @@ export default function Copilot() {
 
   const handleContextSubmit = (data: ContextFormData) => {
     const processedData: InsertCopilotContext = {
-      userId: user?.id || "",
+      userId: (user as any)?.id || "",
       focusAreas: data.focusAreasText 
         ? data.focusAreasText.split(',').map(area => area.trim()).filter(Boolean)
         : [],
@@ -490,7 +495,7 @@ export default function Copilot() {
                       </div>
                     ))}
                   </div>
-                ) : suggestions.length === 0 ? (
+                ) : (suggestions as CopilotSuggestion[]).length === 0 ? (
                   <div className="text-center py-12">
                     <Bot className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">No AI insights available</h3>
@@ -507,7 +512,7 @@ export default function Copilot() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {suggestions.map((suggestion: CopilotSuggestion, index: number) => {
+                    {(suggestions as CopilotSuggestion[]).map((suggestion: CopilotSuggestion, index: number) => {
                       const Icon = getSuggestionIcon(suggestion.type);
                       const colorClass = getSuggestionColor(suggestion.priority);
                       
@@ -685,7 +690,7 @@ export default function Copilot() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Suggestions Generated</span>
-                      <span className="font-semibold">{suggestions.length}</span>
+                      <span className="font-semibold">{(suggestions as CopilotSuggestion[]).length}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Lead Scores Created</span>
@@ -694,7 +699,7 @@ export default function Copilot() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Automation Rules</span>
                       <span className="font-semibold">
-                        {context?.automationRules ? Object.keys(context.automationRules).length : 0}
+                        {(context as any)?.automationRules ? Object.keys((context as any).automationRules).length : 0}
                       </span>
                     </div>
                   </div>
@@ -738,8 +743,8 @@ export default function Copilot() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {context?.focusAreas && context.focusAreas.length > 0 ? (
-                      context.focusAreas.map((area, index) => (
+                    {(context as any)?.focusAreas && (context as any).focusAreas.length > 0 ? (
+                      (context as any).focusAreas.map((area: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {area}
                         </Badge>
@@ -764,9 +769,9 @@ export default function Copilot() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <h4 className="font-semibold text-foreground">Active Rules</h4>
-                      {context?.automationRules && Object.keys(context.automationRules).length > 0 ? (
+                      {(context as any)?.automationRules && Object.keys((context as any).automationRules).length > 0 ? (
                         <div className="space-y-2">
-                          {Object.entries(context.automationRules).map(([key, value]) => (
+                          {Object.entries((context as any).automationRules).map(([key, value]: [string, any]) => (
                             <div key={key} className="flex justify-between items-center p-3 bg-muted rounded-lg">
                               <span className="text-sm font-medium">{key.replace('_', ' ')}</span>
                               <Badge variant="secondary" className="text-xs">
@@ -789,7 +794,7 @@ export default function Copilot() {
                             <p className="text-xs text-muted-foreground">Score new enterprises automatically</p>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {context?.automationRules?.auto_score ? 'Enabled' : 'Disabled'}
+                            {(context as any)?.automationRules?.auto_score ? 'Enabled' : 'Disabled'}
                           </Badge>
                         </div>
                         
@@ -799,7 +804,7 @@ export default function Copilot() {
                             <p className="text-xs text-muted-foreground">Create tasks for follow-ups</p>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {context?.automationRules?.follow_up_days ? 'Enabled' : 'Disabled'}
+                            {(context as any)?.automationRules?.follow_up_days ? 'Enabled' : 'Disabled'}
                           </Badge>
                         </div>
 
@@ -809,7 +814,7 @@ export default function Copilot() {
                             <p className="text-xs text-muted-foreground">Notify for high-value opportunities</p>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {context?.automationRules?.priority_threshold ? 'Enabled' : 'Disabled'}
+                            {(context as any)?.automationRules?.priority_threshold ? 'Enabled' : 'Disabled'}
                           </Badge>
                         </div>
                       </div>

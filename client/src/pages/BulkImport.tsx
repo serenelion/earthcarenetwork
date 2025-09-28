@@ -37,7 +37,8 @@ import {
   Zap,
   Link,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ScrapingResult {
   success: boolean;
@@ -67,7 +68,8 @@ interface ImportResponse {
 
 export default function BulkImport() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isMobile = useIsMobile();
   const [urlsText, setUrlsText] = useState("");
   const [importResults, setImportResults] = useState<ImportResponse | null>(null);
   const [previewResults, setPreviewResults] = useState<ScrapingResult[]>([]);

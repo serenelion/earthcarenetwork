@@ -50,7 +50,8 @@ import {
   Users,
   Filter,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
 import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise } from "@shared/schema";
 
@@ -71,6 +72,7 @@ const categoryColors = {
 export default function Enterprises() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -277,16 +279,30 @@ export default function Enterprises() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded mb-4 w-64"></div>
-            <div className="h-32 bg-muted rounded mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-64 bg-muted rounded-xl"></div>
-              ))}
+        <main className="flex-1">
+          {/* Mobile Header */}
+          <div className="md:hidden bg-card border-b border-border p-4">
+            <div className="flex items-center justify-between">
+              <MobileMenuButton />
+              <div className="flex items-center space-x-2">
+                <Building className="text-primary text-lg" />
+                <span className="font-bold text-foreground font-lato">Enterprises</span>
+              </div>
+              <div className="w-10"></div>
+            </div>
+          </div>
+          
+          <div className="p-4 md:p-6">
+            <div className="animate-pulse">
+              <div className="h-6 md:h-8 bg-muted rounded mb-4 w-48 md:w-64"></div>
+              <div className="h-24 md:h-32 bg-muted rounded mb-6"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-48 md:h-64 bg-muted rounded-xl"></div>
+                ))}
+              </div>
             </div>
           </div>
         </main>
@@ -297,24 +313,76 @@ export default function Enterprises() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-
-      <main className="flex-1 p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground font-lato">Enterprises</h1>
-            <p className="text-muted-foreground">Manage regenerative enterprise directory</p>
+      
+      <main className="flex-1">
+        {/* Mobile Header */}
+        <div className="md:hidden bg-card border-b border-border">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <MobileMenuButton />
+              <div className="flex items-center space-x-2">
+                <Building className="text-primary text-lg" />
+                <span className="text-base font-bold text-foreground font-lato">Enterprises</span>
+              </div>
+              <div className="w-10"></div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                onClick={() => window.open("/", "_blank")}
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                data-testid="button-public-view"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                View Public Directory
+              </Button>
+              <Button
+                onClick={openCreateDialog}
+                size="sm"
+                className="flex-1 text-xs"
+                data-testid="button-create-enterprise"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Enterprise
+              </Button>
+            </div>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
+        </div>
+
+        <div className="p-4 md:p-6">
+          {/* Desktop Header */}
+          <div className="hidden md:flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground font-lato">Enterprises</h1>
+              <p className="text-muted-foreground">Manage regenerative enterprise directory</p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => window.open("/", "_blank")}
+                variant="outline"
+                data-testid="button-public-view"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View Public Directory
+              </Button>
               <Button onClick={openCreateDialog} data-testid="button-create-enterprise">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Enterprise
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            </div>
+          </div>
+          
+          {/* Mobile Title */}
+          <div className="md:hidden mb-4">
+            <p className="text-sm text-muted-foreground">Manage regenerative enterprise directory</p>
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="font-lato">
+                <DialogTitle className="font-lato text-base md:text-lg">
                   {editingEnterprise ? "Edit Enterprise" : "Create New Enterprise"}
                 </DialogTitle>
               </DialogHeader>
@@ -325,10 +393,11 @@ export default function Enterprises() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Enterprise Name</FormLabel>
+                        <FormLabel className="text-sm">Enterprise Name</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter enterprise name"
+                            className="text-sm"
                             {...field}
                             data-testid="input-enterprise-name"
                           />
@@ -343,10 +412,10 @@ export default function Enterprises() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category</FormLabel>
+                        <FormLabel className="text-sm">Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-enterprise-category">
+                            <SelectTrigger className="text-sm" data-testid="select-enterprise-category">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                           </FormControl>
@@ -368,11 +437,11 @@ export default function Enterprises() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel className="text-sm">Description</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Describe the enterprise mission and activities"
-                            className="min-h-[100px]"
+                            className="min-h-[80px] md:min-h-[100px] text-sm"
                             {...field}
                             value={field.value || ""}
                             data-testid="textarea-enterprise-description"
@@ -383,16 +452,17 @@ export default function Enterprises() {
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Location</FormLabel>
+                          <FormLabel className="text-sm">Location</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="City, Country"
+                              className="text-sm"
                               {...field}
                               value={field.value || ""}
                               data-testid="input-enterprise-location"
@@ -408,10 +478,11 @@ export default function Enterprises() {
                       name="website"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Website</FormLabel>
+                          <FormLabel className="text-sm">Website</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="https://example.com"
+                              className="text-sm"
                               {...field}
                               value={field.value || ""}
                               data-testid="input-enterprise-website"
@@ -428,11 +499,12 @@ export default function Enterprises() {
                     name="contactEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Email</FormLabel>
+                        <FormLabel className="text-sm">Contact Email</FormLabel>
                         <FormControl>
                           <Input
                             type="email"
                             placeholder="contact@example.com"
+                            className="text-sm"
                             {...field}
                             value={field.value || ""}
                             data-testid="input-enterprise-email"
@@ -443,10 +515,11 @@ export default function Enterprises() {
                     )}
                   />
 
-                  <div className="flex justify-end space-x-2 pt-4">
+                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
                     <Button
                       type="button"
                       variant="outline"
+                      className="w-full sm:w-auto text-sm"
                       onClick={() => setIsDialogOpen(false)}
                       data-testid="button-cancel-enterprise"
                     >
@@ -455,6 +528,7 @@ export default function Enterprises() {
                     <Button
                       type="submit"
                       disabled={createMutation.isPending || updateMutation.isPending}
+                      className="w-full sm:w-auto text-sm"
                       data-testid="button-save-enterprise"
                     >
                       {createMutation.isPending || updateMutation.isPending
@@ -540,113 +614,117 @@ export default function Enterprises() {
               </Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {enterprises.map((enterprise) => {
-              const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
-              const categoryLabel = categories.find(c => c.value === enterprise.category)?.label || enterprise.category;
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {enterprises.map((enterprise) => {
+                const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
+                const categoryLabel = categories.find(c => c.value === enterprise.category)?.label || enterprise.category;
 
-              return (
-                <Card key={enterprise.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`enterprise-card-${enterprise.id}`}>
-                  {/* Header */}
-                  <div className="h-32 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center relative">
-                    <div className="text-4xl text-primary/30">
-                      {enterprise.category === 'land_projects' && '🌱'}
-                      {enterprise.category === 'capital_sources' && '💰'}
-                      {enterprise.category === 'open_source_tools' && '🔧'}
-                      {enterprise.category === 'network_organizers' && '🌐'}
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(enterprise)}
-                        data-testid={`button-edit-${enterprise.id}`}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(enterprise.id)}
-                        className="text-destructive hover:text-destructive"
-                        data-testid={`button-delete-${enterprise.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge className={`${categoryClass} text-sm font-medium`}>
-                        {categoryLabel}
-                      </Badge>
-                      {enterprise.location && (
-                        <div className="flex items-center text-muted-foreground text-sm">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          <span>{enterprise.location}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="text-xl font-semibold mb-2 text-foreground font-lato">
-                      {enterprise.name}
-                    </h3>
-
-                    <p className="text-muted-foreground mb-4 line-clamp-3 text-sm">
-                      {enterprise.description || "No description available"}
-                    </p>
-
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex space-x-2">
-                        {enterprise.isVerified && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Verified
-                          </Badge>
-                        )}
-                        {enterprise.followerCount !== undefined && enterprise.followerCount > 0 && (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            <Users className="w-3 h-3 mr-1" />
-                            {enterprise.followerCount} Followers
-                          </Badge>
-                        )}
+                return (
+                  <Card key={enterprise.id} className="overflow-hidden hover:shadow-lg transition-shadow touch-manipulation" data-testid={`enterprise-card-${enterprise.id}`}>
+                    {/* Header */}
+                    <div className="h-24 md:h-32 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center relative">
+                      <div className="text-2xl md:text-4xl text-primary/30">
+                        {enterprise.category === 'land_projects' && '🌱'}
+                        {enterprise.category === 'capital_sources' && '💰'}
+                        {enterprise.category === 'open_source_tools' && '🔧'}
+                        {enterprise.category === 'network_organizers' && '🌐'}
                       </div>
-
-                      {enterprise.website && (
+                      <div className="absolute top-2 right-2 flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => window.open(enterprise.website!, "_blank")}
-                          data-testid={`button-visit-${enterprise.id}`}
+                          className="p-1.5 md:p-2 touch-manipulation"
+                          onClick={() => handleEdit(enterprise)}
+                          data-testid={`button-edit-${enterprise.id}`}
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <Edit className="w-3 h-3 md:w-4 md:h-4" />
                         </Button>
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1.5 md:p-2 touch-manipulation text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(enterprise.id)}
+                          data-testid={`button-delete-${enterprise.id}`}
+                        >
+                          <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* Tags */}
-                    {enterprise.tags && enterprise.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {enterprise.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {enterprise.tags.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{enterprise.tags.length - 3} more
-                          </Badge>
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <Badge className={`${categoryClass} text-xs md:text-sm font-medium flex-shrink-0`}>
+                          {categoryLabel}
+                        </Badge>
+                        {enterprise.location && (
+                          <div className="flex items-center text-muted-foreground text-xs md:text-sm min-w-0">
+                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{enterprise.location}</span>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </CardContent>
+
+                      <h3 className="text-base md:text-xl font-semibold mb-2 text-foreground font-lato line-clamp-2">
+                        {enterprise.name}
+                      </h3>
+
+                      <p className="text-muted-foreground mb-3 md:mb-4 line-clamp-2 md:line-clamp-3 text-xs md:text-sm">
+                        {enterprise.description || "No description available"}
+                      </p>
+
+                      <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+                        <div className="flex flex-wrap gap-1 md:gap-2 min-w-0">
+                          {enterprise.isVerified && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                              <CheckCircle className="w-2 h-2 md:w-3 md:h-3 mr-1" />
+                              <span className="hidden sm:inline">Verified</span>
+                              <span className="sm:hidden">✓</span>
+                            </Badge>
+                          )}
+                          {enterprise.followerCount !== undefined && enterprise.followerCount > 0 && (
+                            <Badge variant="outline" className="text-muted-foreground text-xs">
+                              <Users className="w-2 h-2 md:w-3 md:h-3 mr-1" />
+                              <span className="hidden sm:inline">{enterprise.followerCount} Followers</span>
+                              <span className="sm:hidden">{enterprise.followerCount}</span>
+                            </Badge>
+                          )}
+                        </div>
+
+                        {enterprise.website && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-1.5 md:p-2 touch-manipulation flex-shrink-0"
+                            onClick={() => window.open(enterprise.website!, "_blank")}
+                            data-testid={`button-visit-${enterprise.id}`}
+                          >
+                            <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      {enterprise.tags && enterprise.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {enterprise.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {enterprise.tags.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{enterprise.tags.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
                 </Card>
               );
             })}
           </div>
-        )}
+          )}
       </main>
     </div>
   );

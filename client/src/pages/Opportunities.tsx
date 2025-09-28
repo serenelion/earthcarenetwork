@@ -52,8 +52,10 @@ import {
   Filter,
   Lightbulb,
   TrendingUp,
+  ExternalLink,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
 import { insertOpportunitySchema, type Opportunity, type InsertOpportunity, type Enterprise, type Person } from "@shared/schema";
 
@@ -68,7 +70,8 @@ const opportunityStatuses = [
 
 export default function Opportunities() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -88,39 +91,41 @@ export default function Opportunities() {
     },
   });
 
-  const { data: opportunities = [], isLoading } = useQuery({
+  const { data: opportunities = [], isLoading, error: opportunitiesError } = useQuery({
     queryKey: ["/api/crm/opportunities", searchQuery],
-    queryFn: async () => {
+    queryFn: async (): Promise<Opportunity[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
       const response = await fetch(`/api/crm/opportunities?${params}`);
       if (!response.ok) throw new Error("Failed to fetch opportunities");
-      return response.json() as Opportunity[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-      }
-    },
   });
+
+  // Handle opportunities error
+  useEffect(() => {
+    if (opportunitiesError && isUnauthorizedError(opportunitiesError as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [opportunitiesError, toast]);
 
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Enterprise[]> => {
       const response = await fetch("/api/enterprises?limit=200");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json() as Enterprise[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
@@ -128,10 +133,10 @@ export default function Opportunities() {
 
   const { data: people = [] } = useQuery({
     queryKey: ["/api/crm/people"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Person[]> => {
       const response = await fetch("/api/crm/people?limit=200");
       if (!response.ok) throw new Error("Failed to fetch people");
-      return response.json() as Person[];
+      return response.json();
     },
     enabled: isAuthenticated,
     retry: false,
@@ -410,6 +415,7 @@ export default function Opportunities() {
                             placeholder="Describe the opportunity"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ""}
                             data-testid="textarea-opportunity-description"
                           />
                         </FormControl>
@@ -430,6 +436,7 @@ export default function Opportunities() {
                               type="number"
                               placeholder="0"
                               {...field}
+                              value={field.value || ""}
                               onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                               data-testid="input-opportunity-value"
                             />
@@ -445,7 +452,7 @@ export default function Opportunities() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-opportunity-status">
                                 <SelectValue placeholder="Select status" />
@@ -477,6 +484,7 @@ export default function Opportunities() {
                               max="100"
                               placeholder="0"
                               {...field}
+                              value={field.value || ""}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                               data-testid="input-opportunity-probability"
                             />
@@ -551,7 +559,7 @@ export default function Opportunities() {
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? (field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value.split('T')[0]) : ''}
+                            value={field.value ? (field.value instanceof Date ? field.value.toISOString().split('T')[0] : String(field.value).split('T')[0]) : ''}
                             onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                             data-testid="input-opportunity-close-date"
                           />
@@ -572,6 +580,7 @@ export default function Opportunities() {
                             placeholder="Add notes about this opportunity"
                             className="min-h-[80px]"
                             {...field}
+                            value={field.value || ""}
                             data-testid="textarea-opportunity-notes"
                           />
                         </FormControl>

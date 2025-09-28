@@ -50,7 +50,8 @@ import {
   Filter,
   Building,
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
 import { insertPersonSchema, type Person, type InsertPerson, type Enterprise } from "@shared/schema";
 
@@ -77,7 +78,8 @@ const buildProStatuses = [
 
 export default function People() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -308,16 +310,30 @@ export default function People() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded mb-4 w-64"></div>
-            <div className="h-32 bg-muted rounded mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-48 bg-muted rounded-xl"></div>
-              ))}
+        <main className="flex-1">
+          {/* Mobile Header */}
+          <div className="md:hidden bg-card border-b border-border p-4">
+            <div className="flex items-center justify-between">
+              <MobileMenuButton />
+              <div className="flex items-center space-x-2">
+                <Users className="text-primary text-lg" />
+                <span className="font-bold text-foreground font-lato">People</span>
+              </div>
+              <div className="w-10"></div>
+            </div>
+          </div>
+          
+          <div className="p-4 md:p-6">
+            <div className="animate-pulse">
+              <div className="h-6 md:h-8 bg-muted rounded mb-4 w-48 md:w-64"></div>
+              <div className="h-24 md:h-32 bg-muted rounded mb-6"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-48 md:h-64 bg-muted rounded-xl"></div>
+                ))}
+              </div>
             </div>
           </div>
         </main>
@@ -329,23 +345,107 @@ export default function People() {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <main className="flex-1 p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground font-lato">People</h1>
-            <p className="text-muted-foreground">Manage contacts and track user journeys</p>
+      <main className="flex-1">
+        {/* Mobile Header */}
+        <div className="md:hidden bg-card border-b border-border">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <MobileMenuButton />
+              <div className="flex items-center space-x-2">
+                <Users className="text-primary text-lg" />
+                <span className="text-base font-bold text-foreground font-lato">People</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-xs px-2"
+                  onClick={() => window.open("/", "_blank")}
+                  data-testid="button-public-directory"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Public
+                </Button>
+                <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold">
+                  {(user as any)?.firstName?.[0] || (user as any)?.email?.[0]?.toUpperCase() || 'A'}
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              onClick={openCreateDialog}
+              size="sm"
+              className="w-full text-xs"
+              data-testid="button-create-person"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add Person
+            </Button>
           </div>
+        </div>
+
+        {/* Desktop Header */}
+        <header className="hidden md:block bg-card border-b border-border">
+          <div className="px-6 py-4">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-3">
+              <span className="font-medium text-primary">Admin CRM</span>
+              <span>/</span>
+              <span>People Management</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="text-primary text-xl" />
+                  <span className="text-lg font-bold text-foreground font-lato">People CRM</span>
+                  <Badge variant="secondary" className="ml-2 text-xs">Admin View</Badge>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open("/", "_blank")}
+                  data-testid="button-public-directory"
+                  className="flex items-center space-x-2"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  <span>View Public Directory</span>
+                </Button>
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold">
+                    {(user as any)?.firstName?.[0] || (user as any)?.email?.[0]?.toUpperCase() || 'A'}
+                  </div>
+                  <span className="text-sm text-foreground">{(user as any)?.firstName || 'Admin User'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4 md:p-6">
+          {/* Desktop Header */}
+          <div className="hidden md:flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground font-lato">People</h1>
+              <p className="text-muted-foreground">Manage contacts and track user journeys</p>
+            </div>
+            <Button onClick={openCreateDialog} data-testid="button-create-person">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Person
+            </Button>
+          </div>
+          
+          {/* Mobile Title */}
+          <div className="md:hidden mb-4">
+            <p className="text-sm text-muted-foreground">Manage contacts and track user journeys</p>
+          </div>
+          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog} data-testid="button-create-person">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Person
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="font-lato">
+                <DialogTitle className="font-lato text-base md:text-lg">
                   {editingPerson ? "Edit Person" : "Add New Person"}
                 </DialogTitle>
               </DialogHeader>
@@ -401,6 +501,7 @@ export default function People() {
                               type="email"
                               placeholder="email@example.com"
                               {...field}
+                              value={field.value || ""}
                               data-testid="input-email"
                             />
                           </FormControl>
@@ -419,6 +520,7 @@ export default function People() {
                             <Input
                               placeholder="+1 (555) 123-4567"
                               {...field}
+                              value={field.value || ""}
                               data-testid="input-phone"
                             />
                           </FormControl>
@@ -439,6 +541,7 @@ export default function People() {
                             <Input
                               placeholder="Enter job title"
                               {...field}
+                              value={field.value || ""}
                               data-testid="input-title"
                             />
                           </FormControl>
@@ -484,6 +587,7 @@ export default function People() {
                           <Input
                             placeholder="https://linkedin.com/in/username"
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-linkedin"
                           />
                         </FormControl>
@@ -499,7 +603,7 @@ export default function People() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Invitation Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-invitation-status">
                                 <SelectValue />
@@ -524,7 +628,7 @@ export default function People() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Claim Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-claim-status">
                                 <SelectValue />
@@ -549,7 +653,7 @@ export default function People() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Build Pro Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-build-pro-status">
                                 <SelectValue />
@@ -580,6 +684,7 @@ export default function People() {
                             placeholder="Add notes about this person"
                             className="min-h-[80px]"
                             {...field}
+                            value={field.value || ""}
                             data-testid="textarea-notes"
                           />
                         </FormControl>

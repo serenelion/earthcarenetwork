@@ -46,7 +46,7 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
-import { insertBusinessContextSchema, type BusinessContext, type Conversation, type ChatMessage } from "@shared/schema";
+import { insertBusinessContextSchema, type BusinessContext, type Conversation, type ChatMessage, type User as UserType } from "@shared/schema";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -93,7 +93,7 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
   // Fetch conversations
   const { data: conversations = [], refetch: refetchConversations } = useQuery<Conversation[]>({
     queryKey: ["/api/crm/ai/conversations"],
-    enabled: !!user?.id,
+    enabled: !!user && !!(user as UserType)?.id,
   });
 
   // Fetch messages for selected conversation
@@ -105,7 +105,7 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
   // Fetch business context
   const { data: businessContext } = useQuery<BusinessContext>({
     queryKey: ["/api/crm/ai/business-context"],
-    enabled: !!user?.id,
+    enabled: !!user && !!(user as UserType)?.id,
   });
 
   // Update form when business context loads
@@ -128,22 +128,67 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Define chat response type for better type safety
+  type ChatResponse = {
+    conversation: Conversation;
+    userMessage: ChatMessage;
+    assistantMessage: ChatMessage;
+    response: string;
+  };
+
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { message: string; conversationId?: string }) => {
-      return apiRequest("POST", "/api/crm/ai/chat", data);
+    mutationFn: async (data: { message: string; conversationId?: string }): Promise<ChatResponse> => {
+      const response = await apiRequest("POST", "/api/crm/ai/chat", data);
+      return await response.json();
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result: ChatResponse) => {
+      console.log("Chat API response:", result);
+      
+      // Validate response structure
+      if (!result || typeof result !== 'object') {
+        console.error("Invalid response structure:", result);
+        toast({
+          title: "Error",
+          description: "Invalid response from server",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate conversation object
+      if (!result.conversation || !result.conversation.id) {
+        console.error("Missing conversation in response:", result);
+        toast({
+          title: "Error",
+          description: "Invalid conversation data received",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // All validations passed - update state
+      console.log("Successfully processed chat response, conversation ID:", result.conversation.id);
       setMessageInput("");
       setSelectedConversation(result.conversation.id);
       setIsNewChat(false);
+      
+      // Refresh data
       refetchConversations();
       refetchMessages();
+      
+      // Show success feedback
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully",
+      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Chat mutation error:", error);
+      const errorMessage = error?.message || "Failed to send message";
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -188,9 +233,9 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
 
   const handleBusinessContextSubmit = (data: BusinessContextFormData) => {
     console.log("Form submission triggered!", data);
-    console.log("Authentication status:", { isAuthenticated, userId: user?.id });
+    console.log("Authentication status:", { isAuthenticated, userId: (user as UserType)?.id });
     
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !(user as UserType)?.id) {
       console.error("Authentication failed - user not authenticated");
       toast({
         title: "Error",
@@ -202,7 +247,7 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
 
     const processedData = {
       ...data,
-      userId: user.id,
+      userId: (user as UserType).id,
       customerProfiles: data.customerProfilesText ? (() => {
         try {
           return JSON.parse(data.customerProfilesText);
