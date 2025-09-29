@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import { Link } from "wouter";
@@ -23,6 +24,7 @@ import BulkImport from "@/pages/BulkImport";
 import Settings from "@/pages/Settings";
 import Partners from "@/pages/Partners";
 import MemberBenefits from "@/pages/MemberBenefits";
+import Favorites from "@/pages/Favorites";
 import PartnerApplication from "@/pages/PartnerApplication";
 import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
 import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
@@ -233,10 +235,7 @@ function Router() {
           {/* Member-specific routes */}
           <Route path="/favorites">
             <MemberOrHigherRoute>
-              <div className="p-8">
-                <h1 className="text-2xl font-bold">My Favorites</h1>
-                <p>Coming soon...</p>
-              </div>
+              <Favorites />
             </MemberOrHigherRoute>
           </Route>
           
@@ -280,10 +279,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SubscriptionProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <FavoritesProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </FavoritesProvider>
       </SubscriptionProvider>
     </QueryClientProvider>
   );

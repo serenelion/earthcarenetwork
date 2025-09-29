@@ -14,6 +14,7 @@ import {
   subscriptionPlans,
   subscriptions,
   aiUsageLogs,
+  userFavorites,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -48,6 +49,8 @@ import {
   type InsertSubscription,
   type AiUsageLog,
   type InsertAiUsageLog,
+  type UserFavorite,
+  type InsertUserFavorite,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -66,6 +69,15 @@ export interface IStorage {
   updateEnterprise(id: string, enterprise: Partial<InsertEnterprise>): Promise<Enterprise>;
   deleteEnterprise(id: string): Promise<void>;
   getEnterpriseStats(): Promise<{ total: number; byCategory: Record<string, number> }>;
+  
+  // User favorites operations
+  getUserFavorites(userId: string, limit?: number, offset?: number): Promise<Array<UserFavorite & { enterprise: Enterprise }>>;
+  addUserFavorite(userId: string, enterpriseId: string, notes?: string): Promise<UserFavorite>;
+  removeUserFavorite(userId: string, enterpriseId: string): Promise<void>;
+  getUserFavorite(userId: string, enterpriseId: string): Promise<UserFavorite | undefined>;
+  isEnterpriseFavorited(userId: string, enterpriseId: string): Promise<boolean>;
+  getUserFavoritesCount(userId: string): Promise<number>;
+  getFavoritesByCategory(userId: string): Promise<Record<string, number>>;
   
   // People operations
   getPeople(search?: string, limit?: number, offset?: number): Promise<Person[]>;
@@ -346,6 +358,114 @@ export class DatabaseStorage implements IStorage {
       total: totalResult.count,
       byCategory,
     };
+  }
+
+  // User favorites operations
+  async getUserFavorites(userId: string, limit = 50, offset = 0): Promise<Array<UserFavorite & { enterprise: Enterprise }>> {
+    const results = await db
+      .select({
+        id: userFavorites.id,
+        userId: userFavorites.userId,
+        enterpriseId: userFavorites.enterpriseId,
+        notes: userFavorites.notes,
+        createdAt: userFavorites.createdAt,
+        enterprise: enterprises,
+      })
+      .from(userFavorites)
+      .innerJoin(enterprises, eq(userFavorites.enterpriseId, enterprises.id))
+      .where(eq(userFavorites.userId, userId))
+      .orderBy(desc(userFavorites.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      id: result.id,
+      userId: result.userId,
+      enterpriseId: result.enterpriseId,
+      notes: result.notes,
+      createdAt: result.createdAt,
+      enterprise: result.enterprise,
+    }));
+  }
+
+  async addUserFavorite(userId: string, enterpriseId: string, notes?: string): Promise<UserFavorite> {
+    const [favorite] = await db
+      .insert(userFavorites)
+      .values({
+        userId,
+        enterpriseId,
+        notes,
+      })
+      .onConflictDoNothing({
+        target: [userFavorites.userId, userFavorites.enterpriseId],
+      })
+      .returning();
+    
+    if (!favorite) {
+      // If conflict, return existing favorite
+      const [existing] = await db
+        .select()
+        .from(userFavorites)
+        .where(and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.enterpriseId, enterpriseId)
+        ));
+      return existing;
+    }
+    
+    return favorite;
+  }
+
+  async removeUserFavorite(userId: string, enterpriseId: string): Promise<void> {
+    await db
+      .delete(userFavorites)
+      .where(and(
+        eq(userFavorites.userId, userId),
+        eq(userFavorites.enterpriseId, enterpriseId)
+      ));
+  }
+
+  async getUserFavorite(userId: string, enterpriseId: string): Promise<UserFavorite | undefined> {
+    const [favorite] = await db
+      .select()
+      .from(userFavorites)
+      .where(and(
+        eq(userFavorites.userId, userId),
+        eq(userFavorites.enterpriseId, enterpriseId)
+      ));
+    return favorite;
+  }
+
+  async isEnterpriseFavorited(userId: string, enterpriseId: string): Promise<boolean> {
+    const favorite = await this.getUserFavorite(userId, enterpriseId);
+    return !!favorite;
+  }
+
+  async getUserFavoritesCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(userFavorites)
+      .where(eq(userFavorites.userId, userId));
+    return result.count;
+  }
+
+  async getFavoritesByCategory(userId: string): Promise<Record<string, number>> {
+    const results = await db
+      .select({
+        category: enterprises.category,
+        count: count(),
+      })
+      .from(userFavorites)
+      .innerJoin(enterprises, eq(userFavorites.enterpriseId, enterprises.id))
+      .where(eq(userFavorites.userId, userId))
+      .groupBy(enterprises.category);
+
+    const byCategory: Record<string, number> = {};
+    results.forEach(result => {
+      byCategory[result.category] = result.count;
+    });
+
+    return byCategory;
   }
 
   // People operations

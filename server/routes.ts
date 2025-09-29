@@ -27,7 +27,8 @@ import {
   insertOpportunityTransferSchema,
   insertSubscriptionPlanSchema,
   insertSubscriptionSchema,
-  insertAiUsageLogSchema
+  insertAiUsageLogSchema,
+  insertUserFavoriteSchema
 } from "@shared/schema";
 import Stripe from "stripe";
 
@@ -196,6 +197,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting enterprise:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to delete enterprise", error: errorMessage });
+    }
+  });
+
+  // User favorites operations (member-only)
+  app.get('/api/favorites', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { limit = 50, offset = 0 } = req.query;
+      const favorites = await storage.getUserFavorites(
+        userId,
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching user favorites:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch favorites", error: errorMessage });
+    }
+  });
+
+  app.post('/api/favorites', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const validatedData = insertUserFavoriteSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const favorite = await storage.addUserFavorite(
+        userId,
+        validatedData.enterpriseId,
+        validatedData.notes
+      );
+      res.status(201).json(favorite);
+    } catch (error) {
+      console.error("Error adding favorite:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to add favorite", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/favorites/:enterpriseId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      await storage.removeUserFavorite(userId, req.params.enterpriseId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to remove favorite", error: errorMessage });
+    }
+  });
+
+  app.get('/api/enterprises/:id/favorite-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const isFavorited = await storage.isEnterpriseFavorited(userId, req.params.id);
+      res.json({ isFavorited });
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to check favorite status", error: errorMessage });
+    }
+  });
+
+  app.get('/api/favorites/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const [count, byCategory] = await Promise.all([
+        storage.getUserFavoritesCount(userId),
+        storage.getFavoritesByCategory(userId)
+      ]);
+
+      res.json({
+        total: count,
+        byCategory
+      });
+    } catch (error) {
+      console.error("Error fetching favorites stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch favorites stats", error: errorMessage });
     }
   });
 

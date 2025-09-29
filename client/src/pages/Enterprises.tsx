@@ -54,6 +54,7 @@ import {
 import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
+import FavoriteButton from "@/components/FavoriteButton";
 import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise } from "@shared/schema";
 
 const categories = [
@@ -632,11 +633,23 @@ export default function Enterprises() {
                         {enterprise.category === 'open_source_tools' && '🔧'}
                         {enterprise.category === 'network_organizers' && '🌐'}
                       </div>
+                      {/* Favorite Button - Top Left */}
+                      <div className="absolute top-2 left-2">
+                        <FavoriteButton
+                          enterpriseId={enterprise.id}
+                          enterpriseName={enterprise.name}
+                          variant="ghost"
+                          size="sm"
+                          className="bg-white/80 hover:bg-white/90 backdrop-blur-sm shadow-sm"
+                        />
+                      </div>
+                      
+                      {/* Admin Actions - Top Right */}
                       <div className="absolute top-2 right-2 flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-1.5 md:p-2 touch-manipulation"
+                          className="p-1.5 md:p-2 touch-manipulation bg-white/80 hover:bg-white/90 backdrop-blur-sm"
                           onClick={() => handleEdit(enterprise)}
                           data-testid={`button-edit-${enterprise.id}`}
                         >
@@ -645,7 +658,7 @@ export default function Enterprises() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-1.5 md:p-2 touch-manipulation text-destructive hover:text-destructive"
+                          className="p-1.5 md:p-2 touch-manipulation text-destructive hover:text-destructive bg-white/80 hover:bg-white/90 backdrop-blur-sm"
                           onClick={() => handleDelete(enterprise.id)}
                           data-testid={`button-delete-${enterprise.id}`}
                         >
@@ -693,17 +706,26 @@ export default function Enterprises() {
                           )}
                         </div>
 
-                        {enterprise.website && (
-                          <Button
-                            variant="ghost"
+                        <div className="flex gap-1">
+                          <FavoriteButton
+                            enterpriseId={enterprise.id}
+                            enterpriseName={enterprise.name}
+                            variant="outline"
                             size="sm"
-                            className="p-1.5 md:p-2 touch-manipulation flex-shrink-0"
-                            onClick={() => window.open(enterprise.website!, "_blank")}
-                            data-testid={`button-visit-${enterprise.id}`}
-                          >
-                            <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
-                          </Button>
-                        )}
+                            className="flex-shrink-0"
+                          />
+                          {enterprise.website && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-1.5 md:p-2 touch-manipulation flex-shrink-0"
+                              onClick={() => window.open(enterprise.website!, "_blank")}
+                              data-testid={`button-visit-${enterprise.id}`}
+                            >
+                              <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Tags */}

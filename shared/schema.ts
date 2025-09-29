@@ -139,6 +139,18 @@ export const enterprises = pgTable("enterprises", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User favorites table - linking users to their favorite enterprises
+export const userFavorites = pgTable("user_favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  notes: text("notes"), // Optional personal notes/tags
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  // Ensure unique user-enterprise combination
+  index("user_favorites_unique_idx").on(table.userId, table.enterpriseId)
+]);
+
 // People table
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -473,6 +485,11 @@ export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({
   createdAt: true,
 });
 
+export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -504,3 +521,5 @@ export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
+export type UserFavorite = typeof userFavorites.$inferSelect;

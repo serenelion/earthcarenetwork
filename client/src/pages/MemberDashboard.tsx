@@ -1,8 +1,114 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useFavorites, useRecentFavorites, useFavoriteStats } from "@/contexts/FavoritesContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, User, Gift, BookOpen, Star, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Heart, User, Gift, BookOpen, Star, Users, ArrowRight, TrendingUp } from "lucide-react";
+import { Link } from "wouter";
+
+// Favorites Card Component for Dashboard
+function FavoritesCard() {
+  const { stats, isLoading: isLoadingStats } = useFavoriteStats();
+  const { recentFavorites, isLoading: isLoadingRecent } = useRecentFavorites(3);
+  
+  const isLoading = isLoadingStats || isLoadingRecent;
+  const totalFavorites = stats?.total || 0;
+  const hasRecentFavorites = recentFavorites.length > 0;
+
+  return (
+    <Card data-testid="card-favorites" className="group hover:shadow-md transition-shadow">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Heart className="h-5 w-5 text-primary" />
+          My Favorites
+        </CardTitle>
+        <CardDescription>
+          Enterprises and opportunities you've saved
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-2xl font-bold text-primary">{totalFavorites}</div>
+              <div className="text-sm text-muted-foreground">
+                {totalFavorites === 1 ? 'favorite' : 'favorites'}
+              </div>
+            </div>
+
+            {/* Recent Favorites Preview */}
+            {hasRecentFavorites ? (
+              <div className="space-y-2 mb-4">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  Recently Added:
+                </div>
+                {recentFavorites.map((favorite) => (
+                  <Link key={favorite.id} href={`/enterprises/${favorite.enterpriseId}`}>
+                    <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer group">
+                      <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+                      <span className="text-sm truncate group-hover:text-primary">
+                        {favorite.enterprise.name}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+                {totalFavorites > 3 && (
+                  <div className="text-xs text-muted-foreground">
+                    +{totalFavorites - 3} more
+                  </div>
+                )}
+              </div>
+            ) : totalFavorites === 0 ? (
+              <p className="text-sm text-muted-foreground mb-4">No favorites yet</p>
+            ) : null}
+
+            {/* Category Breakdown */}
+            {stats?.byCategory && Object.keys(stats.byCategory).length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  Categories:
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(stats.byCategory).map(([category, count]) => (
+                    <Badge key={category} variant="outline" className="text-xs">
+                      {category.replace('_', ' ')}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              {totalFavorites > 0 ? (
+                <Link href="/favorites">
+                  <Button variant="outline" className="w-full group" data-testid="button-view-all-favorites">
+                    View All Favorites
+                    <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/enterprises">
+                  <Button variant="outline" className="w-full" data-testid="button-browse-enterprises">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Browse Enterprises
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function MemberDashboard() {
   const { user } = useAuth();
@@ -41,24 +147,7 @@ export default function MemberDashboard() {
         </Card>
 
         {/* Favorites */}
-        <Card data-testid="card-favorites">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" />
-              My Favorites
-            </CardTitle>
-            <CardDescription>
-              Enterprises and opportunities you've saved
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground mb-2">0</div>
-            <p className="text-sm text-muted-foreground">No favorites yet</p>
-            <Button variant="outline" className="w-full mt-4" data-testid="button-browse-enterprises">
-              Browse Enterprises
-            </Button>
-          </CardContent>
-        </Card>
+        <FavoritesCard />
 
         {/* Member Benefits */}
         <Card data-testid="card-member-benefits">
