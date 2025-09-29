@@ -145,11 +145,8 @@ function Router() {
           
           <Route path="/directory*" component={Landing} />
           
-          <Route path="/enterprises">
-            <AuthenticatedRoute>
-              <Enterprises />
-            </AuthenticatedRoute>
-          </Route>
+          {/* Directory - accessible to all */}
+          <Route path="/enterprises" component={Enterprises} />
           
           <Route path="/people">
             <AuthenticatedRoute>

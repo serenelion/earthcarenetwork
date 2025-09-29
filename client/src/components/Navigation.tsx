@@ -39,12 +39,17 @@ export default function Navigation() {
               </div>
             </Link>
             
-            {/* Navigation - includes public docs */}
+            {/* Navigation - includes public docs and directory */}
             <nav className="hidden md:flex space-x-6">
               {/* Documentation - accessible to everyone */}
               <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="nav-docs">
                 <Book className="h-4 w-4" />
                 Docs
+              </Link>
+              
+              {/* Directory - accessible to everyone */}
+              <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-directory">
+                Directory
               </Link>
               
               {isAuthenticated && !isLoading && (
@@ -165,11 +170,6 @@ export default function Navigation() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
-                  {/* Common directories for all authenticated users */}
-                  <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-enterprises">
-                    Directory
-                  </Link>
                 </>
               )}
             </nav>
@@ -270,7 +270,7 @@ export default function Navigation() {
                     )}
                   </div>
                 ) : (
-                  // Visitor navigation - search and membership
+                  // Visitor navigation - search, sign in, and membership
                   <div className="flex items-center space-x-3">
                     {/* Global Search Trigger for visitors */}
                     <Button
@@ -286,6 +286,15 @@ export default function Navigation() {
                         <Command className="h-3 w-3" />
                         <span>K</span>
                       </div>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      className="text-sm font-medium"
+                      data-testid="button-sign-in"
+                      onClick={() => window.location.href = "/api/login"}
+                    >
+                      Sign In
                     </Button>
                     
                     <Button 

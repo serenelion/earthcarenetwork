@@ -8,7 +8,6 @@ import { Globe, Sprout, Coins, Wrench, Network, Search, User, ExternalLink } fro
 import SearchBar from "@/components/SearchBar";
 import EnterpriseCard from "@/components/EnterpriseCard";
 import CategorySection from "@/components/CategorySection";
-import Navigation from "@/components/Navigation";
 import type { Enterprise } from "@shared/schema";
 
 export default function Landing() {
@@ -63,8 +62,6 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <Navigation />
 
       {/* Hero Section */}
       <section className="hero-gradient earth-pattern text-white py-24">
