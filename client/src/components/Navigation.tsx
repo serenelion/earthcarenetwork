@@ -86,7 +86,7 @@ export default function Navigation() {
                   <Button 
                     className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 text-sm font-medium"
                     data-testid="button-become-member"
-                    onClick={() => window.location.href = "/api/login"}
+                    onClick={() => window.location.href = "/member-benefits"}
                   >
                     Become a Member
                   </Button>
