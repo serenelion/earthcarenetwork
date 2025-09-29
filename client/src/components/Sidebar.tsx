@@ -23,7 +23,8 @@ import {
   Map,
   ExternalLink,
   Menu,
-  X
+  X,
+  Settings
 } from "lucide-react";
 
 interface SidebarProps {
@@ -92,6 +93,16 @@ const navigationItems = [
         title: "Maps API", 
         href: "/maps", 
         icon: Map 
+      },
+    ]
+  },
+  {
+    title: "Workspace",
+    items: [
+      { 
+        title: "Settings", 
+        href: "/settings", 
+        icon: Settings 
       },
     ]
   }

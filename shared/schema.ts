@@ -206,6 +206,33 @@ export const chatMessages = pgTable("chat_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Custom field types
+export const customFieldTypeEnum = pgEnum('custom_field_type', [
+  'varchar',
+  'text', 
+  'integer',
+  'boolean',
+  'timestamp',
+  'enum'
+]);
+
+// Custom fields for dynamic schema extension
+export const customFields = pgTable("custom_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityName: varchar("entity_name").notNull(), // e.g., 'enterprises', 'people', etc.
+  fieldName: varchar("field_name").notNull(), // e.g., 'industry', 'custom_rating'
+  fieldType: customFieldTypeEnum("field_type").notNull(),
+  description: text("description"),
+  isRequired: boolean("is_required").default(false),
+  isUnique: boolean("is_unique").default(false),
+  enumValues: text("enum_values").array(), // For enum type fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Ensure unique field names per entity
+  index("custom_fields_entity_field_idx").on(table.entityName, table.fieldName)
+]);
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -254,6 +281,12 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export const insertCustomFieldSchema = createInsertSchema(customFields).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -273,3 +306,5 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
+export type CustomField = typeof customFields.$inferSelect;

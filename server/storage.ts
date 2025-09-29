@@ -8,6 +8,7 @@ import {
   businessContext,
   conversations,
   chatMessages,
+  customFields,
   type User,
   type UpsertUser,
   type Enterprise,
@@ -26,6 +27,8 @@ import {
   type InsertConversation,
   type ChatMessage,
   type InsertChatMessage,
+  type CustomField,
+  type InsertCustomField,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql } from "drizzle-orm";
@@ -86,6 +89,12 @@ export interface IStorage {
   getChatMessages(conversationId: string, limit?: number, offset?: number): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   deleteChatMessage(id: string): Promise<void>;
+  
+  // Custom fields operations
+  getCustomFields(entityName: string): Promise<CustomField[]>;
+  createCustomField(customField: InsertCustomField): Promise<CustomField>;
+  updateCustomField(id: string, customField: Partial<InsertCustomField>): Promise<CustomField>;
+  deleteCustomField(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -492,6 +501,33 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChatMessage(id: string): Promise<void> {
     await db.delete(chatMessages).where(eq(chatMessages.id, id));
+  }
+
+  // Custom fields operations
+  async getCustomFields(entityName: string): Promise<CustomField[]> {
+    return await db
+      .select()
+      .from(customFields)
+      .where(eq(customFields.entityName, entityName))
+      .orderBy(customFields.createdAt);
+  }
+
+  async createCustomField(customField: InsertCustomField): Promise<CustomField> {
+    const [result] = await db.insert(customFields).values(customField).returning();
+    return result;
+  }
+
+  async updateCustomField(id: string, customField: Partial<InsertCustomField>): Promise<CustomField> {
+    const [updated] = await db
+      .update(customFields)
+      .set({ ...customField, updatedAt: new Date() })
+      .where(eq(customFields.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCustomField(id: string): Promise<void> {
+    await db.delete(customFields).where(eq(customFields.id, id));
   }
 }
 

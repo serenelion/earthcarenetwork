@@ -21,7 +21,8 @@ import {
   insertCopilotContextSchema,
   insertBusinessContextSchema,
   insertConversationSchema,
-  insertChatMessageSchema
+  insertChatMessageSchema,
+  insertCustomFieldSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -549,6 +550,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in chat:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to process chat", error: errorMessage });
+    }
+  });
+
+  // Schema information routes
+  app.get('/api/crm/schema', isAuthenticated, async (req, res) => {
+    try {
+      // Define schema information for all entities
+      const schemaInfo = {
+        enterprises: {
+          name: "Enterprises",
+          description: "Companies and organizations in your network",
+          category: "Core CRM",
+          status: "Standard",
+          fields: [
+            { name: "id", type: "varchar", isPrimary: true, isRequired: true, description: "Unique identifier" },
+            { name: "name", type: "varchar", isPrimary: false, isRequired: true, description: "Enterprise name" },
+            { name: "description", type: "text", isPrimary: false, isRequired: false, description: "Enterprise description" },
+            { name: "category", type: "enum", isPrimary: false, isRequired: true, description: "Enterprise category", enumValues: ["land_projects", "capital_sources", "open_source_tools", "network_organizers"] },
+            { name: "location", type: "varchar", isPrimary: false, isRequired: false, description: "Geographic location" },
+            { name: "website", type: "varchar", isPrimary: false, isRequired: false, description: "Website URL" },
+            { name: "imageUrl", type: "varchar", isPrimary: false, isRequired: false, description: "Logo image URL" },
+            { name: "isVerified", type: "boolean", isPrimary: false, isRequired: false, description: "Verification status" },
+            { name: "followerCount", type: "integer", isPrimary: false, isRequired: false, description: "Number of followers" },
+            { name: "tags", type: "text[]", isPrimary: false, isRequired: false, description: "Associated tags" },
+            { name: "contactEmail", type: "varchar", isPrimary: false, isRequired: false, description: "Contact email address" },
+            { name: "sourceUrl", type: "varchar", isPrimary: false, isRequired: false, description: "Original source URL" },
+            { name: "createdAt", type: "timestamp", isPrimary: false, isRequired: false, description: "Creation timestamp" },
+            { name: "updatedAt", type: "timestamp", isPrimary: false, isRequired: false, description: "Last update timestamp" }
+          ],
+          relationships: [
+            { type: "hasMany", target: "people", foreignKey: "enterpriseId", description: "People associated with this enterprise" },
+            { type: "hasMany", target: "opportunities", foreignKey: "enterpriseId", description: "Opportunities for this enterprise" },
+            { type: "hasMany", target: "tasks", foreignKey: "relatedEnterpriseId", description: "Tasks related to this enterprise" }
+          ]
+        },
+        people: {
+          name: "People",
+          description: "Contacts and individuals",
+          category: "Core CRM",
+          status: "Standard",
+          fields: [
+            { name: "id", type: "varchar", isPrimary: true, isRequired: true, description: "Unique identifier" },
+            { name: "firstName", type: "varchar", isPrimary: false, isRequired: true, description: "First name" },
+            { name: "lastName", type: "varchar", isPrimary: false, isRequired: true, description: "Last name" },
+            { name: "email", type: "varchar", isPrimary: false, isRequired: false, description: "Email address", isUnique: true },
+            { name: "phone", type: "varchar", isPrimary: false, isRequired: false, description: "Phone number" },
+            { name: "title", type: "varchar", isPrimary: false, isRequired: false, description: "Job title" },
+            { name: "enterpriseId", type: "varchar", isPrimary: false, isRequired: false, description: "Associated enterprise ID", references: "enterprises.id" },
+            { name: "linkedinUrl", type: "varchar", isPrimary: false, isRequired: false, description: "LinkedIn profile URL" },
+            { name: "notes", type: "text", isPrimary: false, isRequired: false, description: "Additional notes" },
+            { name: "invitationStatus", type: "enum", isPrimary: false, isRequired: false, description: "Invitation status", enumValues: ["not_invited", "invited", "signed_up", "active"] },
+            { name: "claimStatus", type: "enum", isPrimary: false, isRequired: false, description: "Claim status", enumValues: ["unclaimed", "claimed", "verified"] },
+            { name: "buildProStatus", type: "enum", isPrimary: false, isRequired: false, description: "Build Pro subscription status", enumValues: ["not_offered", "offered", "trial", "subscribed", "cancelled"] },
+            { name: "supportStatus", type: "enum", isPrimary: false, isRequired: false, description: "Support inquiry status", enumValues: ["no_inquiry", "inquiry_sent", "in_progress", "resolved"] },
+            { name: "lastContactedAt", type: "timestamp", isPrimary: false, isRequired: false, description: "Last contact timestamp" }
+          ],
+          relationships: [
+            { type: "belongsTo", target: "enterprises", foreignKey: "enterpriseId", description: "Associated enterprise" },
+            { type: "hasMany", target: "opportunities", foreignKey: "primaryContactId", description: "Opportunities where this person is primary contact" },
+            { type: "hasMany", target: "tasks", foreignKey: "relatedPersonId", description: "Tasks related to this person" }
+          ]
+        },
+        opportunities: {
+          name: "Opportunities",
+          description: "Sales opportunities and deals",
+          category: "Core CRM", 
+          status: "Standard",
+          fields: [
+            { name: "id", type: "varchar", isPrimary: true, isRequired: true, description: "Unique identifier" },
+            { name: "title", type: "varchar", isPrimary: false, isRequired: true, description: "Opportunity title" },
+            { name: "description", type: "text", isPrimary: false, isRequired: false, description: "Opportunity description" },
+            { name: "value", type: "integer", isPrimary: false, isRequired: false, description: "Value in cents" },
+            { name: "status", type: "enum", isPrimary: false, isRequired: false, description: "Opportunity status", enumValues: ["lead", "qualified", "proposal", "negotiation", "closed_won", "closed_lost"] },
+            { name: "probability", type: "integer", isPrimary: false, isRequired: false, description: "Success probability (0-100)" },
+            { name: "enterpriseId", type: "varchar", isPrimary: false, isRequired: false, description: "Associated enterprise ID", references: "enterprises.id" },
+            { name: "primaryContactId", type: "varchar", isPrimary: false, isRequired: false, description: "Primary contact person ID", references: "people.id" },
+            { name: "expectedCloseDate", type: "timestamp", isPrimary: false, isRequired: false, description: "Expected close date" },
+            { name: "notes", type: "text", isPrimary: false, isRequired: false, description: "Additional notes" },
+            { name: "aiScore", type: "integer", isPrimary: false, isRequired: false, description: "AI-generated lead score (0-100)" },
+            { name: "aiInsights", type: "text", isPrimary: false, isRequired: false, description: "AI-generated insights" }
+          ],
+          relationships: [
+            { type: "belongsTo", target: "enterprises", foreignKey: "enterpriseId", description: "Associated enterprise" },
+            { type: "belongsTo", target: "people", foreignKey: "primaryContactId", description: "Primary contact person" },
+            { type: "hasMany", target: "tasks", foreignKey: "relatedOpportunityId", description: "Tasks related to this opportunity" }
+          ]
+        },
+        tasks: {
+          name: "Tasks",
+          description: "Action items and to-dos",
+          category: "System",
+          status: "Standard",
+          fields: [
+            { name: "id", type: "varchar", isPrimary: true, isRequired: true, description: "Unique identifier" },
+            { name: "title", type: "varchar", isPrimary: false, isRequired: true, description: "Task title" },
+            { name: "description", type: "text", isPrimary: false, isRequired: false, description: "Task description" },
+            { name: "priority", type: "enum", isPrimary: false, isRequired: false, description: "Task priority", enumValues: ["low", "medium", "high", "urgent"] },
+            { name: "status", type: "enum", isPrimary: false, isRequired: false, description: "Task status", enumValues: ["pending", "in_progress", "completed", "cancelled"] },
+            { name: "dueDate", type: "timestamp", isPrimary: false, isRequired: false, description: "Due date" },
+            { name: "assignedToId", type: "varchar", isPrimary: false, isRequired: false, description: "Assigned user ID", references: "users.id" },
+            { name: "relatedEnterpriseId", type: "varchar", isPrimary: false, isRequired: false, description: "Related enterprise ID", references: "enterprises.id" },
+            { name: "relatedPersonId", type: "varchar", isPrimary: false, isRequired: false, description: "Related person ID", references: "people.id" },
+            { name: "relatedOpportunityId", type: "varchar", isPrimary: false, isRequired: false, description: "Related opportunity ID", references: "opportunities.id" }
+          ],
+          relationships: [
+            { type: "belongsTo", target: "users", foreignKey: "assignedToId", description: "Assigned user" },
+            { type: "belongsTo", target: "enterprises", foreignKey: "relatedEnterpriseId", description: "Related enterprise" },
+            { type: "belongsTo", target: "people", foreignKey: "relatedPersonId", description: "Related person" },
+            { type: "belongsTo", target: "opportunities", foreignKey: "relatedOpportunityId", description: "Related opportunity" }
+          ]
+        },
+        users: {
+          name: "Users",
+          description: "System users and authentication",
+          category: "System",
+          status: "Standard", 
+          fields: [
+            { name: "id", type: "varchar", isPrimary: true, isRequired: true, description: "Unique identifier" },
+            { name: "email", type: "varchar", isPrimary: false, isRequired: false, description: "Email address", isUnique: true },
+            { name: "firstName", type: "varchar", isPrimary: false, isRequired: false, description: "First name" },
+            { name: "lastName", type: "varchar", isPrimary: false, isRequired: false, description: "Last name" },
+            { name: "profileImageUrl", type: "varchar", isPrimary: false, isRequired: false, description: "Profile image URL" },
+            { name: "createdAt", type: "timestamp", isPrimary: false, isRequired: false, description: "Creation timestamp" },
+            { name: "updatedAt", type: "timestamp", isPrimary: false, isRequired: false, description: "Last update timestamp" }
+          ],
+          relationships: [
+            { type: "hasMany", target: "tasks", foreignKey: "assignedToId", description: "Assigned tasks" },
+            { type: "hasMany", target: "copilotContext", foreignKey: "userId", description: "Copilot context settings" },
+            { type: "hasMany", target: "businessContext", foreignKey: "userId", description: "Business context settings" },
+            { type: "hasMany", target: "conversations", foreignKey: "userId", description: "Chat conversations" }
+          ]
+        }
+      };
+
+      // Get custom fields for each entity and merge them with standard fields
+      const entities = Object.keys(schemaInfo);
+      for (const entityName of entities) {
+        const customFields = await storage.getCustomFields(entityName);
+        
+        // Convert custom fields to the same format as standard fields
+        const customFieldsFormatted = customFields.map(field => ({
+          name: field.fieldName,
+          type: field.fieldType,
+          isPrimary: false,
+          isRequired: field.isRequired || false,
+          isUnique: field.isUnique || false,
+          description: field.description || `Custom ${field.fieldType} field`,
+          enumValues: field.enumValues || undefined,
+          isCustom: true, // Mark as custom field for frontend identification
+        }));
+        
+        // Add custom fields to the entity's fields array
+        schemaInfo[entityName].fields.push(...customFieldsFormatted);
+      }
+
+      res.json(schemaInfo);
+    } catch (error) {
+      console.error("Error fetching schema info:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch schema info", error: errorMessage });
+    }
+  });
+
+  // Custom fields management
+  app.post('/api/crm/schema/entities/:entityName/fields', isAuthenticated, async (req, res) => {
+    try {
+      const { entityName } = req.params;
+      
+      // Validate entity name exists in our schema
+      const validEntities = ['enterprises', 'people', 'opportunities', 'tasks', 'users'];
+      if (!validEntities.includes(entityName)) {
+        return res.status(400).json({ message: "Invalid entity name" });
+      }
+
+      const validatedData = insertCustomFieldSchema.parse({
+        ...req.body,
+        entityName,
+      });
+
+      const customField = await storage.createCustomField(validatedData);
+      res.status(201).json(customField);
+    } catch (error) {
+      console.error("Error creating custom field:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create custom field", error: errorMessage });
     }
   });
 

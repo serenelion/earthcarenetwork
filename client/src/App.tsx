@@ -12,6 +12,7 @@ import Opportunities from "@/pages/Opportunities";
 import Tasks from "@/pages/Tasks";
 import Copilot from "@/pages/Copilot";
 import BulkImport from "@/pages/BulkImport";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/tasks" component={Tasks} />
           <Route path="/copilot" component={Copilot} />
           <Route path="/bulk-import" component={BulkImport} />
+          <Route path="/settings*" component={Settings} />
         </>
       )}
       <Route component={NotFound} />
