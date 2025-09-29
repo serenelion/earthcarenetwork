@@ -33,7 +33,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import FavoriteButton from "@/components/FavoriteButton";
-import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 
@@ -129,26 +128,6 @@ export default function Favorites() {
   }
 
   return (
-    <SubscriptionGuard
-      requiredMembership="member"
-      fallbackComponent={
-        <div className="container mx-auto px-4 py-8 text-center">
-          <div className="max-w-md mx-auto">
-            <Heart className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold mb-2">Member Feature</h1>
-            <p className="text-muted-foreground mb-6">
-              Favorites are available to Earth Care Network members. Save your favorite enterprises and create a personalized experience.
-            </p>
-            <Link href="/pricing">
-              <Button className="w-full">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Become a Member
-              </Button>
-            </Link>
-          </div>
-        </div>
-      }
-    >
       <div className="container mx-auto px-4 py-8" data-testid="favorites-page">
         {/* Header Section */}
         <div className="mb-8">
@@ -387,6 +366,5 @@ export default function Favorites() {
           </>
         )}
       </div>
-    </SubscriptionGuard>
   );
 }
