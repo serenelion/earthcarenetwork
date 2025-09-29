@@ -42,6 +42,24 @@ export const membershipStatusEnum = pgEnum('membership_status', [
   'cancelled'
 ]);
 
+// Subscription status enum for Stripe subscriptions
+export const subscriptionStatusEnum = pgEnum('subscription_status', [
+  'trial',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'incomplete',
+  'incomplete_expired'
+]);
+
+// Plan types for subscription tiers
+export const planTypeEnum = pgEnum('plan_type', [
+  'free',
+  'crm_basic',
+  'build_pro_bundle'
+]);
+
 // User storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
@@ -52,6 +70,16 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: userRoleEnum("role").default('visitor'),
   membershipStatus: membershipStatusEnum("membership_status").default('free'),
+  // Stripe integration fields
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status"),
+  currentPlanType: planTypeEnum("current_plan_type").default('free'),
+  subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
+  // AI Usage tracking
+  tokenUsageThisMonth: integer("token_usage_this_month").default(0),
+  tokenQuotaLimit: integer("token_quota_limit").default(10000), // Default free tier limit
+  lastTokenUsageReset: timestamp("last_token_usage_reset").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -302,6 +330,66 @@ export const opportunityTransfers = pgTable("opportunity_transfers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Subscription plans table - defines available subscription tiers
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  planType: planTypeEnum("plan_type").notNull(),
+  name: varchar("name").notNull(), // "CRM Basic", "Build Pro Bundle", etc.
+  description: text("description"),
+  priceMonthly: integer("price_monthly").notNull(), // in cents
+  priceYearly: integer("price_yearly"), // in cents, optional
+  stripePriceIdMonthly: varchar("stripe_price_id_monthly"), // Stripe price ID for monthly billing
+  stripePriceIdYearly: varchar("stripe_price_id_yearly"), // Stripe price ID for yearly billing
+  features: text("features").array(), // Array of feature descriptions
+  tokenQuotaLimit: integer("token_quota_limit").default(10000), // AI usage token limit
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User subscriptions table - tracks active subscriptions
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  planId: varchar("plan_id").references(() => subscriptionPlans.id).notNull(),
+  // Stripe fields
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique(),
+  stripeCustomerId: varchar("stripe_customer_id").notNull(),
+  stripePriceId: varchar("stripe_price_id").notNull(),
+  // Subscription status and timing
+  status: subscriptionStatusEnum("status").notNull(),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  cancelAt: timestamp("cancel_at"), // When subscription is scheduled to cancel
+  canceledAt: timestamp("canceled_at"), // When subscription was actually canceled
+  // Billing
+  isYearly: boolean("is_yearly").default(false),
+  lastPaymentAmount: integer("last_payment_amount"), // in cents
+  lastPaymentAt: timestamp("last_payment_at"),
+  nextBillingDate: timestamp("next_billing_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI usage tracking table - detailed token usage logs
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  // Usage details
+  operationType: varchar("operation_type").notNull(), // 'chat', 'lead_score', 'content_generation', etc.
+  tokensUsed: integer("tokens_used").notNull(),
+  cost: integer("cost"), // in cents, for future billing
+  // Context
+  entityType: varchar("entity_type"), // 'opportunity', 'person', 'enterprise', etc.
+  entityId: varchar("entity_id"), // ID of the related entity
+  metadata: jsonb("metadata"), // Additional context, request details
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -368,6 +456,23 @@ export const insertOpportunityTransferSchema = createInsertSchema(opportunityTra
   updatedAt: true,
 });
 
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -393,3 +498,9 @@ export type InsertPartnerApplication = z.infer<typeof insertPartnerApplicationSc
 export type PartnerApplication = typeof partnerApplications.$inferSelect;
 export type InsertOpportunityTransfer = z.infer<typeof insertOpportunityTransferSchema>;
 export type OpportunityTransfer = typeof opportunityTransfers.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;

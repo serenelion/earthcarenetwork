@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -24,8 +24,20 @@ import {
   insertChatMessageSchema,
   insertCustomFieldSchema,
   insertPartnerApplicationSchema,
-  insertOpportunityTransferSchema
+  insertOpportunityTransferSchema,
+  insertSubscriptionPlanSchema,
+  insertSubscriptionSchema,
+  insertAiUsageLogSchema
 } from "@shared/schema";
+import Stripe from "stripe";
+
+// Initialize Stripe (will be used when API keys are available)
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2023-10-16",
+  });
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1315,6 +1327,415 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting partner application:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to delete partner application", error: errorMessage });
+    }
+  });
+
+  // ====== SUBSCRIPTION MANAGEMENT ROUTES ======
+
+  // Public subscription plans (no auth required)
+  app.get('/api/subscription-plans', async (req, res) => {
+    try {
+      const plans = await storage.getSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch subscription plans", error: errorMessage });
+    }
+  });
+
+  // User subscription status (authenticated)
+  app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      const subscription = await storage.getUserSubscription(userId);
+      const tokenUsage = await storage.getUserTokenUsageThisMonth(userId);
+
+      res.json({
+        user: {
+          currentPlanType: user?.currentPlanType || 'free',
+          subscriptionStatus: user?.subscriptionStatus,
+          subscriptionCurrentPeriodEnd: user?.subscriptionCurrentPeriodEnd,
+          tokenUsageThisMonth: tokenUsage,
+          tokenQuotaLimit: user?.tokenQuotaLimit || 10000
+        },
+        subscription: subscription || null
+      });
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch subscription status", error: errorMessage });
+    }
+  });
+
+  // Create Stripe checkout session
+  app.post('/api/subscription/create-checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." });
+      }
+
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { planType, isYearly = false } = req.body;
+      
+      // Get the subscription plan
+      const plan = await storage.getSubscriptionPlanByType(planType);
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email required" });
+      }
+
+      // Get or create Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          metadata: { userId }
+        });
+        stripeCustomerId = customer.id;
+        await storage.updateUserStripeInfo(userId, stripeCustomerId);
+      }
+
+      // Create Stripe checkout session
+      const priceId = isYearly ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly;
+      if (!priceId) {
+        return res.status(400).json({ message: "Price ID not configured for this plan" });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/subscription/canceled`,
+        metadata: {
+          userId,
+          planId: plan.id,
+          planType: plan.planType,
+          isYearly: isYearly.toString()
+        }
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create checkout session", error: errorMessage });
+    }
+  });
+
+  // Create Stripe billing portal session
+  app.post('/api/subscription/billing-portal', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe not configured" });
+      }
+
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer found" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin}/subscription/dashboard`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating billing portal session:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create billing portal session", error: errorMessage });
+    }
+  });
+
+  // Cancel subscription
+  app.post('/api/subscription/cancel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const subscription = await storage.getUserSubscription(userId);
+      if (!subscription) {
+        return res.status(404).json({ message: "No active subscription found" });
+      }
+
+      // Cancel the subscription (it will remain active until period end)
+      const canceledSubscription = await storage.cancelSubscription(subscription.id);
+      
+      // Update user subscription status
+      await storage.updateUserSubscriptionStatus(userId, 'canceled');
+
+      res.json({ 
+        message: "Subscription canceled successfully. Access will continue until the end of your billing period.",
+        subscription: canceledSubscription 
+      });
+    } catch (error) {
+      console.error("Error canceling subscription:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to cancel subscription", error: errorMessage });
+    }
+  });
+
+  // AI Usage tracking
+  app.post('/api/ai-usage/log', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { operationType, tokensUsed, entityType, entityId, metadata } = req.body;
+      
+      // Check quota before logging
+      const quotaCheck = await storage.checkUserTokenQuota(userId, tokensUsed);
+      if (!quotaCheck.allowed) {
+        return res.status(429).json({ 
+          message: "Token quota exceeded", 
+          remainingTokens: quotaCheck.remainingTokens 
+        });
+      }
+
+      const subscription = await storage.getUserSubscription(userId);
+      const usage = await storage.logAiUsage({
+        userId,
+        subscriptionId: subscription?.id || null,
+        operationType,
+        tokensUsed,
+        entityType: entityType || null,
+        entityId: entityId || null,
+        metadata: metadata || null
+      });
+
+      res.json({ 
+        usage, 
+        remainingTokens: quotaCheck.remainingTokens - tokensUsed 
+      });
+    } catch (error) {
+      console.error("Error logging AI usage:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to log AI usage", error: errorMessage });
+    }
+  });
+
+  // Get user AI usage history
+  app.get('/api/ai-usage/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { startDate, endDate, limit = 100, offset = 0 } = req.query;
+      
+      const usage = await storage.getUserAiUsage(
+        userId,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+
+      // Apply pagination manually since storage method doesn't support it
+      const paginatedUsage = usage.slice(
+        parseInt(offset as string), 
+        parseInt(offset as string) + parseInt(limit as string)
+      );
+
+      res.json({
+        usage: paginatedUsage,
+        total: usage.length,
+        hasMore: usage.length > parseInt(offset as string) + parseInt(limit as string)
+      });
+    } catch (error) {
+      console.error("Error fetching AI usage history:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch AI usage history", error: errorMessage });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).send('Stripe not configured');
+      }
+
+      const sig = req.headers['stripe-signature'];
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      
+      if (!sig || !webhookSecret) {
+        return res.status(400).send('Missing signature or webhook secret');
+      }
+
+      let event: Stripe.Event;
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } catch (err) {
+        console.error('Webhook signature verification failed:', err);
+        return res.status(400).send('Webhook signature verification failed');
+      }
+
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const { userId, planId, planType, isYearly } = session.metadata || {};
+          
+          if (userId && planId && planType) {
+            // Create subscription record
+            await storage.createSubscription({
+              userId,
+              planId,
+              stripeSubscriptionId: session.subscription as string,
+              stripeCustomerId: session.customer as string,
+              stripePriceId: session.line_items?.data[0]?.price?.id || '',
+              status: 'active',
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + (isYearly === 'true' ? 365 : 30) * 24 * 60 * 60 * 1000),
+              isYearly: isYearly === 'true'
+            });
+
+            // Update user subscription status
+            await storage.updateUserSubscriptionStatus(userId, 'active');
+            console.log('Subscription created for user:', userId);
+          }
+          break;
+        }
+
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const user = await storage.getUserByStripeCustomerId(subscription.customer as string);
+          
+          if (user) {
+            await storage.updateSubscriptionByStripeId(subscription.id, {
+              status: subscription.status as any,
+              currentPeriodStart: new Date(subscription.current_period_start * 1000),
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+            });
+
+            await storage.updateUserSubscriptionStatus(
+              user.id, 
+              subscription.status as any,
+              new Date(subscription.current_period_end * 1000)
+            );
+            console.log('Subscription updated for user:', user.id);
+          }
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const user = await storage.getUserByStripeCustomerId(subscription.customer as string);
+          
+          if (user) {
+            await storage.updateSubscriptionByStripeId(subscription.id, {
+              status: 'canceled',
+              canceledAt: new Date()
+            });
+
+            await storage.updateUserSubscriptionStatus(user.id, 'canceled');
+            console.log('Subscription canceled for user:', user.id);
+          }
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object as Stripe.Invoice;
+          const user = await storage.getUserByStripeCustomerId(invoice.customer as string);
+          
+          if (user) {
+            await storage.updateUserSubscriptionStatus(user.id, 'past_due');
+            console.log('Payment failed for user:', user.id);
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Stripe webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  // Admin subscription management routes
+  app.get('/api/admin/subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      // TODO: Add admin role check here
+      const { limit = 50, offset = 0, status } = req.query;
+      
+      let subscriptions;
+      if (status) {
+        subscriptions = await storage.getSubscriptionsByStatus(
+          status as any,
+          parseInt(limit as string),
+          parseInt(offset as string)
+        );
+      } else {
+        subscriptions = await storage.getAllSubscriptions(
+          parseInt(limit as string),
+          parseInt(offset as string)
+        );
+      }
+
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching admin subscriptions:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch subscriptions", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/subscription-stats', isAuthenticated, async (req, res) => {
+    try {
+      // TODO: Add admin role check here
+      const stats = await storage.getSubscriptionStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching subscription stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch subscription stats", error: errorMessage });
+    }
+  });
+
+  // Subscription plan management (admin only)
+  app.post('/api/admin/subscription-plans', isAuthenticated, async (req, res) => {
+    try {
+      // TODO: Add admin role check here
+      const validatedData = insertSubscriptionPlanSchema.parse(req.body);
+      const plan = await storage.createSubscriptionPlan(validatedData);
+      res.status(201).json(plan);
+    } catch (error) {
+      console.error("Error creating subscription plan:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create subscription plan", error: errorMessage });
     }
   });
 

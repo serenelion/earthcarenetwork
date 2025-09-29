@@ -3,9 +3,12 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
+import { Link } from "wouter";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import MemberDashboard from "@/pages/MemberDashboard";
@@ -25,6 +28,8 @@ import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
 import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
 import AdminOpportunityTransfers from "@/pages/AdminOpportunityTransfers";
 import ClaimEnterprise from "@/pages/ClaimEnterprise";
+import Pricing from "@/pages/Pricing";
+import SubscriptionDashboard from "@/pages/SubscriptionDashboard";
 import NotFound from "@/pages/not-found";
 // Documentation imports
 import DocsLayout from "@/components/docs/DocsLayout";
@@ -46,6 +51,8 @@ function Router() {
           <Route path="/partner-application" component={PartnerApplication} />
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
           <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/plans" component={Pricing} />
           
           {/* Documentation routes - accessible to all */}
           <Route path="/docs*">
@@ -178,6 +185,51 @@ function Router() {
             </AuthenticatedRoute>
           </Route>
           
+          {/* Subscription routes */}
+          <Route path="/subscription/dashboard">
+            <AuthenticatedRoute>
+              <SubscriptionDashboard />
+            </AuthenticatedRoute>
+          </Route>
+
+          <Route path="/subscription/success">
+            <AuthenticatedRoute>
+              <div className="p-8 text-center max-w-2xl mx-auto">
+                <h1 className="text-3xl font-bold text-green-600 mb-4">Subscription Successful!</h1>
+                <p className="text-muted-foreground mb-8">
+                  Welcome to your new subscription. You now have access to all the features of your plan.
+                </p>
+                <div className="space-x-4">
+                  <Button asChild>
+                    <Link href="/subscription/dashboard">View Dashboard</Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href="/crm">Start Using CRM</Link>
+                  </Button>
+                </div>
+              </div>
+            </AuthenticatedRoute>
+          </Route>
+
+          <Route path="/subscription/canceled">
+            <AuthenticatedRoute>
+              <div className="p-8 text-center max-w-2xl mx-auto">
+                <h1 className="text-2xl font-bold mb-4">Subscription Canceled</h1>
+                <p className="text-muted-foreground mb-8">
+                  Your subscription process was canceled. No charges were made.
+                </p>
+                <div className="space-x-4">
+                  <Button asChild>
+                    <Link href="/pricing">View Plans</Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href="/dashboard">Return to Dashboard</Link>
+                  </Button>
+                </div>
+              </div>
+            </AuthenticatedRoute>
+          </Route>
+
           {/* Member-specific routes */}
           <Route path="/favorites">
             <MemberOrHigherRoute>
@@ -227,10 +279,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <SubscriptionProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </SubscriptionProvider>
     </QueryClientProvider>
   );
 }

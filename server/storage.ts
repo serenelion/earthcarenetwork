@@ -11,8 +11,13 @@ import {
   customFields,
   partnerApplications,
   opportunityTransfers,
+  subscriptionPlans,
+  subscriptions,
+  aiUsageLogs,
   userRoleEnum,
   membershipStatusEnum,
+  subscriptionStatusEnum,
+  planTypeEnum,
   type User,
   type UpsertUser,
   type Enterprise,
@@ -37,6 +42,12 @@ import {
   type InsertPartnerApplication,
   type OpportunityTransfer,
   type InsertOpportunityTransfer,
+  type SubscriptionPlan,
+  type InsertSubscriptionPlan,
+  type Subscription,
+  type InsertSubscription,
+  type AiUsageLog,
+  type InsertAiUsageLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -150,6 +161,46 @@ export interface IStorage {
     tasks: Array<Task & { entityType: 'task'; matchContext?: string }>;
     totalResults: number;
   }>;
+
+  // Subscription plan operations
+  getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
+  getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined>;
+  getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined>;
+  createSubscriptionPlan(plan: InsertSubscriptionPlan): Promise<SubscriptionPlan>;
+  updateSubscriptionPlan(id: string, plan: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan>;
+  deleteSubscriptionPlan(id: string): Promise<void>;
+
+  // User subscription operations
+  getUserSubscription(userId: string): Promise<Subscription | undefined>;
+  getSubscription(id: string): Promise<Subscription | undefined>;
+  getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
+  updateSubscriptionByStripeId(stripeSubscriptionId: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
+  cancelSubscription(id: string, canceledAt?: Date): Promise<Subscription>;
+  
+  // Subscription management for Stripe integration
+  updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId?: string): Promise<User>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  updateUserSubscriptionStatus(userId: string, status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired', currentPeriodEnd?: Date): Promise<User>;
+
+  // AI usage tracking operations
+  logAiUsage(usage: InsertAiUsageLog): Promise<AiUsageLog>;
+  getUserAiUsage(userId: string, startDate?: Date, endDate?: Date): Promise<AiUsageLog[]>;
+  getUserTokenUsageThisMonth(userId: string): Promise<number>;
+  resetUserTokenUsage(userId: string): Promise<User>;
+  checkUserTokenQuota(userId: string, tokensToUse: number): Promise<{ allowed: boolean; remainingTokens: number }>;
+
+  // Subscription analytics and admin operations
+  getSubscriptionStats(): Promise<{ 
+    total: number; 
+    byPlan: Record<string, number>; 
+    byStatus: Record<string, number>;
+    totalMrr: number; // Monthly Recurring Revenue in cents
+    churnRate: number;
+  }>;
+  getAllSubscriptions(limit?: number, offset?: number): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>>;
+  getSubscriptionsByStatus(status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired', limit?: number, offset?: number): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1153,6 +1204,318 @@ export class DatabaseStorage implements IStorage {
     if (task.title?.toLowerCase().includes(q)) return `Title: ${task.title}`;
     if (task.description?.toLowerCase().includes(q)) return `Description: ${task.description?.substring(0, 100)}...`;
     return task.title || 'Unknown Task';
+  }
+
+  // Subscription plan operations
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db.select().from(subscriptionPlans)
+      .where(eq(subscriptionPlans.isActive, true))
+      .orderBy(subscriptionPlans.displayOrder);
+  }
+
+  async getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db.select().from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, id));
+    return plan;
+  }
+
+  async getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db.select().from(subscriptionPlans)
+      .where(and(
+        eq(subscriptionPlans.planType, planType),
+        eq(subscriptionPlans.isActive, true)
+      ));
+    return plan;
+  }
+
+  async createSubscriptionPlan(plan: InsertSubscriptionPlan): Promise<SubscriptionPlan> {
+    const [created] = await db.insert(subscriptionPlans)
+      .values(plan)
+      .returning();
+    return created;
+  }
+
+  async updateSubscriptionPlan(id: string, plan: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan> {
+    const [updated] = await db.update(subscriptionPlans)
+      .set({ ...plan, updatedAt: new Date() })
+      .where(eq(subscriptionPlans.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSubscriptionPlan(id: string): Promise<void> {
+    await db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, id));
+  }
+
+  // User subscription operations
+  async getUserSubscription(userId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1);
+    return subscription;
+  }
+
+  async getSubscription(id: string): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions)
+      .where(eq(subscriptions.id, id));
+    return subscription;
+  }
+
+  async getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions)
+      .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+    return subscription;
+  }
+
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [created] = await db.insert(subscriptions)
+      .values(subscription)
+      .returning();
+    return created;
+  }
+
+  async updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription> {
+    const [updated] = await db.update(subscriptions)
+      .set({ ...subscription, updatedAt: new Date() })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateSubscriptionByStripeId(stripeSubscriptionId: string, subscription: Partial<InsertSubscription>): Promise<Subscription> {
+    const [updated] = await db.update(subscriptions)
+      .set({ ...subscription, updatedAt: new Date() })
+      .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+      .returning();
+    return updated;
+  }
+
+  async cancelSubscription(id: string, canceledAt?: Date): Promise<Subscription> {
+    const [updated] = await db.update(subscriptions)
+      .set({ 
+        status: 'canceled', 
+        canceledAt: canceledAt || new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Subscription management for Stripe integration
+  async updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId?: string): Promise<User> {
+    const updateData: Partial<User> = {
+      stripeCustomerId,
+      updatedAt: new Date()
+    };
+    if (stripeSubscriptionId) {
+      updateData.stripeSubscriptionId = stripeSubscriptionId;
+    }
+
+    const [updated] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users)
+      .where(eq(users.stripeCustomerId, stripeCustomerId));
+    return user;
+  }
+
+  async updateUserSubscriptionStatus(
+    userId: string, 
+    status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired', 
+    currentPeriodEnd?: Date
+  ): Promise<User> {
+    const updateData: Partial<User> = {
+      subscriptionStatus: status,
+      updatedAt: new Date()
+    };
+    if (currentPeriodEnd) {
+      updateData.subscriptionCurrentPeriodEnd = currentPeriodEnd;
+    }
+
+    const [updated] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  // AI usage tracking operations
+  async logAiUsage(usage: InsertAiUsageLog): Promise<AiUsageLog> {
+    const [created] = await db.insert(aiUsageLogs)
+      .values(usage)
+      .returning();
+
+    // Update user's monthly token usage
+    await db.update(users)
+      .set({
+        tokenUsageThisMonth: sql`${users.tokenUsageThisMonth} + ${usage.tokensUsed}`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, usage.userId));
+
+    return created;
+  }
+
+  async getUserAiUsage(userId: string, startDate?: Date, endDate?: Date): Promise<AiUsageLog[]> {
+    let query = db.select().from(aiUsageLogs)
+      .where(eq(aiUsageLogs.userId, userId))
+      .orderBy(desc(aiUsageLogs.createdAt));
+
+    if (startDate && endDate) {
+      query = query.where(
+        and(
+          eq(aiUsageLogs.userId, userId),
+          sql`${aiUsageLogs.createdAt} >= ${startDate}`,
+          sql`${aiUsageLogs.createdAt} <= ${endDate}`
+        )
+      );
+    }
+
+    return await query;
+  }
+
+  async getUserTokenUsageThisMonth(userId: string): Promise<number> {
+    const [user] = await db.select({ 
+      tokenUsageThisMonth: users.tokenUsageThisMonth 
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+    
+    return user?.tokenUsageThisMonth || 0;
+  }
+
+  async resetUserTokenUsage(userId: string): Promise<User> {
+    const [updated] = await db.update(users)
+      .set({
+        tokenUsageThisMonth: 0,
+        lastTokenUsageReset: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async checkUserTokenQuota(userId: string, tokensToUse: number): Promise<{ allowed: boolean; remainingTokens: number }> {
+    const [user] = await db.select({
+      tokenUsageThisMonth: users.tokenUsageThisMonth,
+      tokenQuotaLimit: users.tokenQuotaLimit
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+
+    if (!user) {
+      return { allowed: false, remainingTokens: 0 };
+    }
+
+    const currentUsage = user.tokenUsageThisMonth || 0;
+    const quotaLimit = user.tokenQuotaLimit || 10000;
+    const remainingTokens = Math.max(0, quotaLimit - currentUsage);
+    const allowed = currentUsage + tokensToUse <= quotaLimit;
+
+    return { allowed, remainingTokens };
+  }
+
+  // Subscription analytics and admin operations
+  async getSubscriptionStats(): Promise<{ 
+    total: number; 
+    byPlan: Record<string, number>; 
+    byStatus: Record<string, number>;
+    totalMrr: number;
+    churnRate: number;
+  }> {
+    // Get total subscriptions
+    const [totalResult] = await db.select({ count: count() })
+      .from(subscriptions);
+
+    // Get counts by plan type
+    const planCounts = await db.select({
+      planType: subscriptionPlans.planType,
+      count: count()
+    })
+    .from(subscriptions)
+    .leftJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+    .groupBy(subscriptionPlans.planType);
+
+    // Get counts by status
+    const statusCounts = await db.select({
+      status: subscriptions.status,
+      count: count()
+    })
+    .from(subscriptions)
+    .groupBy(subscriptions.status);
+
+    // Calculate MRR (Monthly Recurring Revenue)
+    const mrrResult = await db.select({
+      totalMrr: sql<number>`SUM(CASE WHEN ${subscriptions.isYearly} = true THEN ${subscriptions.lastPaymentAmount} / 12 ELSE ${subscriptions.lastPaymentAmount} END)`
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.status, 'active'));
+
+    // Calculate churn rate (simplified - canceled this month / total active last month)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [churnResult] = await db.select({
+      canceledThisMonth: count(sql`CASE WHEN ${subscriptions.canceledAt} >= ${thirtyDaysAgo} THEN 1 END`),
+      totalActive: count(sql`CASE WHEN ${subscriptions.status} = 'active' THEN 1 END`)
+    })
+    .from(subscriptions);
+
+    const churnRate = churnResult.totalActive > 0 ? 
+      (churnResult.canceledThisMonth / churnResult.totalActive) * 100 : 0;
+
+    return {
+      total: totalResult.count,
+      byPlan: Object.fromEntries(planCounts.map(p => [p.planType || 'unknown', p.count])),
+      byStatus: Object.fromEntries(statusCounts.map(s => [s.status, s.count])),
+      totalMrr: mrrResult[0]?.totalMrr || 0,
+      churnRate
+    };
+  }
+
+  async getAllSubscriptions(limit: number = 50, offset: number = 0): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>> {
+    const results = await db.select()
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      ...result.subscriptions,
+      user: result.users!,
+      plan: result.subscription_plans!
+    }));
+  }
+
+  async getSubscriptionsByStatus(
+    status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired',
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>> {
+    const results = await db.select()
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+      .where(eq(subscriptions.status, status))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      ...result.subscriptions,
+      user: result.users!,
+      plan: result.subscription_plans!
+    }));
   }
 }
 
