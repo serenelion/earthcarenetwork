@@ -13,16 +13,18 @@ import Tasks from "@/pages/Tasks";
 import Copilot from "@/pages/Copilot";
 import BulkImport from "@/pages/BulkImport";
 import Settings from "@/pages/Settings";
+import Partners from "@/pages/Partners";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // If loading or not authenticated, show only landing route
+  // If loading or not authenticated, show only landing and partners routes
   if (isLoading || !isAuthenticated) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/partners" component={Partners} />
         <Route component={NotFound} />
       </Switch>
     );
@@ -37,6 +39,7 @@ function Router() {
       <Route path="/people" component={People} />
       <Route path="/opportunities" component={Opportunities} />
       <Route path="/tasks" component={Tasks} />
+      <Route path="/partners" component={Partners} />
       <Route path="/copilot" component={Copilot} />
       <Route path="/bulk-import" component={BulkImport} />
       <Route path="/settings*" component={Settings} />

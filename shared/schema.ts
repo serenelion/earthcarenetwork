@@ -233,6 +233,31 @@ export const customFields = pgTable("custom_fields", {
   index("custom_fields_entity_field_idx").on(table.entityName, table.fieldName)
 ]);
 
+// Partner application status
+export const partnerApplicationStatusEnum = pgEnum('partner_application_status', [
+  'pending',
+  'under_review',
+  'approved',
+  'rejected'
+]);
+
+// Partner applications for Council of New Earth Enterprises
+export const partnerApplications = pgTable("partner_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationName: varchar("organization_name").notNull(),
+  contactPerson: varchar("contact_person").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  description: text("description"), // Organization/Mission description
+  areasOfFocus: text("areas_of_focus").array(), // Areas they focus on
+  contribution: text("contribution"), // How they'd contribute to the network
+  status: partnerApplicationStatusEnum("status").default('pending'),
+  notes: text("notes"), // Internal notes for review
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -287,6 +312,12 @@ export const insertCustomFieldSchema = createInsertSchema(customFields).omit({
   updatedAt: true,
 });
 
+export const insertPartnerApplicationSchema = createInsertSchema(partnerApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -308,3 +339,5 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
 export type CustomField = typeof customFields.$inferSelect;
+export type InsertPartnerApplication = z.infer<typeof insertPartnerApplicationSchema>;
+export type PartnerApplication = typeof partnerApplications.$inferSelect;

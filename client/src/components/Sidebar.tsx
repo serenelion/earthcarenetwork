@@ -64,6 +64,11 @@ const navigationItems = [
         href: "/tasks", 
         icon: CheckSquare 
       },
+      { 
+        title: "Partners", 
+        href: "/partners", 
+        icon: Users 
+      },
     ]
   },
   {

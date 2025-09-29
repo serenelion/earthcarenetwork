@@ -9,6 +9,7 @@ import {
   conversations,
   chatMessages,
   customFields,
+  partnerApplications,
   type User,
   type UpsertUser,
   type Enterprise,
@@ -29,6 +30,8 @@ import {
   type InsertChatMessage,
   type CustomField,
   type InsertCustomField,
+  type PartnerApplication,
+  type InsertPartnerApplication,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql } from "drizzle-orm";
@@ -95,6 +98,13 @@ export interface IStorage {
   createCustomField(customField: InsertCustomField): Promise<CustomField>;
   updateCustomField(id: string, customField: Partial<InsertCustomField>): Promise<CustomField>;
   deleteCustomField(id: string): Promise<void>;
+  
+  // Partner application operations
+  getPartnerApplications(limit?: number, offset?: number): Promise<PartnerApplication[]>;
+  getPartnerApplication(id: string): Promise<PartnerApplication | undefined>;
+  createPartnerApplication(application: InsertPartnerApplication): Promise<PartnerApplication>;
+  updatePartnerApplication(id: string, application: Partial<InsertPartnerApplication>): Promise<PartnerApplication>;
+  deletePartnerApplication(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -135,8 +145,6 @@ export class DatabaseStorage implements IStorage {
 
   // Enterprise operations
   async getEnterprises(category?: string, search?: string, limit = 50, offset = 0): Promise<Enterprise[]> {
-    let query = db.select().from(enterprises);
-    
     const conditions = [];
     if (category) {
       conditions.push(eq(enterprises.category, category as any));
@@ -152,10 +160,17 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await db.select().from(enterprises)
+        .where(and(...conditions))
+        .orderBy(desc(enterprises.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
     
-    return query.orderBy(desc(enterprises.createdAt)).limit(limit).offset(offset);
+    return await db.select().from(enterprises)
+      .orderBy(desc(enterprises.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getEnterprise(id: string): Promise<Enterprise | undefined> {
@@ -205,20 +220,25 @@ export class DatabaseStorage implements IStorage {
 
   // People operations
   async getPeople(search?: string, limit = 50, offset = 0): Promise<Person[]> {
-    let query = db.select().from(people);
-    
     if (search) {
-      query = query.where(
-        or(
-          like(people.firstName, `%${search}%`),
-          like(people.lastName, `%${search}%`),
-          like(people.email, `%${search}%`),
-          like(people.title, `%${search}%`)
+      return await db.select().from(people)
+        .where(
+          or(
+            like(people.firstName, `%${search}%`),
+            like(people.lastName, `%${search}%`),
+            like(people.email, `%${search}%`),
+            like(people.title, `%${search}%`)
+          )
         )
-      );
+        .orderBy(desc(people.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
     
-    return query.orderBy(desc(people.createdAt)).limit(limit).offset(offset);
+    return await db.select().from(people)
+      .orderBy(desc(people.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getPerson(id: string): Promise<Person | undefined> {
@@ -270,18 +290,23 @@ export class DatabaseStorage implements IStorage {
 
   // Opportunity operations
   async getOpportunities(search?: string, limit = 50, offset = 0): Promise<Opportunity[]> {
-    let query = db.select().from(opportunities);
-    
     if (search) {
-      query = query.where(
-        or(
-          like(opportunities.title, `%${search}%`),
-          like(opportunities.description, `%${search}%`)
+      return await db.select().from(opportunities)
+        .where(
+          or(
+            like(opportunities.title, `%${search}%`),
+            like(opportunities.description, `%${search}%`)
+          )
         )
-      );
+        .orderBy(desc(opportunities.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
     
-    return query.orderBy(desc(opportunities.createdAt)).limit(limit).offset(offset);
+    return await db.select().from(opportunities)
+      .orderBy(desc(opportunities.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getOpportunity(id: string): Promise<Opportunity | undefined> {
@@ -338,18 +363,23 @@ export class DatabaseStorage implements IStorage {
 
   // Task operations
   async getTasks(search?: string, limit = 50, offset = 0): Promise<Task[]> {
-    let query = db.select().from(tasks);
-    
     if (search) {
-      query = query.where(
-        or(
-          like(tasks.title, `%${search}%`),
-          like(tasks.description, `%${search}%`)
+      return await db.select().from(tasks)
+        .where(
+          or(
+            like(tasks.title, `%${search}%`),
+            like(tasks.description, `%${search}%`)
+          )
         )
-      );
+        .orderBy(desc(tasks.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
     
-    return query.orderBy(desc(tasks.createdAt)).limit(limit).offset(offset);
+    return await db.select().from(tasks)
+      .orderBy(desc(tasks.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getTask(id: string): Promise<Task | undefined> {
@@ -528,6 +558,39 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomField(id: string): Promise<void> {
     await db.delete(customFields).where(eq(customFields.id, id));
+  }
+
+  // Partner application operations
+  async getPartnerApplications(limit = 50, offset = 0): Promise<PartnerApplication[]> {
+    return await db
+      .select()
+      .from(partnerApplications)
+      .orderBy(desc(partnerApplications.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getPartnerApplication(id: string): Promise<PartnerApplication | undefined> {
+    const [application] = await db.select().from(partnerApplications).where(eq(partnerApplications.id, id));
+    return application;
+  }
+
+  async createPartnerApplication(application: InsertPartnerApplication): Promise<PartnerApplication> {
+    const [result] = await db.insert(partnerApplications).values(application).returning();
+    return result;
+  }
+
+  async updatePartnerApplication(id: string, application: Partial<InsertPartnerApplication>): Promise<PartnerApplication> {
+    const [updated] = await db
+      .update(partnerApplications)
+      .set({ ...application, updatedAt: new Date() })
+      .where(eq(partnerApplications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePartnerApplication(id: string): Promise<void> {
+    await db.delete(partnerApplications).where(eq(partnerApplications.id, id));
   }
 }
 

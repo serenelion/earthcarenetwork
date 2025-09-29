@@ -22,7 +22,8 @@ import {
   insertBusinessContextSchema,
   insertConversationSchema,
   insertChatMessageSchema,
-  insertCustomFieldSchema
+  insertCustomFieldSchema,
+  insertPartnerApplicationSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -32,7 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -214,7 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(opportunity);
     } catch (error) {
       console.error("Error creating opportunity:", error);
-      res.status(400).json({ message: "Failed to create opportunity", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create opportunity", error: errorMessage });
     }
   });
 
@@ -230,7 +232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(opportunity);
     } catch (error) {
       console.error("Error updating opportunity:", error);
-      res.status(400).json({ message: "Failed to update opportunity", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update opportunity", error: errorMessage });
     }
   });
 
@@ -267,7 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(task);
     } catch (error) {
       console.error("Error creating task:", error);
-      res.status(400).json({ message: "Failed to create task", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create task", error: errorMessage });
     }
   });
 
@@ -277,7 +281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);
-      res.status(400).json({ message: "Failed to update task", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update task", error: errorMessage });
     }
   });
 
@@ -303,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Enterprise not found" });
       }
 
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -336,7 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getEnterpriseStats(),
       ]);
 
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -358,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/crm/ai/context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -373,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/crm/ai/context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -394,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Business context routes
   app.get('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -409,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -430,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chat conversation routes
   app.get('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -450,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -486,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/crm/ai/chat', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -702,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
         
         // Add custom fields to the entity's fields array
-        schemaInfo[entityName].fields.push(...customFieldsFormatted);
+        (schemaInfo as any)[entityName].fields.push(...customFieldsFormatted);
       }
 
       res.json(schemaInfo);
@@ -811,6 +816,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error scraping URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to scrape URL", error: errorMessage });
+    }
+  });
+
+  // Partner application routes (public access)
+  app.get('/api/partner-applications', async (req, res) => {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      const applications = await storage.getPartnerApplications(
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching partner applications:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch partner applications", error: errorMessage });
+    }
+  });
+
+  app.post('/api/partner-applications', async (req, res) => {
+    try {
+      const validatedData = insertPartnerApplicationSchema.parse(req.body);
+      const application = await storage.createPartnerApplication(validatedData);
+      res.status(201).json(application);
+    } catch (error) {
+      console.error("Error creating partner application:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create partner application", error: errorMessage });
+    }
+  });
+
+  // Protected partner application management routes
+  app.get('/api/crm/partner-applications', isAuthenticated, async (req, res) => {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      const applications = await storage.getPartnerApplications(
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(applications);
+    } catch (error) {
+      console.error("Error fetching partner applications:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch partner applications", error: errorMessage });
+    }
+  });
+
+  app.get('/api/crm/partner-applications/:id', isAuthenticated, async (req, res) => {
+    try {
+      const application = await storage.getPartnerApplication(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Partner application not found" });
+      }
+      res.json(application);
+    } catch (error) {
+      console.error("Error fetching partner application:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch partner application", error: errorMessage });
+    }
+  });
+
+  app.put('/api/crm/partner-applications/:id', isAuthenticated, async (req, res) => {
+    try {
+      const application = await storage.updatePartnerApplication(req.params.id, req.body);
+      res.json(application);
+    } catch (error) {
+      console.error("Error updating partner application:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update partner application", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/crm/partner-applications/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deletePartnerApplication(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting partner application:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to delete partner application", error: errorMessage });
     }
   });
 
