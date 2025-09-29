@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -80,6 +81,7 @@ export default function People() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const isMobile = useIsMobile();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -406,7 +408,7 @@ export default function People() {
                 <Button 
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open("/", "_blank")}
+                  onClick={() => setLocation("/directory")}
                   data-testid="button-public-directory"
                   className="flex items-center space-x-2"
                 >

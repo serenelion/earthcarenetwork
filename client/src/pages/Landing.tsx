@@ -15,7 +15,7 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const { data: enterprises = [], isLoading } = useQuery({
+  const { data: enterprises = [], isLoading } = useQuery<Enterprise[]>({
     queryKey: ["/api/enterprises", selectedCategory, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -25,7 +25,8 @@ export default function Landing() {
       
       const response = await fetch(`/api/enterprises?${params}`);
       if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json() as Enterprise[];
+      const data: Enterprise[] = await response.json();
+      return data;
     },
   });
 

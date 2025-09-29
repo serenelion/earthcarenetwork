@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -73,6 +74,7 @@ export default function Enterprises() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const isMobile = useIsMobile();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -329,7 +331,7 @@ export default function Enterprises() {
             
             <div className="flex gap-2">
               <Button
-                onClick={() => window.open("/", "_blank")}
+                onClick={() => setLocation("/directory")}
                 variant="outline"
                 size="sm"
                 className="flex-1 text-xs"
@@ -360,7 +362,7 @@ export default function Enterprises() {
             </div>
             <div className="flex gap-3">
               <Button
-                onClick={() => window.open("/", "_blank")}
+                onClick={() => setLocation("/directory")}
                 variant="outline"
                 data-testid="button-public-view"
               >
@@ -682,7 +684,7 @@ export default function Enterprises() {
                               <span className="sm:hidden">✓</span>
                             </Badge>
                           )}
-                          {enterprise.followerCount !== undefined && enterprise.followerCount > 0 && (
+                          {enterprise.followerCount != null && enterprise.followerCount > 0 && (
                             <Badge variant="outline" className="text-muted-foreground text-xs">
                               <Users className="w-2 h-2 md:w-3 md:h-3 mr-1" />
                               <span className="hidden sm:inline">{enterprise.followerCount} Followers</span>

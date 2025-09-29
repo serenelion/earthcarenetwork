@@ -18,22 +18,30 @@ import NotFound from "@/pages/not-found";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  // If loading or not authenticated, show only landing route
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  // If authenticated, show all authenticated routes
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/enterprises" component={Enterprises} />
-          <Route path="/people" component={People} />
-          <Route path="/opportunities" component={Opportunities} />
-          <Route path="/tasks" component={Tasks} />
-          <Route path="/copilot" component={Copilot} />
-          <Route path="/bulk-import" component={BulkImport} />
-          <Route path="/settings*" component={Settings} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/directory*" component={Landing} />
+      <Route path="/enterprises" component={Enterprises} />
+      <Route path="/people" component={People} />
+      <Route path="/opportunities" component={Opportunities} />
+      <Route path="/tasks" component={Tasks} />
+      <Route path="/copilot" component={Copilot} />
+      <Route path="/bulk-import" component={BulkImport} />
+      <Route path="/settings*" component={Settings} />
+      <Route path="/analytics" component={() => <div className="p-8"><h1 className="text-2xl font-bold">Analytics</h1><p>Coming soon...</p></div>} />
+      <Route path="/maps" component={() => <div className="p-8"><h1 className="text-2xl font-bold">Maps API</h1><p>Coming soon...</p></div>} />
       <Route component={NotFound} />
     </Switch>
   );
