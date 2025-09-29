@@ -10,6 +10,8 @@ import {
   chatMessages,
   customFields,
   partnerApplications,
+  userRoleEnum,
+  membershipStatusEnum,
   type User,
   type UpsertUser,
   type Enterprise,
@@ -40,6 +42,8 @@ export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getUsersByRole(role: 'visitor' | 'member' | 'enterprise_owner' | 'admin'): Promise<User[]>;
+  getUsersByMembershipStatus(status: 'free' | 'trial' | 'paid_member' | 'spatial_network_subscriber' | 'cancelled'): Promise<User[]>;
   
   // Enterprise operations
   getEnterprises(category?: string, search?: string, limit?: number, offset?: number): Promise<Enterprise[]>;
@@ -115,32 +119,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // First try to find existing user by email
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, userData.email!))
-      .limit(1);
+    // First try to find existing user by email or id
+    let existingUser;
+    if (userData.id) {
+      existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userData.id))
+        .limit(1);
+    }
+    
+    // If not found by id, try by email
+    if ((!existingUser || existingUser.length === 0) && userData.email) {
+      existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, userData.email))
+        .limit(1);
+    }
 
-    if (existingUser.length > 0) {
-      // Update existing user
+    if (existingUser && existingUser.length > 0) {
+      // Update existing user - only update profile fields, preserve role/membership unless explicitly provided
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      // Only update fields that are provided
+      if (userData.firstName !== undefined) updateData.firstName = userData.firstName;
+      if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
+      if (userData.profileImageUrl !== undefined) updateData.profileImageUrl = userData.profileImageUrl;
+      
+      // Only update role/membership if explicitly provided (for admin updates)
+      if (userData.role !== undefined) updateData.role = userData.role;
+      if (userData.membershipStatus !== undefined) updateData.membershipStatus = userData.membershipStatus;
+      
+      const whereClause = userData.id 
+        ? eq(users.id, userData.id)
+        : eq(users.email, userData.email!);
+      
       const [user] = await db
         .update(users)
-        .set({
-          ...userData,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.email, userData.email!))
+        .set(updateData)
+        .where(whereClause)
         .returning();
       return user;
     } else {
-      // Insert new user
+      // Insert new user with all provided data (including defaults)
       const [user] = await db
         .insert(users)
         .values(userData)
         .returning();
       return user;
     }
+  }
+
+  async getUsersByRole(role: 'visitor' | 'member' | 'enterprise_owner' | 'admin'): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role)).orderBy(desc(users.createdAt));
+  }
+
+  async getUsersByMembershipStatus(status: 'free' | 'trial' | 'paid_member' | 'spatial_network_subscriber' | 'cancelled'): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.membershipStatus, status)).orderBy(desc(users.createdAt));
   }
 
   // Enterprise operations

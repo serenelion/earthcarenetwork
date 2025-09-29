@@ -57,13 +57,31 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+  // Check if user already exists to avoid overwriting their role/membership
+  const existingUser = await storage.getUser(claims["sub"]);
+  
+  if (existingUser) {
+    // User exists - only update profile information, preserve role/membership
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      // Don't include role/membershipStatus to preserve existing values
+    });
+  } else {
+    // New user - set default role and membership
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      role: 'visitor',
+      membershipStatus: 'free',
+    });
+  }
 }
 
 export async function setupAuth(app: Express) {

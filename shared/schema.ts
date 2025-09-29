@@ -25,6 +25,23 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// User role enum for role-based access control
+export const userRoleEnum = pgEnum('user_role', [
+  'visitor',
+  'member',
+  'enterprise_owner',
+  'admin'
+]);
+
+// Membership status enum for tracking subscription status
+export const membershipStatusEnum = pgEnum('membership_status', [
+  'free',
+  'trial',
+  'paid_member',
+  'spatial_network_subscriber',
+  'cancelled'
+]);
+
 // User storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
@@ -33,6 +50,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  role: userRoleEnum("role").default('visitor'),
+  membershipStatus: membershipStatusEnum("membership_status").default('free'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
