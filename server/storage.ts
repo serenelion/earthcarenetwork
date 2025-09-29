@@ -10,6 +10,7 @@ import {
   chatMessages,
   customFields,
   partnerApplications,
+  opportunityTransfers,
   userRoleEnum,
   membershipStatusEnum,
   type User,
@@ -34,6 +35,8 @@ import {
   type InsertCustomField,
   type PartnerApplication,
   type InsertPartnerApplication,
+  type OpportunityTransfer,
+  type InsertOpportunityTransfer,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -123,6 +126,21 @@ export interface IStorage {
   updateClaimStatus(personId: string, status: 'unclaimed' | 'claimed' | 'verified'): Promise<Person>;
   getInvitationHistory(limit?: number, offset?: number): Promise<Person[]>;
   getPeopleByEnterpriseId(enterpriseId: string): Promise<Person[]>;
+  
+  // Opportunity transfer operations
+  getOpportunityTransfers(search?: string, status?: 'pending' | 'accepted' | 'declined' | 'completed', limit?: number, offset?: number): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User; transferredToUser: User }>>;
+  getOpportunityTransfer(id: string): Promise<OpportunityTransfer | undefined>;
+  createOpportunityTransfer(transfer: InsertOpportunityTransfer): Promise<OpportunityTransfer>;
+  updateOpportunityTransfer(id: string, transfer: Partial<InsertOpportunityTransfer>): Promise<OpportunityTransfer>;
+  deleteOpportunityTransfer(id: string): Promise<void>;
+  getTransfersByUserId(userId: string, limit?: number, offset?: number): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User }>>;
+  getTransferStats(): Promise<{ 
+    total: number; 
+    byStatus: Record<string, number>; 
+    pendingTransfers: number 
+  }>;
+  acceptOpportunityTransfer(transferId: string, userId: string): Promise<OpportunityTransfer>;
+  declineOpportunityTransfer(transferId: string, userId: string, reason?: string): Promise<OpportunityTransfer>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -813,6 +831,173 @@ export class DatabaseStorage implements IStorage {
       .from(people)
       .where(eq(people.enterpriseId, enterpriseId))
       .orderBy(desc(people.createdAt));
+  }
+
+  // Opportunity transfer operations
+  async getOpportunityTransfers(search?: string, status?: 'pending' | 'accepted' | 'declined' | 'completed', limit = 50, offset = 0): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User; transferredToUser: User }>> {
+    // First get the basic transfers with opportunities
+    let baseQuery = db
+      .select()
+      .from(opportunityTransfers)
+      .innerJoin(opportunities, eq(opportunityTransfers.opportunityId, opportunities.id));
+
+    const conditions = [];
+    
+    if (search) {
+      conditions.push(
+        or(
+          like(opportunities.title, `%${search}%`),
+          like(opportunities.description, `%${search}%`)
+        )
+      );
+    }
+    
+    if (status) {
+      conditions.push(eq(opportunityTransfers.status, status));
+    }
+
+    if (conditions.length > 0) {
+      baseQuery = baseQuery.where(and(...conditions));
+    }
+
+    const transfersWithOpportunities = await baseQuery
+      .orderBy(desc(opportunityTransfers.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Now enrich with user data
+    const result = [];
+    for (const row of transfersWithOpportunities) {
+      const [transferredByUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, row.opportunity_transfers.transferredBy));
+      
+      const [transferredToUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, row.opportunity_transfers.transferredTo));
+
+      result.push({
+        ...row.opportunity_transfers,
+        opportunity: row.opportunities,
+        transferredByUser,
+        transferredToUser,
+      });
+    }
+
+    return result;
+  }
+
+  async getOpportunityTransfer(id: string): Promise<OpportunityTransfer | undefined> {
+    const [transfer] = await db
+      .select()
+      .from(opportunityTransfers)
+      .where(eq(opportunityTransfers.id, id));
+    return transfer;
+  }
+
+  async createOpportunityTransfer(transfer: InsertOpportunityTransfer): Promise<OpportunityTransfer> {
+    const [created] = await db
+      .insert(opportunityTransfers)
+      .values(transfer)
+      .returning();
+    return created;
+  }
+
+  async updateOpportunityTransfer(id: string, transfer: Partial<InsertOpportunityTransfer>): Promise<OpportunityTransfer> {
+    const [updated] = await db
+      .update(opportunityTransfers)
+      .set({ ...transfer, updatedAt: new Date() })
+      .where(eq(opportunityTransfers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOpportunityTransfer(id: string): Promise<void> {
+    await db
+      .delete(opportunityTransfers)
+      .where(eq(opportunityTransfers.id, id));
+  }
+
+  async getTransfersByUserId(userId: string, limit = 50, offset = 0): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User }>> {
+    return await db
+      .select({
+        ...opportunityTransfers,
+        opportunity: opportunities,
+        transferredByUser: users,
+      })
+      .from(opportunityTransfers)
+      .innerJoin(opportunities, eq(opportunityTransfers.opportunityId, opportunities.id))
+      .innerJoin(users, eq(opportunityTransfers.transferredBy, users.id))
+      .where(eq(opportunityTransfers.transferredTo, userId))
+      .orderBy(desc(opportunityTransfers.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getTransferStats(): Promise<{ total: number; byStatus: Record<string, number>; pendingTransfers: number }> {
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(opportunityTransfers);
+
+    const statusResults = await db
+      .select({ 
+        status: opportunityTransfers.status,
+        count: count()
+      })
+      .from(opportunityTransfers)
+      .groupBy(opportunityTransfers.status);
+
+    const [pendingResult] = await db
+      .select({ count: count() })
+      .from(opportunityTransfers)
+      .where(eq(opportunityTransfers.status, 'pending'));
+
+    const byStatus = statusResults.reduce((acc, { status, count }) => {
+      acc[status!] = count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      total: totalResult.count,
+      byStatus,
+      pendingTransfers: pendingResult.count,
+    };
+  }
+
+  async acceptOpportunityTransfer(transferId: string, userId: string): Promise<OpportunityTransfer> {
+    const [updated] = await db
+      .update(opportunityTransfers)
+      .set({ 
+        status: 'accepted',
+        respondedAt: new Date(),
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(opportunityTransfers.id, transferId),
+        eq(opportunityTransfers.transferredTo, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async declineOpportunityTransfer(transferId: string, userId: string, reason?: string): Promise<OpportunityTransfer> {
+    const [updated] = await db
+      .update(opportunityTransfers)
+      .set({ 
+        status: 'declined',
+        respondedAt: new Date(),
+        notes: reason ? `Declined: ${reason}` : 'Declined',
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(opportunityTransfers.id, transferId),
+        eq(opportunityTransfers.transferredTo, userId)
+      ))
+      .returning();
+    return updated;
   }
 }
 

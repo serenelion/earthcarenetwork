@@ -252,6 +252,14 @@ export const customFields = pgTable("custom_fields", {
   index("custom_fields_entity_field_idx").on(table.entityName, table.fieldName)
 ]);
 
+// Transfer status for opportunity transfers
+export const transferStatusEnum = pgEnum('transfer_status', [
+  'pending',
+  'accepted',
+  'declined',
+  'completed'
+]);
+
 // Partner application status
 export const partnerApplicationStatusEnum = pgEnum('partner_application_status', [
   'pending',
@@ -273,6 +281,23 @@ export const partnerApplications = pgTable("partner_applications", {
   contribution: text("contribution"), // How they'd contribute to the network
   status: partnerApplicationStatusEnum("status").default('pending'),
   notes: text("notes"), // Internal notes for review
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Opportunity transfers for admin to enterprise owner workflow
+export const opportunityTransfers = pgTable("opportunity_transfers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  opportunityId: varchar("opportunity_id").references(() => opportunities.id).notNull(),
+  transferredBy: varchar("transferred_by").references(() => users.id).notNull(), // Admin who initiated transfer
+  transferredTo: varchar("transferred_to").references(() => users.id).notNull(), // Enterprise owner receiving transfer
+  previousOwnerId: varchar("previous_owner_id").references(() => users.id), // Previous owner (can be null for new opportunities)
+  status: transferStatusEnum("status").default('pending'),
+  reason: text("reason"), // Reason for transfer
+  notes: text("notes"), // Additional notes
+  transferredAt: timestamp("transferred_at").defaultNow(),
+  respondedAt: timestamp("responded_at"), // When the recipient responded
+  completedAt: timestamp("completed_at"), // When transfer was completed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -337,6 +362,12 @@ export const insertPartnerApplicationSchema = createInsertSchema(partnerApplicat
   updatedAt: true,
 });
 
+export const insertOpportunityTransferSchema = createInsertSchema(opportunityTransfers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -360,3 +391,5 @@ export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
 export type CustomField = typeof customFields.$inferSelect;
 export type InsertPartnerApplication = z.infer<typeof insertPartnerApplicationSchema>;
 export type PartnerApplication = typeof partnerApplications.$inferSelect;
+export type InsertOpportunityTransfer = z.infer<typeof insertOpportunityTransferSchema>;
+export type OpportunityTransfer = typeof opportunityTransfers.$inferSelect;

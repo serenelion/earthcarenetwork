@@ -23,6 +23,7 @@ import MemberBenefits from "@/pages/MemberBenefits";
 import PartnerApplication from "@/pages/PartnerApplication";
 import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
 import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
+import AdminOpportunityTransfers from "@/pages/AdminOpportunityTransfers";
 import ClaimEnterprise from "@/pages/ClaimEnterprise";
 import NotFound from "@/pages/not-found";
 
@@ -69,6 +70,12 @@ function Router() {
           <Route path="/admin/enterprise-claiming">
             <AdminOnlyRoute>
               <AdminEnterpriseClaiming />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin/opportunity-transfers">
+            <AdminOnlyRoute>
+              <AdminOpportunityTransfers />
             </AdminOnlyRoute>
           </Route>
           

@@ -23,7 +23,8 @@ import {
   insertConversationSchema,
   insertChatMessageSchema,
   insertCustomFieldSchema,
-  insertPartnerApplicationSchema
+  insertPartnerApplicationSchema,
+  insertOpportunityTransferSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -712,6 +713,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating invitation:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to update invitation", error: errorMessage });
+    }
+  });
+
+  // Admin Opportunity Transfer Routes
+  app.post('/api/admin/opportunity-transfers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const validatedData = insertOpportunityTransferSchema.parse({
+        ...req.body,
+        transferredBy: userId
+      });
+      
+      const transfer = await storage.createOpportunityTransfer(validatedData);
+      res.status(201).json(transfer);
+    } catch (error) {
+      console.error("Error creating opportunity transfer:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create opportunity transfer", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/opportunity-transfers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { search, status, limit = 50, offset = 0 } = req.query;
+      const transfers = await storage.getOpportunityTransfers(
+        search as string,
+        status as 'pending' | 'accepted' | 'declined' | 'completed',
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(transfers);
+    } catch (error) {
+      console.error("Error fetching opportunity transfers:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch opportunity transfers", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/transfer-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const stats = await storage.getTransferStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching transfer stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch transfer stats", error: errorMessage });
+    }
+  });
+
+  // Enterprise Owner Transfer Routes
+  app.get('/api/my-transferred-opportunities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is enterprise owner or admin
+      const user = await storage.getUser(userId);
+      if (!user || !['enterprise_owner', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Enterprise owner or admin access required" });
+      }
+
+      const { limit = 50, offset = 0 } = req.query;
+      const transfers = await storage.getTransfersByUserId(
+        userId,
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(transfers);
+    } catch (error) {
+      console.error("Error fetching user transfers:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch transferred opportunities", error: errorMessage });
+    }
+  });
+
+  app.patch('/api/opportunity-transfers/:id/accept', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const transferId = req.params.id;
+      const transfer = await storage.acceptOpportunityTransfer(transferId, userId);
+      res.json(transfer);
+    } catch (error) {
+      console.error("Error accepting transfer:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to accept transfer", error: errorMessage });
+    }
+  });
+
+  app.patch('/api/opportunity-transfers/:id/decline', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const transferId = req.params.id;
+      const { reason } = req.body;
+      const transfer = await storage.declineOpportunityTransfer(transferId, userId, reason);
+      res.json(transfer);
+    } catch (error) {
+      console.error("Error declining transfer:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to decline transfer", error: errorMessage });
+    }
+  });
+
+  app.get('/api/opportunity-transfers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const transferId = req.params.id;
+      const transfer = await storage.getOpportunityTransfer(transferId);
+      
+      if (!transfer) {
+        return res.status(404).json({ message: "Transfer not found" });
+      }
+
+      // Check if user has access to this transfer (admin, transferredBy, or transferredTo)
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'admin' && transfer.transferredBy !== userId && transfer.transferredTo !== userId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(transfer);
+    } catch (error) {
+      console.error("Error fetching transfer:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch transfer", error: errorMessage });
     }
   });
 
