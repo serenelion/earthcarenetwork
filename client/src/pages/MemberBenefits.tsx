@@ -17,7 +17,7 @@ export default function MemberBenefits() {
             <Zap className="w-4 h-4 mr-2" />
             Free & Open Source Forever
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 font-lato">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Unlock the Power of Earth Network
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-white/90">
@@ -55,7 +55,7 @@ export default function MemberBenefits() {
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-foreground font-lato">What Members Get</h2>
+            <h2 className="text-3xl font-bold mb-4 text-foreground">What Members Get</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Join thousands of regenerative leaders accessing our comprehensive platform for discovering, reviewing, and connecting with earth-positive enterprises.
             </p>
@@ -68,7 +68,7 @@ export default function MemberBenefits() {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Building className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl font-lato">Enterprise Discovery</CardTitle>
+                <CardTitle className="text-xl">Enterprise Discovery</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
@@ -88,7 +88,7 @@ export default function MemberBenefits() {
                 <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-secondary" />
                 </div>
-                <CardTitle className="text-xl font-lato">Review & Claim Enterprises</CardTitle>
+                <CardTitle className="text-xl">Review & Claim Enterprises</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
@@ -108,7 +108,7 @@ export default function MemberBenefits() {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
                   <Heart className="w-6 h-6 text-accent" />
                 </div>
-                <CardTitle className="text-xl font-lato">Personal Favorites</CardTitle>
+                <CardTitle className="text-xl">Personal Favorites</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">

@@ -69,7 +69,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="hero-gradient earth-pattern text-white py-24">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 font-lato">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Discover Regenerative Enterprise
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-white/90">
@@ -110,7 +110,7 @@ export default function Landing() {
       {/* Categories Section */}
       <section id="categories" className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12 text-foreground font-lato">
+          <h2 className="text-3xl font-bold text-center mb-12 text-foreground">
             Explore by Category
           </h2>
           
@@ -134,7 +134,7 @@ export default function Landing() {
       <section id="featured" className="py-16 bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-12">
-            <h2 className="text-3xl font-bold text-foreground font-lato">
+            <h2 className="text-3xl font-bold text-foreground">
               {selectedCategory 
                 ? `${categories.find(c => c.id === selectedCategory)?.title} Enterprises`
                 : "Featured Enterprises"

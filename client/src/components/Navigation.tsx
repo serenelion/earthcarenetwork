@@ -35,7 +35,7 @@ export default function Navigation() {
             <Link href="/">
               <div className="flex items-center space-x-2 cursor-pointer" data-testid="nav-logo">
                 <Globe className="text-primary text-2xl" />
-                <span className="text-xl font-bold text-foreground font-lato">Earth Network</span>
+                <span className="text-xl font-bold text-foreground">Earth Network</span>
               </div>
             </Link>
             
