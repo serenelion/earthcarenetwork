@@ -29,10 +29,10 @@ export default function MemberBenefits() {
             <Button 
               className="bg-secondary hover:bg-secondary/90 text-white px-8 py-3 text-lg font-semibold"
               data-testid="button-become-partner-hero"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/partner-application"}
             >
               <Star className="w-5 h-5 mr-2" />
-              Become a Partner
+              Apply for Partnership
             </Button>
             <Button 
               variant="outline" 
@@ -281,10 +281,10 @@ export default function MemberBenefits() {
                 <Button 
                   className="bg-white text-secondary hover:bg-gray-100 w-full"
                   data-testid="button-become-partner-final"
-                  onClick={() => window.location.href = "/api/login"}
+                  onClick={() => window.location.href = "/partner-application"}
                 >
                   <Star className="w-4 h-4 mr-2" />
-                  Become a Partner
+                  Apply for Partnership
                 </Button>
                 <p className="text-xs text-white/70 mt-2">Limited partnerships available</p>
               </CardContent>

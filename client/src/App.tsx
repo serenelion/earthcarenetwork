@@ -15,6 +15,8 @@ import BulkImport from "@/pages/BulkImport";
 import Settings from "@/pages/Settings";
 import Partners from "@/pages/Partners";
 import MemberBenefits from "@/pages/MemberBenefits";
+import PartnerApplication from "@/pages/PartnerApplication";
+import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +29,7 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/partners" component={Partners} />
         <Route path="/member-benefits" component={MemberBenefits} />
+        <Route path="/partner-application" component={PartnerApplication} />
         <Route component={NotFound} />
       </Switch>
     );
@@ -43,6 +46,8 @@ function Router() {
       <Route path="/tasks" component={Tasks} />
       <Route path="/partners" component={Partners} />
       <Route path="/member-benefits" component={MemberBenefits} />
+      <Route path="/partner-application" component={PartnerApplication} />
+      <Route path="/admin/partner-applications" component={AdminPartnerApplications} />
       <Route path="/copilot" component={Copilot} />
       <Route path="/bulk-import" component={BulkImport} />
       <Route path="/settings*" component={Settings} />
