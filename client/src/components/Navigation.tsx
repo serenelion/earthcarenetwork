@@ -1,4 +1,4 @@
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings } from "lucide-react";
+import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +112,12 @@ export default function Navigation() {
                         <Link href="/admin/partner-applications" data-testid="nav-admin-applications">
                           <FileText className="mr-2 h-4 w-4" />
                           Partner Applications
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/enterprise-claiming" data-testid="nav-admin-enterprise-claiming">
+                          <Crown className="mr-2 h-4 w-4" />
+                          Enterprise Claiming
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>

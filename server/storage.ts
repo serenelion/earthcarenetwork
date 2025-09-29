@@ -36,7 +36,7 @@ import {
   type InsertPartnerApplication,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, and, or, count, sql } from "drizzle-orm";
+import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -109,6 +109,20 @@ export interface IStorage {
   createPartnerApplication(application: InsertPartnerApplication): Promise<PartnerApplication>;
   updatePartnerApplication(id: string, application: Partial<InsertPartnerApplication>): Promise<PartnerApplication>;
   deletePartnerApplication(id: string): Promise<void>;
+  
+  // Enterprise claiming and invitation operations
+  getEnterprisesWithClaimInfo(search?: string, claimStatus?: 'unclaimed' | 'claimed' | 'verified', limit?: number, offset?: number): Promise<Array<Enterprise & { contacts: Person[] }>>;
+  getEnterpriseClaimStats(): Promise<{ 
+    total: number; 
+    byClaim: Record<string, number>; 
+    byInvitation: Record<string, number>;
+    pendingClaims: number;
+  }>;
+  sendInvitation(personId: string, enterpriseId: string): Promise<Person>;
+  updateInvitationStatus(personId: string, status: 'not_invited' | 'invited' | 'signed_up' | 'active'): Promise<Person>;
+  updateClaimStatus(personId: string, status: 'unclaimed' | 'claimed' | 'verified'): Promise<Person>;
+  getInvitationHistory(limit?: number, offset?: number): Promise<Person[]>;
+  getPeopleByEnterpriseId(enterpriseId: string): Promise<Person[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -629,6 +643,176 @@ export class DatabaseStorage implements IStorage {
 
   async deletePartnerApplication(id: string): Promise<void> {
     await db.delete(partnerApplications).where(eq(partnerApplications.id, id));
+  }
+
+  // Enterprise claiming and invitation operations
+  async getEnterprisesWithClaimInfo(search?: string, claimStatus?: 'unclaimed' | 'claimed' | 'verified', limit = 50, offset = 0): Promise<Array<Enterprise & { contacts: Person[] }>> {
+    let enterpriseQuery = db.select().from(enterprises);
+    const conditions = [];
+    
+    if (search) {
+      conditions.push(
+        or(
+          like(enterprises.name, `%${search}%`),
+          like(enterprises.description, `%${search}%`),
+          like(enterprises.location, `%${search}%`)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      enterpriseQuery = enterpriseQuery.where(and(...conditions));
+    }
+    
+    const enterpriseResults = await enterpriseQuery
+      .orderBy(desc(enterprises.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get all people for these enterprises
+    const enterpriseIds = enterpriseResults.map(e => e.id);
+    const allContacts = enterpriseIds.length > 0 
+      ? await db.select().from(people).where(inArray(people.enterpriseId, enterpriseIds))
+      : [];
+
+    // Group contacts by enterprise and filter by claim status if specified
+    const enterpriseWithContacts = enterpriseResults.map(enterprise => {
+      let contacts = allContacts.filter(p => p.enterpriseId === enterprise.id);
+      
+      // Filter by claim status if specified
+      if (claimStatus) {
+        contacts = contacts.filter(p => p.claimStatus === claimStatus);
+      }
+      
+      return {
+        ...enterprise,
+        contacts
+      };
+    });
+
+    // If filtering by claim status, only return enterprises that have contacts with that status
+    if (claimStatus) {
+      return enterpriseWithContacts.filter(e => e.contacts.length > 0);
+    }
+    
+    return enterpriseWithContacts;
+  }
+
+  async getEnterpriseClaimStats(): Promise<{ 
+    total: number; 
+    byClaim: Record<string, number>; 
+    byInvitation: Record<string, number>;
+    pendingClaims: number;
+  }> {
+    const [totalResult] = await db.select({ count: count() }).from(enterprises);
+    
+    // Get claim status distribution
+    const claimStats = await db
+      .select({
+        status: people.claimStatus,
+        count: count(),
+      })
+      .from(people)
+      .where(sql`${people.enterpriseId} IS NOT NULL`)
+      .groupBy(people.claimStatus);
+    
+    // Get invitation status distribution
+    const invitationStats = await db
+      .select({
+        status: people.invitationStatus,
+        count: count(),
+      })
+      .from(people)
+      .where(sql`${people.enterpriseId} IS NOT NULL`)
+      .groupBy(people.invitationStatus);
+    
+    // Get pending claims (invited but not yet claimed)
+    const [pendingResult] = await db
+      .select({ count: count() })
+      .from(people)
+      .where(
+        and(
+          sql`${people.enterpriseId} IS NOT NULL`,
+          eq(people.invitationStatus, 'invited'),
+          eq(people.claimStatus, 'unclaimed')
+        )
+      );
+
+    const byClaim: Record<string, number> = {};
+    claimStats.forEach(stat => {
+      if (stat.status) {
+        byClaim[stat.status] = stat.count;
+      }
+    });
+
+    const byInvitation: Record<string, number> = {};
+    invitationStats.forEach(stat => {
+      if (stat.status) {
+        byInvitation[stat.status] = stat.count;
+      }
+    });
+    
+    return {
+      total: totalResult.count,
+      byClaim,
+      byInvitation,
+      pendingClaims: pendingResult.count,
+    };
+  }
+
+  async sendInvitation(personId: string, enterpriseId: string): Promise<Person> {
+    const [updated] = await db
+      .update(people)
+      .set({ 
+        invitationStatus: 'invited',
+        lastContactedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated;
+  }
+
+  async updateInvitationStatus(personId: string, status: 'not_invited' | 'invited' | 'signed_up' | 'active'): Promise<Person> {
+    const [updated] = await db
+      .update(people)
+      .set({ 
+        invitationStatus: status,
+        updatedAt: new Date()
+      })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated;
+  }
+
+  async updateClaimStatus(personId: string, status: 'unclaimed' | 'claimed' | 'verified'): Promise<Person> {
+    const [updated] = await db
+      .update(people)
+      .set({ 
+        claimStatus: status,
+        updatedAt: new Date()
+      })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated;
+  }
+
+  async getInvitationHistory(limit = 50, offset = 0): Promise<Person[]> {
+    return await db
+      .select()
+      .from(people)
+      .where(sql`${people.invitationStatus} != 'not_invited'`)
+      .orderBy(desc(people.lastContactedAt), desc(people.updatedAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getPeopleByEnterpriseId(enterpriseId: string): Promise<Person[]> {
+    return await db
+      .select()
+      .from(people)
+      .where(eq(people.enterpriseId, enterpriseId))
+      .orderBy(desc(people.createdAt));
   }
 }
 

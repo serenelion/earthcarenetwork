@@ -78,6 +78,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contacts for a specific enterprise (needed for claiming system)
+  app.get('/api/enterprises/:id/contacts', async (req, res) => {
+    try {
+      const contacts = await storage.getPeopleByEnterpriseId(req.params.id);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching enterprise contacts:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch enterprise contacts", error: errorMessage });
+    }
+  });
+
   // Protected CRM Routes
   app.get('/api/crm/stats', isAuthenticated, async (req, res) => {
     try {
@@ -555,6 +567,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in chat:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to process chat", error: errorMessage });
+    }
+  });
+
+  // Enterprise claiming and invitation routes (Admin only)
+  app.get('/api/admin/enterprises/claiming', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { search, claimStatus, limit = 50, offset = 0 } = req.query;
+      const enterprises = await storage.getEnterprisesWithClaimInfo(
+        search as string,
+        claimStatus as 'unclaimed' | 'claimed' | 'verified',
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(enterprises);
+    } catch (error) {
+      console.error("Error fetching enterprises for claiming:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch enterprises", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/claim-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const stats = await storage.getEnterpriseClaimStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching claim stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch claim stats", error: errorMessage });
+    }
+  });
+
+  app.post('/api/admin/invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { personId, enterpriseId } = req.body;
+      if (!personId || !enterpriseId) {
+        return res.status(400).json({ message: "Person ID and Enterprise ID are required" });
+      }
+
+      const updatedPerson = await storage.sendInvitation(personId, enterpriseId);
+      
+      // Here you would typically send an email invitation
+      // For now, we'll just log it
+      console.log(`Invitation sent to ${updatedPerson.email} for enterprise ${enterpriseId}`);
+      
+      res.status(201).json({
+        message: "Invitation sent successfully",
+        person: updatedPerson
+      });
+    } catch (error) {
+      console.error("Error sending invitation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to send invitation", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { limit = 50, offset = 0 } = req.query;
+      const invitations = await storage.getInvitationHistory(
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch invitations", error: errorMessage });
+    }
+  });
+
+  app.patch('/api/admin/invitations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { invitationStatus, claimStatus } = req.body;
+      const personId = req.params.id;
+
+      let updatedPerson;
+      if (invitationStatus) {
+        updatedPerson = await storage.updateInvitationStatus(personId, invitationStatus);
+      } else if (claimStatus) {
+        updatedPerson = await storage.updateClaimStatus(personId, claimStatus);
+      } else {
+        return res.status(400).json({ message: "Either invitationStatus or claimStatus must be provided" });
+      }
+
+      res.json(updatedPerson);
+    } catch (error) {
+      console.error("Error updating invitation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to update invitation", error: errorMessage });
+    }
+  });
+
+  // Public claiming routes
+  app.get('/api/enterprises/:id/contacts', async (req, res) => {
+    try {
+      const enterpriseId = req.params.id;
+      const contacts = await storage.getPeopleByEnterpriseId(enterpriseId);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching enterprise contacts:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch contacts", error: errorMessage });
+    }
+  });
+
+  app.post('/api/claim-enterprise', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { personId, enterpriseId } = req.body;
+      if (!personId || !enterpriseId) {
+        return res.status(400).json({ message: "Person ID and Enterprise ID are required" });
+      }
+
+      // Verify the person is associated with this enterprise
+      const person = await storage.getPerson(personId);
+      if (!person || person.enterpriseId !== enterpriseId) {
+        return res.status(400).json({ message: "Invalid person or enterprise association" });
+      }
+
+      // Update claim status to claimed
+      const updatedPerson = await storage.updateClaimStatus(personId, 'claimed');
+      
+      // Update user role to enterprise_owner if not already
+      const user = await storage.getUser(userId);
+      if (user && (user.role === 'visitor' || user.role === 'member')) {
+        await storage.upsertUser({ 
+          ...user, 
+          role: 'enterprise_owner' 
+        });
+      }
+
+      res.json({
+        message: "Enterprise claimed successfully",
+        person: updatedPerson
+      });
+    } catch (error) {
+      console.error("Error claiming enterprise:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to claim enterprise", error: errorMessage });
     }
   });
 

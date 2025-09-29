@@ -22,6 +22,8 @@ import Partners from "@/pages/Partners";
 import MemberBenefits from "@/pages/MemberBenefits";
 import PartnerApplication from "@/pages/PartnerApplication";
 import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
+import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
+import ClaimEnterprise from "@/pages/ClaimEnterprise";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +37,8 @@ function Router() {
           <Route path="/partners" component={Partners} />
           <Route path="/member-benefits" component={MemberBenefits} />
           <Route path="/partner-application" component={PartnerApplication} />
+          <Route path="/claim-enterprise" component={ClaimEnterprise} />
+          <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
           
           {/* Role-specific dashboard routes */}
           <Route path="/member/dashboard">
@@ -59,6 +63,12 @@ function Router() {
           <Route path="/admin/partner-applications">
             <AdminOnlyRoute>
               <AdminPartnerApplications />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin/enterprise-claiming">
+            <AdminOnlyRoute>
+              <AdminEnterpriseClaiming />
             </AdminOnlyRoute>
           </Route>
           
