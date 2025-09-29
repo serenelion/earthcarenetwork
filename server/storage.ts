@@ -141,6 +141,15 @@ export interface IStorage {
   }>;
   acceptOpportunityTransfer(transferId: string, userId: string): Promise<OpportunityTransfer>;
   declineOpportunityTransfer(transferId: string, userId: string, reason?: string): Promise<OpportunityTransfer>;
+
+  // Global search operations
+  globalSearch(query: string, entityTypes?: string[], limit?: number, offset?: number): Promise<{
+    enterprises: Array<Enterprise & { entityType: 'enterprise'; matchContext?: string }>;
+    people: Array<Person & { entityType: 'person'; matchContext?: string }>;
+    opportunities: Array<Opportunity & { entityType: 'opportunity'; matchContext?: string }>;
+    tasks: Array<Task & { entityType: 'task'; matchContext?: string }>;
+    totalResults: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -998,6 +1007,152 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
     return updated;
+  }
+
+  async globalSearch(query: string, entityTypes?: string[], limit = 20, offset = 0): Promise<{
+    enterprises: Array<Enterprise & { entityType: 'enterprise'; matchContext?: string }>;
+    people: Array<Person & { entityType: 'person'; matchContext?: string }>;
+    opportunities: Array<Opportunity & { entityType: 'opportunity'; matchContext?: string }>;
+    tasks: Array<Task & { entityType: 'task'; matchContext?: string }>;
+    totalResults: number;
+  }> {
+    const searchTerm = `%${query}%`;
+    const shouldSearchAll = !entityTypes || entityTypes.length === 0 || entityTypes.includes('all');
+    const entityLimit = Math.ceil(limit / 4); // Split limit across entity types
+    
+    // Search enterprises
+    let enterpriseResults: Array<Enterprise & { entityType: 'enterprise'; matchContext?: string }> = [];
+    if (shouldSearchAll || entityTypes?.includes('enterprises')) {
+      const enterpriseData = await db.select().from(enterprises)
+        .where(
+          or(
+            like(enterprises.name, searchTerm),
+            like(enterprises.description, searchTerm),
+            like(enterprises.location, searchTerm),
+            like(enterprises.contactEmail, searchTerm)
+          )
+        )
+        .orderBy(desc(enterprises.createdAt))
+        .limit(entityLimit)
+        .offset(offset);
+      
+      enterpriseResults = enterpriseData.map(enterprise => ({
+        ...enterprise,
+        entityType: 'enterprise' as const,
+        matchContext: this.getEnterpriseMatchContext(enterprise, query)
+      }));
+    }
+
+    // Search people
+    let peopleResults: Array<Person & { entityType: 'person'; matchContext?: string }> = [];
+    if (shouldSearchAll || entityTypes?.includes('people')) {
+      const peopleData = await db.select().from(people)
+        .where(
+          or(
+            like(people.firstName, searchTerm),
+            like(people.lastName, searchTerm),
+            like(people.email, searchTerm),
+            like(people.title, searchTerm),
+            like(people.notes, searchTerm)
+          )
+        )
+        .orderBy(desc(people.createdAt))
+        .limit(entityLimit)
+        .offset(offset);
+      
+      peopleResults = peopleData.map(person => ({
+        ...person,
+        entityType: 'person' as const,
+        matchContext: this.getPersonMatchContext(person, query)
+      }));
+    }
+
+    // Search opportunities
+    let opportunityResults: Array<Opportunity & { entityType: 'opportunity'; matchContext?: string }> = [];
+    if (shouldSearchAll || entityTypes?.includes('opportunities')) {
+      const opportunityData = await db.select().from(opportunities)
+        .where(
+          or(
+            like(opportunities.title, searchTerm),
+            like(opportunities.description, searchTerm),
+            like(opportunities.notes, searchTerm)
+          )
+        )
+        .orderBy(desc(opportunities.createdAt))
+        .limit(entityLimit)
+        .offset(offset);
+      
+      opportunityResults = opportunityData.map(opportunity => ({
+        ...opportunity,
+        entityType: 'opportunity' as const,
+        matchContext: this.getOpportunityMatchContext(opportunity, query)
+      }));
+    }
+
+    // Search tasks
+    let taskResults: Array<Task & { entityType: 'task'; matchContext?: string }> = [];
+    if (shouldSearchAll || entityTypes?.includes('tasks')) {
+      const taskData = await db.select().from(tasks)
+        .where(
+          or(
+            like(tasks.title, searchTerm),
+            like(tasks.description, searchTerm)
+          )
+        )
+        .orderBy(desc(tasks.createdAt))
+        .limit(entityLimit)
+        .offset(offset);
+      
+      taskResults = taskData.map(task => ({
+        ...task,
+        entityType: 'task' as const,
+        matchContext: this.getTaskMatchContext(task, query)
+      }));
+    }
+
+    const totalResults = enterpriseResults.length + peopleResults.length + opportunityResults.length + taskResults.length;
+
+    return {
+      enterprises: enterpriseResults,
+      people: peopleResults,
+      opportunities: opportunityResults,
+      tasks: taskResults,
+      totalResults
+    };
+  }
+
+  private getEnterpriseMatchContext(enterprise: Enterprise, query: string): string {
+    const q = query.toLowerCase();
+    if (enterprise.name?.toLowerCase().includes(q)) return `Name: ${enterprise.name}`;
+    if (enterprise.description?.toLowerCase().includes(q)) return `Description: ${enterprise.description?.substring(0, 100)}...`;
+    if (enterprise.location?.toLowerCase().includes(q)) return `Location: ${enterprise.location}`;
+    if (enterprise.contactEmail?.toLowerCase().includes(q)) return `Contact: ${enterprise.contactEmail}`;
+    return enterprise.name || 'Unknown Enterprise';
+  }
+
+  private getPersonMatchContext(person: Person, query: string): string {
+    const q = query.toLowerCase();
+    const fullName = `${person.firstName} ${person.lastName}`;
+    if (fullName.toLowerCase().includes(q)) return `Name: ${fullName}`;
+    if (person.email?.toLowerCase().includes(q)) return `Email: ${person.email}`;
+    if (person.title?.toLowerCase().includes(q)) return `Title: ${person.title}`;
+    if (person.notes?.toLowerCase().includes(q)) return `Notes: ${person.notes?.substring(0, 100)}...`;
+    return fullName;
+  }
+
+  private getOpportunityMatchContext(opportunity: Opportunity, query: string): string {
+    const q = query.toLowerCase();
+    if (opportunity.title?.toLowerCase().includes(q)) return `Title: ${opportunity.title}`;
+    if (opportunity.description?.toLowerCase().includes(q)) return `Description: ${opportunity.description?.substring(0, 100)}...`;
+    if (opportunity.notes?.toLowerCase().includes(q)) return `Notes: ${opportunity.notes?.substring(0, 100)}...`;
+    return opportunity.title || 'Unknown Opportunity';
+  }
+
+  private getTaskMatchContext(task: Task, query: string): string {
+    const q = query.toLowerCase();
+    if (task.title?.toLowerCase().includes(q)) return `Title: ${task.title}`;
+    if (task.description?.toLowerCase().includes(q)) return `Description: ${task.description?.substring(0, 100)}...`;
+    return task.title || 'Unknown Task';
   }
 }
 

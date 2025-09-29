@@ -1,14 +1,30 @@
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getPrimaryRole, hasRole, hasRoleOrHigher } from "@/lib/authUtils";
 import { Link } from "wouter";
+import GlobalSearch from "@/components/GlobalSearch";
 
 export default function Navigation() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const userRole = getPrimaryRole(user);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Keyboard shortcut for global search (Cmd/Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50">
@@ -156,6 +172,22 @@ export default function Navigation() {
               <>
                 {isAuthenticated ? (
                   <div className="flex items-center space-x-3">
+                    {/* Global Search Trigger */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="relative h-9 w-9 p-0 md:h-9 md:w-60 md:justify-start md:px-3 md:py-2 text-muted-foreground"
+                      onClick={() => setSearchOpen(true)}
+                      data-testid="global-search-trigger"
+                    >
+                      <Search className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">Search...</span>
+                      <div className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium opacity-100 md:flex">
+                        <Command className="h-3 w-3" />
+                        <span>K</span>
+                      </div>
+                    </Button>
+                    
                     {/* Role indicator badge */}
                     <Badge 
                       variant={userRole === "admin" ? "destructive" : userRole === "enterprise_owner" ? "default" : "secondary"}
@@ -230,22 +262,43 @@ export default function Navigation() {
                     )}
                   </div>
                 ) : (
-                  // Visitor navigation - encourage membership
-                  <Button 
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 text-sm font-medium"
-                    data-testid="button-become-member"
-                    asChild
-                  >
-                    <Link href="/member-benefits">
-                      Become a Member
-                    </Link>
-                  </Button>
+                  // Visitor navigation - search and membership
+                  <div className="flex items-center space-x-3">
+                    {/* Global Search Trigger for visitors */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="relative h-9 w-9 p-0 md:h-9 md:w-48 md:justify-start md:px-3 md:py-2 text-muted-foreground"
+                      onClick={() => setSearchOpen(true)}
+                      data-testid="global-search-trigger-visitor"
+                    >
+                      <Search className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">Search...</span>
+                      <div className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium opacity-100 md:flex">
+                        <Command className="h-3 w-3" />
+                        <span>K</span>
+                      </div>
+                    </Button>
+                    
+                    <Button 
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 text-sm font-medium"
+                      data-testid="button-become-member"
+                      asChild
+                    >
+                      <Link href="/member-benefits">
+                        Become a Member
+                      </Link>
+                    </Button>
+                  </div>
                 )}
               </>
             )}
           </div>
         </div>
       </div>
+      
+      {/* Global Search Modal */}
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </nav>
   );
 }

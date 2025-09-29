@@ -91,6 +91,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global search route
+  app.get('/api/search', async (req, res) => {
+    try {
+      const { q: query, type: entityTypes, limit = 20, offset = 0 } = req.query;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+
+      if (query.trim().length < 2) {
+        return res.status(400).json({ message: "Query must be at least 2 characters long" });
+      }
+
+      // Parse entity types filter
+      let entityTypesArray: string[] | undefined;
+      if (entityTypes) {
+        if (typeof entityTypes === 'string') {
+          entityTypesArray = entityTypes.split(',').map(t => t.trim()).filter(Boolean);
+        } else if (Array.isArray(entityTypes)) {
+          entityTypesArray = entityTypes as string[];
+        }
+      }
+
+      const searchResults = await storage.globalSearch(
+        query.trim(),
+        entityTypesArray,
+        parseInt(limit as string) || 20,
+        parseInt(offset as string) || 0
+      );
+
+      res.json(searchResults);
+    } catch (error) {
+      console.error("Error performing global search:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Search failed", error: errorMessage });
+    }
+  });
+
   // Protected CRM Routes
   app.get('/api/crm/stats', isAuthenticated, async (req, res) => {
     try {
