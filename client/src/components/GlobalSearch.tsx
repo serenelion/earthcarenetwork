@@ -22,7 +22,7 @@ interface GlobalSearchProps {
 
 interface SearchResult {
   id: string;
-  entityType: 'enterprise' | 'person' | 'opportunity' | 'task';
+  entityType: 'enterprise' | 'person' | 'opportunity' | 'task' | 'documentation';
   matchContext?: string;
   [key: string]: any;
 }
@@ -32,6 +32,7 @@ interface SearchResponse {
   people: Array<SearchResult>;
   opportunities: Array<SearchResult>;
   tasks: Array<SearchResult>;
+  documentation?: Array<SearchResult>;
   totalResults: number;
 }
 
@@ -41,7 +42,7 @@ const ENTITY_FILTERS = [
   { value: 'people', label: 'People', icon: Users },
   { value: 'opportunities', label: 'Opportunities', icon: Target },
   { value: 'tasks', label: 'Tasks', icon: Calendar },
-  { value: 'documentation', label: 'Documentation', icon: FileText, disabled: true }, // Future feature
+  { value: 'documentation', label: 'Documentation', icon: FileText },
 ];
 
 const RECENT_SEARCHES_KEY = 'earth-network-recent-searches';
@@ -102,15 +103,53 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
 
   const shouldSearch = debouncedQuery.length >= 2;
 
-  const { data: searchResults, isLoading, isError } = useQuery<SearchResponse>({
+  // Documentation search data (client-side)
+  const documentationPages = useMemo(() => [
+    { id: 'overview', title: 'API Overview', path: '/docs/api', description: 'Complete reference for the Earth Care Network API' },
+    { id: 'getting-started', title: 'Getting Started', path: '/docs/guides/getting-started', description: 'Quick start guide to build your first application' },
+    { id: 'authentication', title: 'Authentication', path: '/docs/guides/authentication', description: 'Learn how to authenticate with our API' },
+    { id: 'first-api-call', title: 'First API Call', path: '/docs/guides/first-api-call', description: 'Make your first request to our API' },
+    { id: 'enterprises-api', title: 'Enterprises API', path: '/docs/api/enterprises', description: 'Manage enterprise directory with full CRUD operations' },
+    { id: 'people-api', title: 'People API', path: '/docs/api/people', description: 'Handle contacts and relationships' },
+    { id: 'opportunities-api', title: 'Opportunities API', path: '/docs/api/opportunities', description: 'Track leads and sales pipeline' },
+    { id: 'tasks-api', title: 'Tasks API', path: '/docs/api/tasks', description: 'Project management and task tracking' },
+    { id: 'search-api', title: 'Search API', path: '/docs/api/search', description: 'Global search across all entities' },
+    { id: 'ai-copilot-api', title: 'AI Copilot API', path: '/docs/api/ai-copilot', description: 'AI-powered insights and suggestions' },
+    { id: 'auth-api', title: 'Authentication API', path: '/docs/api/authentication', description: 'API reference for authentication endpoints' },
+  ], []);
+
+  // Perform documentation search
+  const documentationResults = useMemo(() => {
+    if (!shouldSearch || selectedFilter === 'enterprises' || selectedFilter === 'people' || selectedFilter === 'opportunities' || selectedFilter === 'tasks') {
+      return [];
+    }
+
+    const searchTerm = debouncedQuery.toLowerCase();
+    return documentationPages
+      .filter(page => 
+        page.title.toLowerCase().includes(searchTerm) || 
+        page.description.toLowerCase().includes(searchTerm) ||
+        page.path.toLowerCase().includes(searchTerm)
+      )
+      .map(page => ({
+        id: page.id,
+        entityType: 'documentation' as const,
+        title: page.title,
+        description: page.description,
+        path: page.path,
+        matchContext: page.description,
+      }));
+  }, [debouncedQuery, selectedFilter, shouldSearch, documentationPages]);
+
+  const { data: apiSearchResults, isLoading, isError } = useQuery<SearchResponse>({
     queryKey: ['/api/search', debouncedQuery, selectedFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         q: debouncedQuery,
       });
       
-      // Add type parameter only if not 'all'
-      if (selectedFilter !== 'all') {
+      // Add type parameter only if not 'all' and not documentation-only
+      if (selectedFilter !== 'all' && selectedFilter !== 'documentation') {
         params.append('type', selectedFilter);
       }
       
@@ -120,10 +159,20 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       }
       return response.json();
     },
-    enabled: shouldSearch && debouncedQuery.length >= 2,
+    enabled: shouldSearch && selectedFilter !== 'documentation',
     staleTime: 30000, // 30 seconds
     retry: 1,
   });
+
+  // Combine API results with documentation results
+  const searchResults = useMemo(() => {
+    const apiResults = apiSearchResults || { enterprises: [], people: [], opportunities: [], tasks: [], totalResults: 0 };
+    return {
+      ...apiResults,
+      documentation: documentationResults,
+      totalResults: apiResults.totalResults + documentationResults.length,
+    };
+  }, [apiSearchResults, documentationResults]);
 
   // Flatten results for keyboard navigation
   const allResults = useMemo(() => {
@@ -142,6 +191,9 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
     }
     if (searchResults.tasks.length > 0) {
       results.push(...searchResults.tasks.map(r => ({ ...r, sectionTitle: 'Tasks' })));
+    }
+    if (searchResults.documentation && searchResults.documentation.length > 0) {
+      results.push(...searchResults.documentation.map(r => ({ ...r, sectionTitle: 'Documentation' })));
     }
     
     return results;
@@ -198,6 +250,9 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       case 'task':
         setLocation(`/tasks?highlight=${result.id}`);
         break;
+      case 'documentation':
+        setLocation(result.path);
+        break;
     }
   }, [query, addRecentSearch, onOpenChange, setLocation]);
 
@@ -211,6 +266,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       case 'person': return Users;
       case 'opportunity': return Target;
       case 'task': return Calendar;
+      case 'documentation': return FileText;
       default: return FileText;
     }
   };
@@ -221,6 +277,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       case 'person': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'opportunity': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
       case 'task': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'documentation': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
@@ -248,6 +305,10 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       case 'task':
         title = result.title;
         subtitle = result.status;
+        break;
+      case 'documentation':
+        title = result.title;
+        subtitle = result.description;
         break;
     }
 

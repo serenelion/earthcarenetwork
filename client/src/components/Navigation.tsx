@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command } from "lucide-react";
+import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +39,20 @@ export default function Navigation() {
               </div>
             </Link>
             
-            {/* Role-based Navigation */}
-            {isAuthenticated && !isLoading && (
-              <nav className="hidden md:flex space-x-6">
-                {/* Common navigation for all authenticated users */}
-                <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-home">
-                  Home
-                </Link>
+            {/* Navigation - includes public docs */}
+            <nav className="hidden md:flex space-x-6">
+              {/* Documentation - accessible to everyone */}
+              <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="nav-docs">
+                <Book className="h-4 w-4" />
+                Docs
+              </Link>
+              
+              {isAuthenticated && !isLoading && (
+                <>
+                  {/* Common navigation for all authenticated users */}
+                  <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-home">
+                    Home
+                  </Link>
                 
                 {/* Member-specific navigation */}
                 {hasRoleOrHigher(user, "member") && (
@@ -159,12 +166,13 @@ export default function Navigation() {
                   </DropdownMenu>
                 )}
 
-                {/* Common directories for all authenticated users */}
-                <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-enterprises">
-                  Directory
-                </Link>
-              </nav>
-            )}
+                  {/* Common directories for all authenticated users */}
+                  <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-enterprises">
+                    Directory
+                  </Link>
+                </>
+              )}
+            </nav>
           </div>
           
           <div className="flex items-center space-x-4">

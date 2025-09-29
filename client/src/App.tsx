@@ -26,6 +26,12 @@ import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
 import AdminOpportunityTransfers from "@/pages/AdminOpportunityTransfers";
 import ClaimEnterprise from "@/pages/ClaimEnterprise";
 import NotFound from "@/pages/not-found";
+// Documentation imports
+import DocsLayout from "@/components/docs/DocsLayout";
+import DocsHome from "@/pages/docs/DocsHome";
+import GettingStarted from "@/pages/docs/GettingStarted";
+import APIOverview from "@/pages/docs/APIOverview";
+import EnterprisesAPI from "@/pages/docs/EnterprisesAPI";
 
 function Router() {
   return (
@@ -40,6 +46,11 @@ function Router() {
           <Route path="/partner-application" component={PartnerApplication} />
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
           <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
+          
+          {/* Documentation routes - accessible to all */}
+          <Route path="/docs*">
+            <DocsLayout />
+          </Route>
           
           {/* Role-specific dashboard routes */}
           <Route path="/member/dashboard">
