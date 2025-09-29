@@ -32,7 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface DocsLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 interface NavItem {
