@@ -34,6 +34,7 @@ import ClaimEnterprise from "@/pages/ClaimEnterprise";
 import Pricing from "@/pages/Pricing";
 import SubscriptionDashboard from "@/pages/SubscriptionDashboard";
 import NotFound from "@/pages/not-found";
+import Search from "@/pages/Search";
 // Documentation imports
 import DocsLayout from "@/components/docs/DocsLayout";
 import DocsHome from "@/pages/docs/DocsHome";
@@ -51,6 +52,7 @@ function Router() {
         <Switch>
           {/* Public routes - accessible to all */}
           <Route path="/" component={Landing} />
+          <Route path="/search" component={Search} />
           <Route path="/partners" component={Partners} />
           <Route path="/member-benefits" component={MemberBenefits} />
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
