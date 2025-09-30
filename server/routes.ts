@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -31,6 +31,7 @@ import {
   insertUserFavoriteSchema
 } from "@shared/schema";
 import Stripe from "stripe";
+import { z } from "zod";
 
 // Initialize Stripe (will be used when API keys are available)
 let stripe: Stripe | null = null;
@@ -38,6 +39,32 @@ if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: "2023-10-16",
   });
+}
+
+// Role-based authorization middleware
+function requireRole(roles: Array<'visitor' | 'member' | 'enterprise_owner' | 'admin'>): RequestHandler {
+  return async (req: any, res, next) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.role) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (!roles.includes(user.role)) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -165,38 +192,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enterprise management
-  app.post('/api/crm/enterprises', isAuthenticated, async (req, res) => {
+  // CRM Enterprise management (protected - admin/enterprise_owner only)
+  app.post('/api/crm/enterprises', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
     try {
       const validatedData = insertEnterpriseSchema.parse(req.body);
       const enterprise = await storage.createEnterprise(validatedData);
       res.status(201).json(enterprise);
     } catch (error) {
       console.error("Error creating enterprise:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(400).json({ message: "Failed to create enterprise", error: errorMessage });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.put('/api/crm/enterprises/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/crm/enterprises/:id', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
     try {
-      const enterprise = await storage.updateEnterprise(req.params.id, req.body);
+      const validatedData = insertEnterpriseSchema.parse(req.body);
+      const enterprise = await storage.updateEnterprise(req.params.id, validatedData);
       res.json(enterprise);
     } catch (error) {
       console.error("Error updating enterprise:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(400).json({ message: "Failed to update enterprise", error: errorMessage });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.delete('/api/crm/enterprises/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/crm/enterprises/:id', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
     try {
       await storage.deleteEnterprise(req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting enterprise:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to delete enterprise", error: errorMessage });
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 

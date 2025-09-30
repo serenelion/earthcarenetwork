@@ -40,6 +40,8 @@ import DocsHome from "@/pages/docs/DocsHome";
 import GettingStarted from "@/pages/docs/GettingStarted";
 import APIOverview from "@/pages/docs/APIOverview";
 import EnterprisesAPI from "@/pages/docs/EnterprisesAPI";
+// CRM Shell
+import CrmShell from "@/pages/crm/CrmShell";
 
 function Router() {
   return (
@@ -127,9 +129,9 @@ function Router() {
             </EnterpriseOrAdminRoute>
           </Route>
           
-          <Route path="/crm">
+          <Route path="/crm/:rest*">
             <EnterpriseOrAdminRoute>
-              <Dashboard />
+              <CrmShell />
             </EnterpriseOrAdminRoute>
           </Route>
           
