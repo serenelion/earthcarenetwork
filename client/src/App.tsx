@@ -128,10 +128,7 @@ function Router() {
           
           <Route path="/crm">
             <EnterpriseOrAdminRoute>
-              <div className="p-8">
-                <h1 className="text-2xl font-bold">CRM Dashboard</h1>
-                <p>Coming soon...</p>
-              </div>
+              <Dashboard />
             </EnterpriseOrAdminRoute>
           </Route>
           
