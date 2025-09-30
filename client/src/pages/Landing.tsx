@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Globe, Sprout, Coins, Wrench, Network, Search, User, ExternalLink } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
-import EnterpriseCard from "@/components/EnterpriseCard";
-import CategorySection from "@/components/CategorySection";
+import EnterpriseCard from "@/components/directory/EnterpriseCard";
+import CategorySection from "@/components/directory/CategorySection";
 import type { Enterprise } from "@shared/schema";
 
 export default function Landing() {

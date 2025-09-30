@@ -9,31 +9,31 @@ import { Building, Users, Handshake, CheckSquare, TrendingUp, Plus, Download, Ex
 import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { fetchCRMStats, fetchEnterprises, fetchAISuggestions, type CRMStats, type AISuggestion } from "@/lib/api";
+import type { Enterprise } from "@shared/schema";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<CRMStats>({
     queryKey: ["/api/crm/stats"],
+    queryFn: fetchCRMStats,
     enabled: isAuthenticated,
     retry: false,
   });
 
-  const { data: recentEnterprises = [], isLoading: enterprisesLoading } = useQuery({
+  const { data: recentEnterprises = [], isLoading: enterprisesLoading } = useQuery<Enterprise[]>({
     queryKey: ["/api/enterprises", "", "", 5, 0],
-    queryFn: async () => {
-      const response = await fetch("/api/enterprises?limit=5");
-      if (!response.ok) throw new Error("Failed to fetch recent enterprises");
-      return response.json();
-    },
+    queryFn: () => fetchEnterprises(undefined, undefined, 5, 0),
     enabled: isAuthenticated,
     retry: false,
   });
 
-  const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useQuery({
+  const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useQuery<AISuggestion[]>({
     queryKey: ["/api/crm/ai/suggestions"],
+    queryFn: fetchAISuggestions,
     enabled: isAuthenticated,
     retry: false,
   });
@@ -276,7 +276,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3 md:space-y-4">
-                    {recentEnterprises.slice(0, 3).map((enterprise: any) => (
+                    {recentEnterprises.slice(0, 3).map((enterprise) => (
                       <div 
                         key={enterprise.id} 
                         className="flex items-center justify-between p-3 bg-muted rounded-lg touch-manipulation"
@@ -299,7 +299,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                          {new Date(enterprise.createdAt).toLocaleDateString()}
+                          {enterprise.createdAt ? new Date(enterprise.createdAt).toLocaleDateString() : 'N/A'}
                         </span>
                       </div>
                     ))}
@@ -345,7 +345,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {suggestions.slice(0, 2).map((suggestion: any, index: number) => (
+                    {suggestions.slice(0, 2).map((suggestion, index) => (
                       <div 
                         key={index} 
                         className={`border rounded-lg p-4 ${
