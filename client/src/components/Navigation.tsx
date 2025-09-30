@@ -53,10 +53,12 @@ export default function Navigation() {
               
               {isAuthenticated && !isLoading && (
                 <>
-                  {/* Common navigation for all authenticated users */}
-                  <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-home">
-                    Home
-                  </Link>
+                  {/* CRM - accessible to enterprise_owner and admin */}
+                  {hasRole(user, ["enterprise_owner", "admin"]) && (
+                    <Link href="/crm" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-crm-link">
+                      CRM
+                    </Link>
+                  )}
                 
                 {/* Member-specific navigation */}
                 {hasRoleOrHigher(user, "member") && (
