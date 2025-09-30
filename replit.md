@@ -8,14 +8,41 @@ Preferred communication style: Simple, everyday language.
 
 # System Architecture
 
+## Dual-Surface Architecture (Directory + CRM)
+The application features a complete separation between public directory browsing and authenticated CRM management:
+
+### Public Directory
+- **Routes**: /, /enterprises, /directory/:category, /enterprises/:id
+- **Access**: No authentication required - accessible to all visitors
+- **Purpose**: Public browsing of regenerative enterprises with category filtering
+- **Features**: Search, category filters, enterprise details, responsive cards
+- **Component**: `client/src/pages/Enterprises.tsx` (pure public, no admin features)
+
+### CRM Management
+- **Routes**: /crm, /crm/enterprises, /crm/people, /crm/opportunities, /crm/tasks, /crm/reports, /crm/copilot, /crm/bulk-import
+- **Access**: Requires authentication with enterprise_owner or admin role
+- **Purpose**: Full CRUD management of enterprises, contacts, and opportunities
+- **Features**: Create/edit/delete operations, advanced filtering, data tables, analytics
+- **Layout**: `client/src/pages/crm/CrmShell.tsx` provides sidebar navigation and nested routing
+- **API**: Separate `/api/crm/*` endpoints with role-based authorization
+
+### API Architecture
+- **Public APIs**: `GET /api/enterprises`, `GET /api/enterprises/:id` (no auth)
+- **CRM APIs**: `POST/PUT/DELETE /api/crm/enterprises` (auth required, admin/enterprise_owner only)
+- **Authorization**: `requireRole` middleware enforces role-based access control
+
 ## Frontend Architecture
 The frontend is built with React and TypeScript using Vite as the build tool. The application uses:
 - **UI Framework**: Custom component library based on shadcn/ui with Radix UI primitives
 - **Styling**: Tailwind CSS with custom CSS variables for theming
 - **State Management**: TanStack Query (React Query) for server state management
-- **Routing**: Wouter for lightweight client-side routing
+- **Routing**: Wouter for lightweight client-side routing with nested route support
 - **Forms**: React Hook Form with Zod validation
-- **Component Structure**: Modular component architecture with separate pages for Dashboard, Enterprises, People, Opportunities, Tasks, Copilot (AI features), and Bulk Import
+- **Component Structure**: 
+  - `components/shared/` - Reusable components (EnterpriseSummary, PageLayout, etc.)
+  - `components/directory/` - Public directory components
+  - `components/crm/` - CRM-specific admin components
+  - Separate pages for public Directory and CRM management
 
 ## Backend Architecture
 The backend uses Express.js with TypeScript in ESM format:
