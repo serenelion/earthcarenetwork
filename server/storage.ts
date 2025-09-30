@@ -15,6 +15,7 @@ import {
   subscriptions,
   aiUsageLogs,
   userFavorites,
+  profileClaims,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -51,6 +52,8 @@ import {
   type InsertAiUsageLog,
   type UserFavorite,
   type InsertUserFavorite,
+  type ProfileClaim,
+  type InsertProfileClaim,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -213,6 +216,13 @@ export interface IStorage {
   }>;
   getAllSubscriptions(limit?: number, offset?: number): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>>;
   getSubscriptionsByStatus(status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired', limit?: number, offset?: number): Promise<Array<Subscription & { user: User; plan: SubscriptionPlan }>>;
+
+  // Profile claim operations
+  createProfileClaim(claim: InsertProfileClaim): Promise<ProfileClaim>;
+  getProfileClaim(token: string): Promise<ProfileClaim | undefined>;
+  getProfileClaimById(id: string): Promise<ProfileClaim | undefined>;
+  claimProfile(token: string, userId: string): Promise<{ claim: ProfileClaim; enterprise: Enterprise }>;
+  updateProfileClaimStatus(id: string, status: 'pending' | 'claimed' | 'expired'): Promise<ProfileClaim>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1636,6 +1646,72 @@ export class DatabaseStorage implements IStorage {
       user: result.users!,
       plan: result.subscription_plans!
     }));
+  }
+
+  // Profile claim operations
+  async createProfileClaim(claim: InsertProfileClaim): Promise<ProfileClaim> {
+    const [newClaim] = await db.insert(profileClaims).values(claim).returning();
+    return newClaim;
+  }
+
+  async getProfileClaim(token: string): Promise<ProfileClaim | undefined> {
+    const [claim] = await db.select().from(profileClaims).where(eq(profileClaims.claimToken, token));
+    return claim;
+  }
+
+  async getProfileClaimById(id: string): Promise<ProfileClaim | undefined> {
+    const [claim] = await db.select().from(profileClaims).where(eq(profileClaims.id, id));
+    return claim;
+  }
+
+  async claimProfile(token: string, userId: string): Promise<{ claim: ProfileClaim; enterprise: Enterprise }> {
+    const claim = await this.getProfileClaim(token);
+    if (!claim) {
+      throw new Error("Claim not found");
+    }
+
+    if (claim.status !== 'pending') {
+      throw new Error("Claim has already been processed");
+    }
+
+    if (new Date() > new Date(claim.expiresAt)) {
+      await db.update(profileClaims)
+        .set({ status: 'expired', updatedAt: new Date() })
+        .where(eq(profileClaims.id, claim.id));
+      throw new Error("Claim has expired");
+    }
+
+    const [updatedClaim] = await db.update(profileClaims)
+      .set({ 
+        status: 'claimed',
+        claimedAt: new Date(),
+        claimedBy: userId,
+        updatedAt: new Date()
+      })
+      .where(eq(profileClaims.id, claim.id))
+      .returning();
+
+    const enterprise = await this.getEnterprise(claim.enterpriseId);
+    if (!enterprise) {
+      throw new Error("Enterprise not found");
+    }
+
+    await db.update(users)
+      .set({ 
+        role: 'enterprise_owner',
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+
+    return { claim: updatedClaim, enterprise };
+  }
+
+  async updateProfileClaimStatus(id: string, status: 'pending' | 'claimed' | 'expired'): Promise<ProfileClaim> {
+    const [updatedClaim] = await db.update(profileClaims)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(profileClaims.id, id))
+      .returning();
+    return updatedClaim;
   }
 }
 

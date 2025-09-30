@@ -31,10 +31,12 @@ import {
   insertSubscriptionSchema,
   insertAiUsageLogSchema,
   insertUserFavoriteSchema,
+  insertProfileClaimSchema,
   opportunities,
   enterprises,
   people
 } from "@shared/schema";
+import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { z } from "zod";
 
@@ -847,18 +849,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         copilotContext
       );
 
-      // Save AI response
+      // Handle function calls
+      if (aiResponse.functionCall) {
+        const { name, arguments: args } = aiResponse.functionCall;
+        let functionResult: any;
+        let responseMessage = '';
+
+        try {
+          if (name === 'add_enterprise') {
+            // Validate and create enterprise
+            const validatedData = insertEnterpriseSchema.parse(args);
+            const enterprise = await storage.createEnterprise(validatedData);
+            functionResult = enterprise;
+            responseMessage = `✅ Successfully added enterprise "${enterprise.name}" to the directory!\n\nID: ${enterprise.id}\nCategory: ${enterprise.category}\nLocation: ${enterprise.location || 'Not specified'}\n\nYou can view it at: /enterprises/${enterprise.id}`;
+          } else if (name === 'send_invitation') {
+            // Generate claim token and create invitation
+            const claimToken = nanoid(32);
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
+
+            const claim = await storage.createProfileClaim({
+              enterpriseId: args.enterpriseId,
+              claimToken,
+              invitedEmail: args.email,
+              invitedName: args.name,
+              invitedBy: userId,
+              invitedAt: new Date(),
+              expiresAt,
+              status: 'pending'
+            });
+
+            functionResult = claim;
+            const claimUrl = `/claim-profile?token=${claimToken}`;
+            responseMessage = `✅ Profile claim invitation created successfully!\n\nInvitation Link: ${claimUrl}\n\nSent to: ${args.email}${args.name ? ` (${args.name})` : ''}\nExpires: ${expiresAt.toLocaleDateString()}\n\n📧 Note: Email sending is not yet implemented. Please share this link manually with the recipient.`;
+          }
+        } catch (error) {
+          console.error(`Error executing function ${name}:`, error);
+          responseMessage = `❌ Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+
+        // Save AI response with function result
+        const assistantMessage = await storage.createChatMessage({
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: responseMessage,
+          metadata: { functionCall: { name, arguments: args, result: functionResult } }
+        });
+
+        return res.json({
+          conversation,
+          userMessage,
+          assistantMessage,
+          response: responseMessage,
+          functionCall: { name, arguments: args, result: functionResult }
+        });
+      }
+
+      // Regular text response (no function call)
       const assistantMessage = await storage.createChatMessage({
         conversationId: conversation.id,
         role: 'assistant',
-        content: aiResponse,
+        content: aiResponse.content || '',
       });
 
       res.json({
         conversation,
         userMessage,
         assistantMessage,
-        response: aiResponse,
+        response: aiResponse.content,
       });
     } catch (error) {
       console.error("Error in chat:", error);
@@ -1009,6 +1067,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating invitation:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to update invitation", error: errorMessage });
+    }
+  });
+
+  // Profile Claim Routes
+  app.post('/api/crm/enterprises/:id/invite', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { email, name } = req.body;
+      const enterpriseId = req.params.id;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      if (!enterprise) {
+        return res.status(404).json({ message: "Enterprise not found" });
+      }
+
+      const claimToken = nanoid(32);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      const claim = await storage.createProfileClaim({
+        enterpriseId,
+        claimToken,
+        invitedEmail: email,
+        invitedName: name,
+        invitedBy: userId,
+        invitedAt: new Date(),
+        expiresAt,
+        status: 'pending'
+      });
+
+      const claimUrl = `/claim-profile?token=${claimToken}`;
+
+      res.status(201).json({
+        message: "Invitation created successfully",
+        claim,
+        claimUrl,
+        note: "Email sending not yet implemented. Share this link manually with the recipient."
+      });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create invitation", error: errorMessage });
+    }
+  });
+
+  app.get('/api/enterprises/claim/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const claim = await storage.getProfileClaim(token);
+
+      if (!claim) {
+        return res.status(404).json({ message: "Claim not found" });
+      }
+
+      if (claim.status !== 'pending') {
+        return res.status(400).json({ 
+          message: "This claim has already been processed",
+          status: claim.status 
+        });
+      }
+
+      if (new Date() > new Date(claim.expiresAt)) {
+        await storage.updateProfileClaimStatus(claim.id, 'expired');
+        return res.status(400).json({ message: "This claim has expired" });
+      }
+
+      const enterprise = await storage.getEnterprise(claim.enterpriseId);
+      if (!enterprise) {
+        return res.status(404).json({ message: "Enterprise not found" });
+      }
+
+      res.json({
+        claim: {
+          id: claim.id,
+          invitedEmail: claim.invitedEmail,
+          invitedName: claim.invitedName,
+          invitedAt: claim.invitedAt,
+          expiresAt: claim.expiresAt,
+          status: claim.status
+        },
+        enterprise: {
+          id: enterprise.id,
+          name: enterprise.name,
+          description: enterprise.description,
+          category: enterprise.category,
+          location: enterprise.location,
+          website: enterprise.website,
+          imageUrl: enterprise.imageUrl
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching claim:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch claim", error: errorMessage });
+    }
+  });
+
+  app.post('/api/enterprises/claim/:token', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { token } = req.params;
+      
+      const result = await storage.claimProfile(token, userId);
+
+      res.json({
+        message: "Profile claimed successfully",
+        claim: result.claim,
+        enterprise: result.enterprise
+      });
+    } catch (error) {
+      console.error("Error claiming profile:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: errorMessage });
     }
   });
 

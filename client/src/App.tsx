@@ -31,6 +31,7 @@ import EnterpriseDetail from "@/pages/EnterpriseDetail";
 import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
 import AdminOpportunityTransfers from "@/pages/AdminOpportunityTransfers";
 import ClaimEnterprise from "@/pages/ClaimEnterprise";
+import ClaimProfile from "@/pages/ClaimProfile";
 import Pricing from "@/pages/Pricing";
 import SubscriptionDashboard from "@/pages/SubscriptionDashboard";
 import NotFound from "@/pages/not-found";
@@ -57,6 +58,7 @@ function Router() {
           <Route path="/member-benefits" component={MemberBenefits} />
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
           <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
+          <Route path="/claim-profile" component={ClaimProfile} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/plans" component={Pricing} />
           

@@ -402,6 +402,30 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Profile claim status enum
+export const profileClaimStatusEnum = pgEnum('profile_claim_status', [
+  'pending',
+  'claimed',
+  'expired'
+]);
+
+// Profile claims table - for enterprise profile ownership invitations
+export const profileClaims = pgTable("profile_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  claimToken: varchar("claim_token").notNull().unique(),
+  invitedEmail: varchar("invited_email").notNull(),
+  invitedName: varchar("invited_name"),
+  status: profileClaimStatusEnum("status").default('pending').notNull(),
+  invitedBy: varchar("invited_by").references(() => users.id).notNull(),
+  invitedAt: timestamp("invited_at").defaultNow().notNull(),
+  claimedAt: timestamp("claimed_at"),
+  claimedBy: varchar("claimed_by").references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -490,6 +514,12 @@ export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
   createdAt: true,
 });
 
+export const insertProfileClaimSchema = createInsertSchema(profileClaims).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -523,3 +553,5 @@ export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
 export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 export type UserFavorite = typeof userFavorites.$inferSelect;
+export type InsertProfileClaim = z.infer<typeof insertProfileClaimSchema>;
+export type ProfileClaim = typeof profileClaims.$inferSelect;

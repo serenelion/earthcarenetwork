@@ -214,8 +214,75 @@ export async function generateCopilotResponse(
   conversationHistory: any[],
   businessContext?: any,
   copilotContext?: any
-): Promise<string> {
+): Promise<{ content?: string; functionCall?: { name: string; arguments: any } }> {
   try {
+    // Define available functions for the AI
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "add_enterprise",
+          description: "Add a new enterprise to the directory when the user wants to create or add an organization",
+          parameters: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "The name of the enterprise or organization"
+              },
+              description: {
+                type: "string",
+                description: "A brief description of what the enterprise does"
+              },
+              category: {
+                type: "string",
+                enum: ["land_projects", "capital_sources", "open_source_tools", "network_organizers"],
+                description: "The category of the enterprise"
+              },
+              location: {
+                type: "string",
+                description: "The location or address of the enterprise"
+              },
+              website: {
+                type: "string",
+                description: "The website URL of the enterprise"
+              },
+              contactEmail: {
+                type: "string",
+                description: "The contact email for the enterprise"
+              }
+            },
+            required: ["name", "category"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "send_invitation",
+          description: "Send a profile claim invitation to someone to claim ownership of an enterprise",
+          parameters: {
+            type: "object",
+            properties: {
+              enterpriseId: {
+                type: "string",
+                description: "The ID of the enterprise to invite someone to claim"
+              },
+              email: {
+                type: "string",
+                description: "The email address to send the invitation to"
+              },
+              name: {
+                type: "string",
+                description: "The name of the person being invited (optional)"
+              }
+            },
+            required: ["enterpriseId", "email"]
+          }
+        }
+      }
+    ];
+
     // Build conversation history for AI context
     const messages: any[] = [
       {
@@ -227,7 +294,12 @@ ${copilotContext ? `Focus: ${copilotContext.focusAreas?.join(', ') || 'N/A'}` : 
 
 Expertise: Regenerative agriculture, carbon solutions, sustainable business, partnerships, CRM management.
 
-Provide practical, actionable advice for regenerative enterprises with environmental impact focus.`
+You can help users:
+- Add new enterprises to the directory using the add_enterprise function
+- Send profile claim invitations using the send_invitation function
+- Provide advice and insights about regenerative enterprises
+
+When users want to add an enterprise or send invitations, use the appropriate function. Otherwise, provide helpful conversation and advice.`
       }
     ];
 
@@ -250,6 +322,8 @@ Provide practical, actionable advice for regenerative enterprises with environme
     const response = await openai.chat.completions.create({
       model: "gpt-5",
       messages,
+      tools,
+      tool_choice: "auto",
       max_completion_tokens: 3000,
     });
 
@@ -257,16 +331,30 @@ Provide practical, actionable advice for regenerative enterprises with environme
       id: response.id,
       choices: response.choices?.length,
       firstChoice: response.choices?.[0] || "No choices",
-      content: response.choices?.[0]?.message?.content || "No content"
     });
 
-    const content = response.choices[0].message.content;
+    const message = response.choices[0].message;
+
+    // Check if AI wants to call a function
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const toolCall = message.tool_calls[0];
+      console.log("Function call detected:", toolCall.function.name);
+      return {
+        functionCall: {
+          name: toolCall.function.name,
+          arguments: JSON.parse(toolCall.function.arguments)
+        }
+      };
+    }
+
+    // Regular text response
+    const content = message.content;
     if (!content) {
       console.error("OpenAI returned empty content. Full response:", JSON.stringify(response, null, 2));
       throw new Error("No content received from OpenAI");
     }
 
-    return content;
+    return { content };
   } catch (error) {
     console.error("Error generating copilot response:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
