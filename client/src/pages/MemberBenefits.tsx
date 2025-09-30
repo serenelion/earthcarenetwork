@@ -276,7 +276,7 @@ export default function MemberBenefits() {
                   Ready to lead? Get featured placement, advanced networking, and partnership opportunities.
                 </p>
                 <Button 
-                  className="bg-white text-secondary hover:bg-gray-100 w-full"
+                  className="bg-white text-foreground hover:bg-gray-100 w-full"
                   data-testid="button-become-partner-final"
                   onClick={() => window.location.href = "/partner-application"}
                 >

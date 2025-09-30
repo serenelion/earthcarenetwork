@@ -51,7 +51,7 @@ const partners = [
     services: ["digital solutions", "creative design", "strategic consulting"],
     website: "https://terraluxagency.replit.app/",
     theme: "professional",
-    gradient: "from-amber-400 to-yellow-600",
+    gradient: "from-amber-600 to-yellow-700",
     icon: Lightbulb,
   },
   {
