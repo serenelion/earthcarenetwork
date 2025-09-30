@@ -94,6 +94,20 @@ export default function Search() {
 
   const shouldSearch = debouncedQuery.length >= 2;
 
+  // Read URL params and update state when location changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    const urlQuery = params.get('q') || '';
+    const urlFilter = params.get('filter') || 'all';
+    
+    if (urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+    if (urlFilter !== selectedFilter) {
+      setSelectedFilter(urlFilter);
+    }
+  }, [location]);
+
   // Update URL when query or filter changes
   useEffect(() => {
     const params = new URLSearchParams();
