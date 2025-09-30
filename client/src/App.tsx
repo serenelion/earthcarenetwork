@@ -133,6 +133,11 @@ function Router() {
             </EnterpriseOrAdminRoute>
           </Route>
           
+          <Route path="/crm">
+            <EnterpriseOrAdminRoute>
+              <CrmShell />
+            </EnterpriseOrAdminRoute>
+          </Route>
           <Route path="/crm/:rest*">
             <EnterpriseOrAdminRoute>
               <CrmShell />
