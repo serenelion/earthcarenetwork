@@ -1,6 +1,8 @@
 import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   generateLeadScore, 
@@ -28,7 +30,10 @@ import {
   insertSubscriptionPlanSchema,
   insertSubscriptionSchema,
   insertAiUsageLogSchema,
-  insertUserFavoriteSchema
+  insertUserFavoriteSchema,
+  opportunities,
+  enterprises,
+  people
 } from "@shared/schema";
 import Stripe from "stripe";
 import { z } from "zod";
@@ -441,6 +446,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting opportunity:", error);
       res.status(500).json({ message: "Failed to delete opportunity" });
+    }
+  });
+
+  // Export opportunities as CSV
+  app.get('/api/crm/opportunities/export', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
+    try {
+      // Query opportunities with related enterprises and people using left joins
+      const opportunitiesData = await db
+        .select({
+          id: opportunities.id,
+          title: opportunities.title,
+          status: opportunities.status,
+          value: opportunities.value,
+          probability: opportunities.probability,
+          expectedCloseDate: opportunities.expectedCloseDate,
+          description: opportunities.description,
+          notes: opportunities.notes,
+          enterpriseName: enterprises.name,
+          enterpriseCategory: enterprises.category,
+          primaryContactFirstName: people.firstName,
+          primaryContactLastName: people.lastName,
+          primaryContactEmail: people.email,
+        })
+        .from(opportunities)
+        .leftJoin(enterprises, eq(opportunities.enterpriseId, enterprises.id))
+        .leftJoin(people, eq(opportunities.primaryContactId, people.id))
+        .orderBy(desc(opportunities.createdAt));
+
+      // CSV helper function to escape special characters
+      const escapeCSV = (value: any): string => {
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      };
+
+      // Format date as YYYY-MM-DD
+      const formatDate = (date: Date | null | undefined): string => {
+        if (!date) return '';
+        const d = new Date(date);
+        return d.toISOString().split('T')[0];
+      };
+
+      // Format currency (value is in cents)
+      const formatValue = (value: number | null | undefined): string => {
+        if (value === null || value === undefined) return '';
+        return (value / 100).toFixed(2);
+      };
+
+      // CSV headers
+      const headers = [
+        'Opportunity Title',
+        'Status',
+        'Value',
+        'Probability',
+        'Expected Close Date',
+        'Enterprise Name',
+        'Enterprise Category',
+        'Primary Contact Name',
+        'Primary Contact Email',
+        'Description',
+        'Notes'
+      ];
+
+      // Build CSV content
+      const csvRows = [headers.join(',')];
+
+      for (const opp of opportunitiesData) {
+        const primaryContactName = opp.primaryContactFirstName && opp.primaryContactLastName
+          ? `${opp.primaryContactFirstName} ${opp.primaryContactLastName}`
+          : '';
+
+        const row = [
+          escapeCSV(opp.title),
+          escapeCSV(opp.status),
+          escapeCSV(formatValue(opp.value)),
+          escapeCSV(opp.probability ?? ''),
+          escapeCSV(formatDate(opp.expectedCloseDate)),
+          escapeCSV(opp.enterpriseName),
+          escapeCSV(opp.enterpriseCategory),
+          escapeCSV(primaryContactName),
+          escapeCSV(opp.primaryContactEmail),
+          escapeCSV(opp.description),
+          escapeCSV(opp.notes)
+        ];
+        csvRows.push(row.join(','));
+      }
+
+      // Add UTF-8 BOM for Excel compatibility
+      const BOM = '\uFEFF';
+      const csvContent = BOM + csvRows.join('\n');
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      const filename = `opportunities-export-${timestamp}.csv`;
+
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error exporting opportunities:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to export opportunities", error: errorMessage });
     }
   });
 

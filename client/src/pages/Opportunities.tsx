@@ -53,6 +53,7 @@ import {
   Lightbulb,
   TrendingUp,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -76,6 +77,7 @@ export default function Opportunities() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const form = useForm<InsertOpportunity>({
     resolver: zodResolver(insertOpportunitySchema),
@@ -337,6 +339,62 @@ export default function Opportunities() {
     setIsDialogOpen(true);
   };
 
+  const handleExportCSV = async () => {
+    try {
+      setIsExporting(true);
+      const response = await fetch('/api/crm/opportunities/export', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to export opportunities');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      a.download = `opportunities-export-${timestamp}.csv`;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Opportunities exported successfully",
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to export opportunities",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const filteredOpportunities = statusFilter
     ? opportunities.filter(opportunity => opportunity.status === statusFilter)
     : opportunities;
@@ -371,14 +429,24 @@ export default function Opportunities() {
             <h1 className="text-3xl font-bold text-foreground font-lato">Opportunities</h1>
             <p className="text-muted-foreground">Track deals and partnership opportunities</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog} data-testid="button-create-opportunity">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Opportunity
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV} 
+              disabled={isExporting}
+              data-testid="button-export-csv"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isExporting ? "Exporting..." : "Export CSV"}
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openCreateDialog} data-testid="button-create-opportunity">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Opportunity
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="font-lato">
                   {editingOpportunity ? "Edit Opportunity" : "Create New Opportunity"}
@@ -614,6 +682,7 @@ export default function Opportunities() {
               </Form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Search and Filter */}
