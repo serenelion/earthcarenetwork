@@ -9,6 +9,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import { Link } from "wouter";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -267,6 +268,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </main>
+      <Footer />
     </div>
   );
 }

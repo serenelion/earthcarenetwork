@@ -69,7 +69,7 @@ export default function Landing() {
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Discover Regenerative Enterprise
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-white/90">
+          <p className="text-xl md:text-2xl mb-8 text-white">
             Connect with ecological champions from the land to the cloud.
           </p>
           
@@ -244,7 +244,7 @@ export default function Landing() {
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold mb-4 font-lato">Join the Regenerative Ecosystem</h2>
-          <p className="text-xl mb-8 text-primary-foreground/90">
+          <p className="text-xl mb-8 text-primary-foreground">
             Are you working on a regenerative project? Add your enterprise to our directory and connect with a global community of changemakers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -264,12 +264,12 @@ export default function Landing() {
               Claim Your Profile
             </Button>
           </div>
-          <p className="mt-6 text-sm text-primary-foreground/70">
+          <p className="mt-6 text-sm text-primary-foreground opacity-90">
             Powered by <a 
               href="https://terra-lux.org/terraluxtech/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="underline hover:text-primary-foreground"
+              className="underline hover:text-primary-foreground hover:opacity-100"
               data-testid="link-terralux-powered"
             >
               TerraLux Technology
@@ -277,7 +277,7 @@ export default function Landing() {
               href="https://thespatialnetwork.net"
               target="_blank"
               rel="noopener noreferrer" 
-              className="underline hover:text-primary-foreground"
+              className="underline hover:text-primary-foreground hover:opacity-100"
               data-testid="link-spatial-network"
             >
               The Spatial Network
