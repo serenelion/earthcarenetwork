@@ -23,10 +23,13 @@ import {
   Users,
   Filter,
   Sparkles,
+  LayoutDashboard,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FavoriteButton from "@/components/FavoriteButton";
 import { type Enterprise } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { hasRole } from "@/lib/authUtils";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -46,6 +49,7 @@ export default function Enterprises() {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
 
   // Detect category from URL path (/directory/:category)
   useEffect(() => {
@@ -91,11 +95,26 @@ export default function Enterprises() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Building className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground font-lato">
-              {getCategoryLabel()}
-            </h1>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <Building className="w-8 h-8 text-primary" />
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground font-lato">
+                {getCategoryLabel()}
+              </h1>
+            </div>
+            {isAuthenticated && hasRole(user, ["enterprise_owner", "admin"]) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                data-testid="quick-switch-to-crm"
+              >
+                <Link href="/crm" className="flex items-center gap-1">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Go to CRM Dashboard</span>
+                </Link>
+              </Button>
+            )}
           </div>
           <p className="text-lg text-muted-foreground">
             {selectedCategory 

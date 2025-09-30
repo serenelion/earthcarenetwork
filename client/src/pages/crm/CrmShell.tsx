@@ -15,8 +15,18 @@ import {
   Sparkles,
   Upload,
   Menu,
+  ChevronRight,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 import Dashboard from "@/pages/Dashboard";
 import People from "@/pages/People";
@@ -137,6 +147,60 @@ function MobileCrmSidebar() {
   );
 }
 
+function CrmBreadcrumbs() {
+  const [location] = useLocation();
+
+  const getSectionName = () => {
+    if (location === '/crm') return 'Dashboard';
+    if (location.startsWith('/crm/enterprises')) return 'Enterprises';
+    if (location.startsWith('/crm/people')) return 'People';
+    if (location.startsWith('/crm/opportunities')) return 'Opportunities';
+    if (location.startsWith('/crm/tasks')) return 'Tasks';
+    if (location.startsWith('/crm/reports')) return 'Reports';
+    if (location.startsWith('/crm/copilot')) return 'Copilot';
+    if (location.startsWith('/crm/bulk-import')) return 'Bulk Import';
+    return 'Dashboard';
+  };
+
+  return (
+    <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
+      <Breadcrumb data-testid="crm-breadcrumbs">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/crm" className="flex items-center gap-1">
+                <LayoutDashboard className="h-4 w-4" />
+                CRM
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {location !== '/crm' && (
+            <>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{getSectionName()}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          )}
+        </BreadcrumbList>
+      </Breadcrumb>
+      <Button
+        variant="ghost"
+        size="sm"
+        asChild
+        data-testid="quick-switch-to-directory"
+      >
+        <Link href="/enterprises" className="flex items-center gap-1">
+          <Globe className="h-4 w-4" />
+          <span className="hidden sm:inline">View Public Directory</span>
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export default function CrmShell() {
   return (
     <PageLayout
@@ -145,25 +209,28 @@ export default function CrmShell() {
       showSidebar={false}
       headerActions={<MobileCrmSidebar />}
     >
-      <div className="flex h-full">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 border-r border-border bg-card" data-testid="crm-sidebar">
-          <CrmSidebar />
-        </aside>
+      <div className="flex flex-col h-full">
+        <CrmBreadcrumbs />
+        <div className="flex flex-1 overflow-hidden">
+          {/* Desktop Sidebar */}
+          <aside className="hidden md:block w-64 border-r border-border bg-card" data-testid="crm-sidebar">
+            <CrmSidebar />
+          </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-auto" data-testid="crm-main-content">
-          <Switch>
-            <Route path="/crm/enterprises" component={CRMEnterprises} />
-            <Route path="/crm/people" component={People} />
-            <Route path="/crm/opportunities" component={Opportunities} />
-            <Route path="/crm/tasks" component={Tasks} />
-            <Route path="/crm/reports" component={Reports} />
-            <Route path="/crm/copilot" component={Copilot} />
-            <Route path="/crm/bulk-import" component={BulkImport} />
-            <Route path="/crm" component={Dashboard} />
-          </Switch>
-        </main>
+          {/* Main Content Area */}
+          <main className="flex-1 overflow-auto" data-testid="crm-main-content">
+            <Switch>
+              <Route path="/crm/enterprises" component={CRMEnterprises} />
+              <Route path="/crm/people" component={People} />
+              <Route path="/crm/opportunities" component={Opportunities} />
+              <Route path="/crm/tasks" component={Tasks} />
+              <Route path="/crm/reports" component={Reports} />
+              <Route path="/crm/copilot" component={Copilot} />
+              <Route path="/crm/bulk-import" component={BulkImport} />
+              <Route path="/crm" component={Dashboard} />
+            </Switch>
+          </main>
+        </div>
       </div>
     </PageLayout>
   );

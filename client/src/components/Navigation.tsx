@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book } from "lucide-react";
+import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { getPrimaryRole, hasRole, hasRoleOrHigher } from "@/lib/authUtils";
 import { Link, useLocation } from "wouter";
@@ -10,7 +11,10 @@ import { Link, useLocation } from "wouter";
 export default function Navigation() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const userRole = getPrimaryRole(user);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const isInCRM = location.startsWith('/crm');
+  const isInDirectory = location === '/' || location.startsWith('/enterprises') || location === '/enterprises';
 
   // Keyboard shortcut for global search (Cmd/Ctrl+K)
   useEffect(() => {
@@ -55,9 +59,19 @@ export default function Navigation() {
                 <>
                   {/* CRM - accessible to enterprise_owner and admin */}
                   {hasRole(user, ["enterprise_owner", "admin"]) && (
-                    <Link href="/crm" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-crm-link">
-                      CRM
-                    </Link>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link href="/crm" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="nav-crm-link">
+                            <LayoutDashboard className="h-4 w-4" />
+                            CRM
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Management Dashboard</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 
                 {/* Member-specific navigation */}
@@ -198,6 +212,17 @@ export default function Navigation() {
                         </div>
                       </Link>
                     </Button>
+                    
+                    {/* Context indicator badge - shows Directory or CRM mode */}
+                    {(isInCRM || isInDirectory) && (
+                      <Badge 
+                        variant={isInCRM ? "default" : "outline"}
+                        className="hidden sm:inline-flex"
+                        data-testid="context-indicator-badge"
+                      >
+                        {isInCRM ? "CRM" : "Directory"}
+                      </Badge>
+                    )}
                     
                     {/* Role indicator badge */}
                     <Badge 
