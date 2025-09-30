@@ -323,7 +323,7 @@ print(f"Created enterprise: {enterprise['id']}")`,
         </p>
         
         <div className="flex items-center gap-4 mb-6">
-          <Badge variant="secondary">8 endpoints</Badge>
+          <Badge variant="secondary">18 endpoints</Badge>
           <Badge variant="secondary">Public & Private</Badge>
           <Badge variant="secondary">Categorized</Badge>
         </div>
@@ -544,6 +544,556 @@ if (response.ok) {
           ]}
           requiresAuth={true}
           roles={['admin']}
+        />
+      </section>
+
+      {/* Profile Claims / Invitations */}
+      <section className="mb-16">
+        <h2 id="profile-claims" className="text-2xl font-semibold mb-6">Profile Claims & Invitations</h2>
+        <p className="text-muted-foreground mb-8">
+          Allow enterprise representatives to claim their organization's profile. Admins and enterprise owners can send claim invitations with secure tokens.
+        </p>
+
+        <APIEndpoint
+          method="POST"
+          path="/api/crm/enterprises/:id/invite"
+          title="Send Profile Claim Invitation"
+          description="Generate a secure claim link and send it to an enterprise representative. The token expires after 30 days."
+          parameters={[idParameter]}
+          bodyParameters={[
+            {
+              name: 'email',
+              type: 'string',
+              required: true,
+              description: 'Email address of the person to invite',
+              example: 'ceo@solarsolutions.example.com',
+            },
+            {
+              name: 'name',
+              type: 'string',
+              required: false,
+              description: 'Name of the person being invited',
+              example: 'Jane Smith',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Send a profile claim invitation
+const response = await fetch('/api/crm/enterprises/ent_123abc456def789/invite', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'ceo@solarsolutions.example.com',
+    name: 'Jane Smith'
+  })
+});
+
+const result = await response.json();
+console.log('Claim URL:', result.claimUrl);
+console.log('Token:', result.claim.claimToken);
+
+// Share the claim URL with the recipient
+const fullUrl = \`https://yourdomain.com\${result.claimUrl}\`;`,
+            },
+          ]}
+          responses={[
+            {
+              status: 201,
+              description: "Invitation created successfully",
+              example: {
+                message: "Invitation created successfully",
+                claim: {
+                  id: "claim_abc123",
+                  enterpriseId: "ent_123abc456def789",
+                  claimToken: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                  invitedEmail: "ceo@solarsolutions.example.com",
+                  invitedName: "Jane Smith",
+                  status: "pending",
+                  expiresAt: "2025-10-30T12:00:00Z"
+                },
+                claimUrl: "/claim-profile?token=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                note: "Email sending not yet implemented. Share this link manually with the recipient."
+              },
+            },
+          ]}
+          requiresAuth={true}
+          roles={['admin', 'enterprise_owner']}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="GET"
+          path="/api/enterprises/claim/:token"
+          title="Get Claim Details"
+          description="Retrieve information about a profile claim invitation using its token. This endpoint is public to allow recipients to view the claim before logging in."
+          parameters={[
+            {
+              name: 'token',
+              type: 'string',
+              required: true,
+              description: 'The unique claim token from the invitation URL',
+              example: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Get claim details from token
+const token = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
+const response = await fetch(\`/api/enterprises/claim/\${token}\`);
+const claimInfo = await response.json();
+
+console.log('Claiming:', claimInfo.enterprise.name);
+console.log('Invited:', claimInfo.claim.invitedEmail);
+console.log('Expires:', claimInfo.claim.expiresAt);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Claim details retrieved",
+              example: {
+                claim: {
+                  id: "claim_abc123",
+                  invitedEmail: "ceo@solarsolutions.example.com",
+                  invitedName: "Jane Smith",
+                  invitedAt: "2025-09-30T12:00:00Z",
+                  expiresAt: "2025-10-30T12:00:00Z",
+                  status: "pending"
+                },
+                enterprise: {
+                  id: "ent_123abc456def789",
+                  name: "Solar Solutions Inc",
+                  description: "Leading renewable energy provider",
+                  category: "land_projects",
+                  location: "California, USA",
+                  website: "https://solarsolutions.example.com",
+                  imageUrl: null
+                }
+              },
+            },
+            {
+              status: 400,
+              description: "Claim expired or already processed",
+              example: {
+                message: "This claim has expired",
+                statusCode: 400
+              },
+            },
+          ]}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="POST"
+          path="/api/enterprises/claim/:token"
+          title="Claim Enterprise Profile"
+          description="Accept a profile claim invitation and become the owner of the enterprise. Requires authentication. The user's role will be upgraded to 'enterprise_owner'."
+          parameters={[
+            {
+              name: 'token',
+              type: 'string',
+              required: true,
+              description: 'The unique claim token from the invitation',
+              example: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Claim the enterprise profile (requires auth)
+const token = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
+const response = await fetch(\`/api/enterprises/claim/\${token}\`, {
+  method: 'POST',
+  credentials: 'include'
+});
+
+const result = await response.json();
+console.log('Success!', result.message);
+console.log('Your enterprise:', result.enterprise.name);
+
+// User is now an enterprise_owner and can manage the enterprise`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Profile claimed successfully",
+              example: {
+                message: "Profile claimed successfully",
+                claim: {
+                  id: "claim_abc123",
+                  status: "claimed",
+                  claimedAt: "2025-09-30T14:30:00Z"
+                },
+                enterprise: {
+                  id: "ent_123abc456def789",
+                  name: "Solar Solutions Inc"
+                }
+              },
+            },
+            {
+              status: 401,
+              description: "Authentication required",
+              example: {
+                message: "Unauthorized",
+                statusCode: 401
+              },
+            },
+          ]}
+          requiresAuth={true}
+        />
+      </section>
+
+      {/* Bulk Import & Scraping */}
+      <section className="mb-16">
+        <h2 id="bulk-import" className="text-2xl font-semibold mb-6">Bulk Import & Web Scraping</h2>
+        <p className="text-muted-foreground mb-8">
+          Import multiple enterprises from external sources. Requires authentication and appropriate permissions.
+        </p>
+
+        <APIEndpoint
+          method="POST"
+          path="/api/crm/bulk-import/urls"
+          title="Bulk Import from URLs"
+          description="Scrape and import enterprise data from a list of URLs. The system will extract information like name, description, location, and contact details."
+          bodyParameters={[
+            {
+              name: 'urls',
+              type: 'array',
+              required: true,
+              description: 'Array of URLs to scrape',
+              example: '["https://example1.com", "https://example2.com"]',
+            },
+            {
+              name: 'category',
+              type: 'string',
+              required: false,
+              description: 'Default category to assign to imported enterprises',
+              enum: ['land_projects', 'capital_sources', 'open_source_tools', 'network_organizers'],
+              example: 'land_projects',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Bulk import enterprises from URLs
+const urls = [
+  'https://greenenergy.example.com',
+  'https://solarfarm.example.com',
+  'https://windenergy.example.com'
+];
+
+const response = await fetch('/api/crm/bulk-import/urls', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    urls: urls,
+    category: 'land_projects'
+  })
+});
+
+const result = await response.json();
+console.log(\`Imported \${result.imported} enterprises\`);
+console.log('Failed:', result.failed);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Import completed",
+              example: {
+                message: "Bulk import completed",
+                imported: 2,
+                failed: 1,
+                enterprises: [
+                  {
+                    id: "ent_new123",
+                    name: "Green Energy Solutions",
+                    sourceUrl: "https://greenenergy.example.com"
+                  }
+                ]
+              },
+            },
+          ]}
+          requiresAuth={true}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="POST"
+          path="/api/crm/scrape-url"
+          title="Scrape Single URL"
+          description="Extract enterprise information from a single URL without importing to database. Useful for previewing data before import."
+          bodyParameters={[
+            {
+              name: 'url',
+              type: 'string',
+              required: true,
+              description: 'The URL to scrape',
+              example: 'https://example.com',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Preview scraped data from a URL
+const response = await fetch('/api/crm/scrape-url', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    url: 'https://greenenergy.example.com'
+  })
+});
+
+const data = await response.json();
+console.log('Extracted name:', data.name);
+console.log('Extracted description:', data.description);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Data scraped successfully",
+              example: {
+                name: "Green Energy Solutions",
+                description: "Innovative solar and wind energy solutions",
+                url: "https://greenenergy.example.com",
+                contactEmail: "info@greenenergy.example.com"
+              },
+            },
+          ]}
+          requiresAuth={true}
+        />
+      </section>
+
+      {/* Favorites API */}
+      <section className="mb-16">
+        <h2 id="favorites" className="text-2xl font-semibold mb-6">Favorites Management</h2>
+        <p className="text-muted-foreground mb-8">
+          Authenticated users can bookmark enterprises to their favorites list with optional personal notes.
+        </p>
+
+        <APIEndpoint
+          method="GET"
+          path="/api/favorites"
+          title="Get User Favorites"
+          description="Retrieve the authenticated user's list of favorite enterprises with pagination."
+          queryParameters={[limitParameter, offsetParameter]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Get user's favorite enterprises
+const response = await fetch('/api/favorites?limit=20&offset=0', {
+  credentials: 'include'
+});
+
+const favorites = await response.json();
+favorites.forEach(fav => {
+  console.log(\`⭐ \${fav.enterprise.name}\`);
+  if (fav.notes) console.log(\`   Notes: \${fav.notes}\`);
+});`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "List of user favorites",
+              example: [
+                {
+                  id: "fav_123",
+                  userId: "user_456",
+                  enterpriseId: "ent_789",
+                  notes: "Great for solar panel collaboration",
+                  createdAt: "2025-09-15T10:00:00Z",
+                  enterprise: enterpriseResponse
+                }
+              ],
+            },
+          ]}
+          requiresAuth={true}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="POST"
+          path="/api/favorites"
+          title="Add to Favorites"
+          description="Add an enterprise to the user's favorites list with optional notes."
+          bodyParameters={[
+            {
+              name: 'enterpriseId',
+              type: 'string',
+              required: true,
+              description: 'The ID of the enterprise to favorite',
+              example: 'ent_123abc456def789',
+            },
+            {
+              name: 'notes',
+              type: 'string',
+              required: false,
+              description: 'Personal notes about this enterprise',
+              example: 'Potential partner for Q4 solar initiative',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Add enterprise to favorites
+const response = await fetch('/api/favorites', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    enterpriseId: 'ent_123abc456def789',
+    notes: 'Potential partner for Q4 solar initiative'
+  })
+});
+
+const favorite = await response.json();
+console.log('Added to favorites:', favorite.id);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 201,
+              description: "Enterprise added to favorites",
+              example: {
+                id: "fav_123",
+                userId: "user_456",
+                enterpriseId: "ent_123abc456def789",
+                notes: "Potential partner for Q4 solar initiative",
+                createdAt: "2025-09-30T14:00:00Z"
+              },
+            },
+          ]}
+          requiresAuth={true}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="DELETE"
+          path="/api/favorites/:enterpriseId"
+          title="Remove from Favorites"
+          description="Remove an enterprise from the user's favorites list."
+          parameters={[
+            {
+              name: 'enterpriseId',
+              type: 'string',
+              required: true,
+              description: 'The ID of the enterprise to unfavorite',
+              example: 'ent_123abc456def789',
+            },
+          ]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Remove from favorites
+const response = await fetch('/api/favorites/ent_123abc456def789', {
+  method: 'DELETE',
+  credentials: 'include'
+});
+
+if (response.ok) {
+  console.log('Removed from favorites');
+}`,
+            },
+          ]}
+          responses={[
+            {
+              status: 204,
+              description: "Successfully removed from favorites",
+              example: {},
+            },
+          ]}
+          requiresAuth={true}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="GET"
+          path="/api/enterprises/:id/favorite-status"
+          title="Check Favorite Status"
+          description="Check if a specific enterprise is in the user's favorites."
+          parameters={[idParameter]}
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Check if enterprise is favorited
+const response = await fetch('/api/enterprises/ent_123abc456def789/favorite-status', {
+  credentials: 'include'
+});
+
+const { isFavorited } = await response.json();
+console.log('Is favorited:', isFavorited);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Favorite status",
+              example: {
+                isFavorited: true
+              },
+            },
+          ]}
+          requiresAuth={true}
+          className="mb-12"
+        />
+
+        <APIEndpoint
+          method="GET"
+          path="/api/favorites/stats"
+          title="Get Favorites Statistics"
+          description="Retrieve statistics about the user's favorites, including total count and breakdown by category."
+          examples={[
+            {
+              language: 'javascript',
+              label: 'JavaScript',
+              code: `// Get favorites statistics
+const response = await fetch('/api/favorites/stats', {
+  credentials: 'include'
+});
+
+const stats = await response.json();
+console.log('Total favorites:', stats.total);
+console.log('By category:', stats.byCategory);`,
+            },
+          ]}
+          responses={[
+            {
+              status: 200,
+              description: "Favorites statistics",
+              example: {
+                total: 12,
+                byCategory: {
+                  land_projects: 5,
+                  capital_sources: 3,
+                  open_source_tools: 2,
+                  network_organizers: 2
+                }
+              },
+            },
+          ]}
+          requiresAuth={true}
         />
       </section>
 

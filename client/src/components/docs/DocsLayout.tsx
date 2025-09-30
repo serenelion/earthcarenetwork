@@ -24,6 +24,13 @@ import DocsHome from '@/pages/docs/DocsHome';
 import GettingStarted from '@/pages/docs/GettingStarted';
 import APIOverview from '@/pages/docs/APIOverview';
 import EnterprisesAPI from '@/pages/docs/EnterprisesAPI';
+import AuthenticationAPI from '@/pages/docs/AuthenticationAPI';
+import PeopleAPI from '@/pages/docs/PeopleAPI';
+import OpportunitiesAPI from '@/pages/docs/OpportunitiesAPI';
+import TasksAPI from '@/pages/docs/TasksAPI';
+import SearchAPI from '@/pages/docs/SearchAPI';
+import AICopilotAPI from '@/pages/docs/AICopilotAPI';
+import ExamplesPage from '@/pages/docs/ExamplesPage';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -356,79 +363,20 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
               
               {/* API Reference */}
               <Route path="/docs/api" component={APIOverview} />
+              <Route path="/docs/api/authentication" component={AuthenticationAPI} />
               <Route path="/docs/api/enterprises" component={EnterprisesAPI} />
-              <Route path="/docs/api/authentication">
-                <PlaceholderPage 
-                  title="Authentication API" 
-                  description="API reference for authentication endpoints."
-                  testId="api-auth-page"
-                />
-              </Route>
-              <Route path="/docs/api/people">
-                <PlaceholderPage 
-                  title="People API" 
-                  description="Manage contacts and relationships with the People API."
-                  testId="people-api-page"
-                />
-              </Route>
-              <Route path="/docs/api/opportunities">
-                <PlaceholderPage 
-                  title="Opportunities API" 
-                  description="Track leads and manage sales pipeline with the Opportunities API."
-                  testId="opportunities-api-page"
-                />
-              </Route>
-              <Route path="/docs/api/tasks">
-                <PlaceholderPage 
-                  title="Tasks API" 
-                  description="Project management and task tracking functionality."
-                  testId="tasks-api-page"
-                />
-              </Route>
-              <Route path="/docs/api/search">
-                <PlaceholderPage 
-                  title="Search API" 
-                  description="Global search across enterprises, people, opportunities, and tasks."
-                  testId="search-api-page"
-                />
-              </Route>
-              <Route path="/docs/api/ai-copilot">
-                <PlaceholderPage 
-                  title="AI Copilot API" 
-                  description="AI-powered insights, lead scoring, and intelligent suggestions."
-                  testId="ai-copilot-api-page"
-                />
-              </Route>
+              <Route path="/docs/api/people" component={PeopleAPI} />
+              <Route path="/docs/api/opportunities" component={OpportunitiesAPI} />
+              <Route path="/docs/api/tasks" component={TasksAPI} />
+              <Route path="/docs/api/search" component={SearchAPI} />
+              <Route path="/docs/api/ai-copilot" component={AICopilotAPI} />
               
               {/* Code Examples */}
-              <Route path="/docs/examples/javascript">
-                <PlaceholderPage 
-                  title="JavaScript/Node.js Examples" 
-                  description="Complete code examples and SDK usage for JavaScript and Node.js applications."
-                  testId="javascript-examples-page"
-                />
-              </Route>
-              <Route path="/docs/examples/python">
-                <PlaceholderPage 
-                  title="Python Examples" 
-                  description="Complete code examples and SDK usage for Python applications."
-                  testId="python-examples-page"
-                />
-              </Route>
-              <Route path="/docs/examples/curl">
-                <PlaceholderPage 
-                  title="cURL Examples" 
-                  description="Raw HTTP request examples using cURL for testing and integration."
-                  testId="curl-examples-page"
-                />
-              </Route>
-              <Route path="/docs/examples/react">
-                <PlaceholderPage 
-                  title="React Component Examples" 
-                  description="Pre-built React components and integration patterns."
-                  testId="react-examples-page"
-                />
-              </Route>
+              <Route path="/docs/examples" component={ExamplesPage} />
+              <Route path="/docs/examples/javascript" component={ExamplesPage} />
+              <Route path="/docs/examples/python" component={ExamplesPage} />
+              <Route path="/docs/examples/curl" component={ExamplesPage} />
+              <Route path="/docs/examples/react" component={ExamplesPage} />
               
               {/* Tools & Resources */}
               <Route path="/docs/tools/api-explorer">
