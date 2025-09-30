@@ -270,8 +270,8 @@ export default function Navigation() {
                     )}
                   </div>
                 ) : (
-                  // Visitor navigation - search, sign in, and membership
-                  <div className="flex items-center space-x-3">
+                  // Visitor navigation - search, sign in, become partner, and become member
+                  <div className="flex items-center space-x-2">
                     {/* Global Search Trigger for visitors */}
                     <Button
                       variant="ghost"
@@ -289,22 +289,37 @@ export default function Navigation() {
                     </Button>
                     
                     <Button 
-                      variant="outline"
-                      className="text-sm font-medium"
-                      data-testid="button-sign-in"
-                      onClick={() => window.location.href = "/api/login"}
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm font-medium hidden sm:inline-flex"
+                      data-testid="button-become-partner"
+                      asChild
                     >
-                      Sign In
+                      <Link href="/partners">
+                        Become a Partner
+                      </Link>
                     </Button>
                     
                     <Button 
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 text-sm font-medium"
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm font-medium hidden sm:inline-flex"
                       data-testid="button-become-member"
                       asChild
                     >
                       <Link href="/member-benefits">
                         Become a Member
                       </Link>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="text-sm font-medium"
+                      data-testid="button-sign-in"
+                      onClick={() => window.location.href = "/api/login"}
+                    >
+                      Sign In
                     </Button>
                   </div>
                 )}

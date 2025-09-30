@@ -75,11 +75,29 @@ export default function Enterprises() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const isMobile = useIsMobile();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEnterprise, setEditingEnterprise] = useState<Enterprise | null>(null);
+
+  // Detect category from URL path (/directory/:category)
+  useEffect(() => {
+    const categoryMap: Record<string, string> = {
+      '/directory/land-projects': 'land_projects',
+      '/directory/capital-sources': 'capital_sources',
+      '/directory/open-source-tools': 'open_source_tools',
+      '/directory/network-organizers': 'network_organizers',
+    };
+    
+    const categoryFromUrl = categoryMap[location];
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+    } else if (location === '/enterprises') {
+      // Clear category filter when navigating back to main directory
+      setSelectedCategory(null);
+    }
+  }, [location]);
 
   const form = useForm<InsertEnterprise>({
     resolver: zodResolver(insertEnterpriseSchema),
@@ -108,7 +126,6 @@ export default function Enterprises() {
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },
-    enabled: isAuthenticated,
     retry: false,
   });
 

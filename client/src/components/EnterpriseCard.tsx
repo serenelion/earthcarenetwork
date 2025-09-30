@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, ExternalLink, Users, CheckCircle } from "lucide-react";
+import { MapPin, ExternalLink, Users, CheckCircle, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import type { Enterprise } from "@shared/schema";
 
 interface EnterpriseCardProps {
@@ -27,16 +28,11 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
   const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
   const categoryLabel = categoryLabels[enterprise.category as keyof typeof categoryLabels] || enterprise.category;
 
-  const handleViewProfile = () => {
-    if (enterprise.website) {
-      window.open(enterprise.website, "_blank", "noopener,noreferrer");
-    }
-  };
-
   return (
-    <Card className="overflow-hidden shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer">
-      {/* Enterprise Image Placeholder */}
-      <div className="h-48 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
+    <Link href={`/enterprises/${enterprise.id}`}>
+      <Card className="overflow-hidden shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer">
+        {/* Enterprise Image Placeholder */}
+        <div className="h-48 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
         {enterprise.imageUrl ? (
           <img 
             src={enterprise.imageUrl} 
@@ -89,7 +85,7 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
                 Verified
               </Badge>
             )}
-            {enterprise.followerCount !== undefined && enterprise.followerCount > 0 && (
+            {enterprise.followerCount !== undefined && enterprise.followerCount !== null && enterprise.followerCount > 0 && (
               <Badge variant="outline" className="text-muted-foreground">
                 <Users className="w-3 h-3 mr-1" />
                 {enterprise.followerCount} Followers
@@ -100,12 +96,11 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleViewProfile}
             className="text-primary hover:text-primary/80 hover:underline text-sm font-medium"
             data-testid={testId ? `${testId}-view-profile` : "button-view-profile"}
           >
-            View Profile
-            <ExternalLink className="w-3 h-3 ml-1" />
+            View Details
+            <ArrowRight className="w-3 h-3 ml-1" />
           </Button>
         </div>
         
@@ -126,5 +121,6 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
         )}
       </CardContent>
     </Card>
+    </Link>
   );
 }

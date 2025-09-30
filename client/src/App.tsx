@@ -25,8 +25,8 @@ import Settings from "@/pages/Settings";
 import Partners from "@/pages/Partners";
 import MemberBenefits from "@/pages/MemberBenefits";
 import Favorites from "@/pages/Favorites";
-import PartnerApplication from "@/pages/PartnerApplication";
 import AdminPartnerApplications from "@/pages/AdminPartnerApplications";
+import EnterpriseDetail from "@/pages/EnterpriseDetail";
 import AdminEnterpriseClaiming from "@/pages/AdminEnterpriseClaiming";
 import AdminOpportunityTransfers from "@/pages/AdminOpportunityTransfers";
 import ClaimEnterprise from "@/pages/ClaimEnterprise";
@@ -50,7 +50,6 @@ function Router() {
           <Route path="/" component={Landing} />
           <Route path="/partners" component={Partners} />
           <Route path="/member-benefits" component={MemberBenefits} />
-          <Route path="/partner-application" component={PartnerApplication} />
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
           <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
           <Route path="/pricing" component={Pricing} />
@@ -143,10 +142,13 @@ function Router() {
             </AuthenticatedRoute>
           </Route>
           
-          <Route path="/directory*" component={Landing} />
-          
-          {/* Directory - accessible to all */}
+          {/* Directory routes - accessible to all */}
+          <Route path="/enterprises/:id" component={EnterpriseDetail} />
           <Route path="/enterprises" component={Enterprises} />
+          <Route path="/directory/land-projects" component={Enterprises} />
+          <Route path="/directory/capital-sources" component={Enterprises} />
+          <Route path="/directory/open-source-tools" component={Enterprises} />
+          <Route path="/directory/network-organizers" component={Enterprises} />
           
           <Route path="/people">
             <AuthenticatedRoute>

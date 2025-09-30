@@ -116,10 +116,6 @@ export default function Landing() {
               <CategorySection
                 key={category.id}
                 category={category}
-                onSelect={() => {
-                  setSelectedCategory(category.id);
-                  document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
-                }}
                 data-testid={`category-${category.id}`}
               />
             ))}

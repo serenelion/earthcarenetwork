@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, LucideIcon } from "lucide-react";
+import { Link } from "wouter";
 
 interface CategorySectionProps {
   category: {
@@ -10,19 +11,21 @@ interface CategorySectionProps {
     icon: LucideIcon;
     count: number;
   };
-  onSelect: () => void;
   "data-testid"?: string;
 }
 
-export default function CategorySection({ category, onSelect, "data-testid": testId }: CategorySectionProps) {
+export default function CategorySection({ category, "data-testid": testId }: CategorySectionProps) {
   const Icon = category.icon;
+  
+  // Convert category ID to route path
+  const categoryRoute = `/directory/${category.id.replace(/_/g, '-')}`;
 
   return (
-    <Card 
-      className="p-6 shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer"
-      onClick={onSelect}
-      data-testid={testId}
-    >
+    <Link href={categoryRoute}>
+      <Card 
+        className="p-6 shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer"
+        data-testid={testId}
+      >
       <CardContent className="p-0">
         <div className="text-primary mb-4">
           <Icon className="w-8 h-8" />
@@ -53,5 +56,6 @@ export default function CategorySection({ category, onSelect, "data-testid": tes
         </div>
       </CardContent>
     </Card>
+    </Link>
   );
 }
