@@ -54,7 +54,17 @@ import {
   TrendingUp,
   ExternalLink,
   Download,
+  Mail,
+  Briefcase,
+  MapPin,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import Sidebar, { MobileMenuButton } from "@/components/Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SearchBar from "@/components/SearchBar";
@@ -69,6 +79,20 @@ const opportunityStatuses = [
   { value: "closed_lost", label: "Closed Lost", color: "bg-red-100 text-red-800" },
 ];
 
+const categoryColors = {
+  land_projects: "bg-green-100 text-green-800",
+  capital_sources: "bg-yellow-100 text-yellow-800", 
+  open_source_tools: "bg-blue-100 text-blue-800",
+  network_organizers: "bg-purple-100 text-purple-800",
+};
+
+const categoryLabels = {
+  land_projects: "Land Project",
+  capital_sources: "Capital Source",
+  open_source_tools: "Open Source Tool", 
+  network_organizers: "Network Organizer",
+};
+
 export default function Opportunities() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -78,6 +102,8 @@ export default function Opportunities() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   const form = useForm<InsertOpportunity>({
     resolver: zodResolver(insertOpportunitySchema),
@@ -762,7 +788,15 @@ export default function Opportunities() {
               const status = opportunityStatuses.find(s => s.value === opportunity.status);
 
               return (
-                <Card key={opportunity.id} className="hover:shadow-lg transition-shadow" data-testid={`opportunity-card-${opportunity.id}`}>
+                <Card 
+                  key={opportunity.id} 
+                  className="hover:shadow-lg transition-shadow cursor-pointer" 
+                  data-testid={`opportunity-card-${opportunity.id}`}
+                  onClick={() => {
+                    setViewingOpportunity(opportunity);
+                    setIsDetailDialogOpen(true);
+                  }}
+                >
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
@@ -775,7 +809,7 @@ export default function Opportunities() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -811,6 +845,100 @@ export default function Opportunities() {
                       </p>
                     )}
 
+                    {/* Enterprise and Contact Badges Section */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {enterprise ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
+                                  <Building className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Enterprise</p>
+                                    <p className="text-sm font-medium truncate" data-testid={`enterprise-name-${opportunity.id}`}>
+                                      {enterprise.name}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1">
+                                <p className="font-semibold">{enterprise.name}</p>
+                                {enterprise.category && (
+                                  <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
+                                    {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
+                                  </Badge>
+                                )}
+                                {enterprise.location && (
+                                  <p className="text-xs flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {enterprise.location}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
+                            <Building className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">No enterprise linked</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {contact ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
+                                  <User className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Contact</p>
+                                    <p className="text-sm font-medium truncate" data-testid={`contact-name-${opportunity.id}`}>
+                                      {contact.firstName} {contact.lastName}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1">
+                                <p className="font-semibold">{contact.firstName} {contact.lastName}</p>
+                                {contact.title && (
+                                  <p className="text-xs flex items-center gap-1">
+                                    <Briefcase className="w-3 h-3" />
+                                    {contact.title}
+                                  </p>
+                                )}
+                                {contact.email && (
+                                  <p className="text-xs flex items-center gap-1">
+                                    <Mail className="w-3 h-3" />
+                                    {contact.email}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
+                            <User className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">No contact assigned</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-3 mb-4">
                       {opportunity.value && opportunity.value > 0 && (
                         <div className="flex items-center text-sm">
@@ -844,20 +972,6 @@ export default function Opportunities() {
                         </div>
                       )}
 
-                      {enterprise && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Building className="w-3 h-3 mr-2" />
-                          {enterprise.name}
-                        </div>
-                      )}
-
-                      {contact && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-3 h-3 mr-2" />
-                          {contact.firstName} {contact.lastName}
-                        </div>
-                      )}
-
                       {opportunity.expectedCloseDate && (
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Calendar className="w-3 h-3 mr-2" />
@@ -887,6 +1001,258 @@ export default function Opportunities() {
             })}
           </div>
         )}
+
+        {/* Opportunity Detail Dialog */}
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            {viewingOpportunity && (() => {
+              const enterprise = enterprises.find(e => e.id === viewingOpportunity.enterpriseId);
+              const contact = people.find(p => p.id === viewingOpportunity.primaryContactId);
+              const status = opportunityStatuses.find(s => s.value === viewingOpportunity.status);
+
+              return (
+                <>
+                  <DialogHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <DialogTitle className="font-lato text-2xl mb-2">
+                          {viewingOpportunity.title}
+                        </DialogTitle>
+                        {status && (
+                          <Badge className={`${status.color}`}>
+                            {status.label}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="space-y-6 mt-6">
+                    {/* Description */}
+                    {viewingOpportunity.description && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">Description</h4>
+                        <p className="text-foreground">{viewingOpportunity.description}</p>
+                      </div>
+                    )}
+
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {viewingOpportunity.value && viewingOpportunity.value > 0 && (
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-2 text-green-600 mb-1">
+                              <DollarSign className="w-4 h-4" />
+                              <span className="text-xs font-medium">Value</span>
+                            </div>
+                            <p className="text-2xl font-bold">
+                              ${(viewingOpportunity.value / 100).toLocaleString()}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {viewingOpportunity.probability !== null && (
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-2 text-blue-600 mb-1">
+                              <TrendingUp className="w-4 h-4" />
+                              <span className="text-xs font-medium">Probability</span>
+                            </div>
+                            <p className="text-2xl font-bold">{viewingOpportunity.probability}%</p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {viewingOpportunity.aiScore && (
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-2 text-purple-600 mb-1">
+                              <Lightbulb className="w-4 h-4" />
+                              <span className="text-xs font-medium">AI Score</span>
+                            </div>
+                            <p className="text-2xl font-bold">{viewingOpportunity.aiScore}/100</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Enterprise Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                        <Building className="w-4 h-4" />
+                        Enterprise
+                      </h4>
+                      {enterprise ? (
+                        <Card className="border-2">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-lg mb-2" data-testid="detail-enterprise-name">
+                                  {enterprise.name}
+                                </h5>
+                                {enterprise.category && (
+                                  <Badge className={`${categoryColors[enterprise.category as keyof typeof categoryColors]} mb-2`}>
+                                    {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
+                                  </Badge>
+                                )}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(`/enterprises/${enterprise.id}`, '_blank')}
+                                data-testid="button-view-enterprise"
+                              >
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                            
+                            <div className="space-y-2 text-sm">
+                              {enterprise.location && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{enterprise.location}</span>
+                                </div>
+                              )}
+                              {enterprise.description && (
+                                <p className="text-muted-foreground mt-2">{enterprise.description}</p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="border-dashed">
+                          <CardContent className="p-6 text-center">
+                            <Building className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                            <p className="text-muted-foreground text-sm">No enterprise linked to this opportunity</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+
+                    {/* Contact Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Primary Contact
+                      </h4>
+                      {contact ? (
+                        <Card className="border-2">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-lg mb-1" data-testid="detail-contact-name">
+                                  {contact.firstName} {contact.lastName}
+                                </h5>
+                                {contact.title && (
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Briefcase className="w-3 h-3" />
+                                    {contact.title}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 text-sm">
+                              {contact.email && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Mail className="w-4 h-4" />
+                                  <a href={`mailto:${contact.email}`} className="hover:underline text-primary">
+                                    {contact.email}
+                                  </a>
+                                </div>
+                              )}
+                              {contact.notes && (
+                                <p className="text-muted-foreground mt-2">{contact.notes}</p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="border-dashed">
+                          <CardContent className="p-6 text-center">
+                            <User className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                            <p className="text-muted-foreground text-sm">No contact assigned to this opportunity</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+
+                    {/* Additional Information */}
+                    {(viewingOpportunity.expectedCloseDate || viewingOpportunity.notes || viewingOpportunity.aiInsights) && (
+                      <>
+                        <Separator />
+                        <div className="space-y-4">
+                          {viewingOpportunity.expectedCloseDate && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Expected Close Date
+                              </h4>
+                              <p className="text-foreground">
+                                {new Date(viewingOpportunity.expectedCloseDate).toLocaleDateString('en-US', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                          )}
+
+                          {viewingOpportunity.aiInsights && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                                <Lightbulb className="w-4 h-4" />
+                                AI Insights
+                              </h4>
+                              <p className="text-foreground bg-muted/50 p-3 rounded-lg">
+                                {viewingOpportunity.aiInsights}
+                              </p>
+                            </div>
+                          )}
+
+                          {viewingOpportunity.notes && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h4>
+                              <p className="text-foreground bg-muted/50 p-3 rounded-lg">
+                                {viewingOpportunity.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsDetailDialogOpen(false);
+                        handleEdit(viewingOpportunity);
+                      }}
+                      data-testid="button-edit-from-detail"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Opportunity
+                    </Button>
+                    <Button
+                      onClick={() => setIsDetailDialogOpen(false)}
+                      data-testid="button-close-detail"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
