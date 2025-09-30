@@ -408,7 +408,7 @@ export default function People() {
                 <Button 
                   variant="outline"
                   size="sm"
-                  onClick={() => setLocation("/directory")}
+                  onClick={() => setLocation("/enterprises")}
                   data-testid="button-public-directory"
                   className="flex items-center space-x-2"
                 >

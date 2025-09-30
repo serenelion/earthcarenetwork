@@ -44,15 +44,13 @@ export default function CategorySection({ category, "data-testid": testId }: Cat
             {category.count} enterprises
           </span>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary font-medium hover:underline p-0 h-auto"
+          <span
+            className="text-primary font-medium hover:underline flex items-center text-sm"
             data-testid={testId ? `${testId}-view-directory` : undefined}
           >
             View Directory
             <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
+          </span>
         </div>
       </CardContent>
     </Card>
