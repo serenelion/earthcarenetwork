@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Navigation from "@/components/Navigation";
 import { 
   Handshake, 
   Users, 
@@ -162,9 +161,6 @@ export default function Partners() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <Navigation />
-
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-emerald-500/10 to-secondary/20"></div>

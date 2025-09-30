@@ -2,13 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Gift, Star, Shield, Network, Zap, CheckCircle, Users, Building, Heart, ArrowRight, ExternalLink } from "lucide-react";
-import Navigation from "@/components/Navigation";
 
 export default function MemberBenefits() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <Navigation />
 
       {/* Hero Section - Emphasizing Free & Open Source */}
       <section className="hero-gradient earth-pattern text-white py-24">
@@ -36,7 +33,7 @@ export default function MemberBenefits() {
             </Button>
             <Button 
               variant="outline" 
-              className="bg-white/20 backdrop-blur text-white border-white/30 hover:bg-white/30 px-8 py-3 text-lg"
+              className="bg-white hover:bg-white/90 text-primary border-white px-8 py-3 text-lg font-semibold"
               data-testid="button-join-member-hero"
               onClick={() => window.location.href = "/api/login"}
             >
