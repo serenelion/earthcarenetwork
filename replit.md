@@ -12,11 +12,11 @@ Preferred communication style: Simple, everyday language.
 The application features a complete separation between public directory browsing and authenticated CRM management:
 
 ### Public Directory
-- **Routes**: /, /enterprises, /directory/:category, /enterprises/:id
+- **Routes**: /, /enterprises, /directory/:category, /enterprises/:id, /search
 - **Access**: No authentication required - accessible to all visitors
 - **Purpose**: Public browsing of regenerative enterprises with category filtering
-- **Features**: Search, category filters, enterprise details, responsive cards
-- **Component**: `client/src/pages/Enterprises.tsx` (pure public, no admin features)
+- **Features**: Full page search at /search, category filters, enterprise details, responsive cards
+- **Components**: `client/src/pages/Enterprises.tsx` (pure public, no admin features), `client/src/pages/Search.tsx` (full page search with URL state persistence)
 
 ### CRM Management
 - **Routes**: /crm, /crm/enterprises, /crm/people, /crm/opportunities, /crm/tasks, /crm/reports, /crm/copilot, /crm/bulk-import
@@ -71,6 +71,7 @@ The backend uses Express.js with TypeScript in ESM format:
 - **Task Management**: Task assignment and tracking with priority levels
 - **AI Copilot**: Lead scoring, suggestions, and automated insights using OpenAI
 - **Bulk Import**: Web scraping capabilities for importing enterprise data from external sources
+- **Full Page Search**: Comprehensive search experience at /search with URL state persistence, category filters, and unified search across enterprises, people, opportunities, tasks, and documentation
 
 # External Dependencies
 
