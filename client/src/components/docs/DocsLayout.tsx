@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { Link, useLocation, Switch, Route } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { 
   ChevronRight, 
   Menu, 
-  X, 
-  Home, 
   Book, 
+  Home, 
   Code, 
   Building2, 
   Users, 
   Target, 
   Search,
-  Zap,
   Shield,
   FileText,
   Settings,
@@ -19,18 +17,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-// Import existing documentation pages
-import DocsHome from '@/pages/docs/DocsHome';
-import GettingStarted from '@/pages/docs/GettingStarted';
-import APIOverview from '@/pages/docs/APIOverview';
-import EnterprisesAPI from '@/pages/docs/EnterprisesAPI';
-import AuthenticationAPI from '@/pages/docs/AuthenticationAPI';
-import PeopleAPI from '@/pages/docs/PeopleAPI';
-import OpportunitiesAPI from '@/pages/docs/OpportunitiesAPI';
-import TasksAPI from '@/pages/docs/TasksAPI';
-import SearchAPI from '@/pages/docs/SearchAPI';
-import AICopilotAPI from '@/pages/docs/AICopilotAPI';
-import ExamplesPage from '@/pages/docs/ExamplesPage';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -166,7 +152,7 @@ function NavigationItem({ item, level = 0 }: { item: NavItem; level?: number }) 
       
       {hasChildren && (isOpen || isParentActive) && (
         <div className="mt-1 space-y-1">
-          {item.items.map((subItem, index) => (
+          {item.items?.map((subItem, index) => (
             <NavigationItem key={index} item={subItem} level={level + 1} />
           ))}
         </div>
@@ -223,19 +209,6 @@ function Breadcrumbs() {
         </div>
       ))}
     </nav>
-  );
-}
-
-// Placeholder component factory
-function PlaceholderPage({ title, description, testId }: { title: string; description: string; testId: string }) {
-  return (
-    <div className="max-w-4xl" data-testid={testId}>
-      <h1 className="text-4xl font-bold mb-4">{title}</h1>
-      <p className="text-xl text-muted-foreground mb-6">{description}</p>
-      <div className="bg-muted/30 rounded-lg p-6">
-        <p>Documentation coming soon...</p>
-      </div>
-    </div>
   );
 }
 
@@ -303,128 +276,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
         <div className="h-full overflow-auto">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
             <Breadcrumbs />
-            <Switch>
-              {/* Home */}
-              <Route path="/docs" component={DocsHome} />
-              
-              {/* Getting Started Guides */}
-              <Route path="/docs/guides/getting-started" component={GettingStarted} />
-              <Route path="/docs/guides/authentication">
-                <PlaceholderPage 
-                  title="Authentication" 
-                  description="Learn how to authenticate with the Earth Care Network API using Replit Auth."
-                  testId="auth-guide-page"
-                />
-              </Route>
-              <Route path="/docs/guides/first-api-call">
-                <PlaceholderPage 
-                  title="First API Call" 
-                  description="Make your first request to the Earth Care Network API."
-                  testId="first-api-call-page"
-                />
-              </Route>
-              
-              {/* Integration Guides */}
-              <Route path="/docs/guides/enterprise-directory">
-                <PlaceholderPage 
-                  title="Enterprise Directory Integration" 
-                  description="Build a searchable enterprise directory with filters and categories."
-                  testId="enterprise-directory-guide-page"
-                />
-              </Route>
-              <Route path="/docs/guides/contact-management">
-                <PlaceholderPage 
-                  title="Contact Management Integration" 
-                  description="Implement comprehensive contact and relationship management."
-                  testId="contact-management-guide-page"
-                />
-              </Route>
-              <Route path="/docs/guides/crm-workflow">
-                <PlaceholderPage 
-                  title="CRM Workflow Setup" 
-                  description="Implement opportunity management and pipeline tracking."
-                  testId="crm-workflow-guide-page"
-                />
-              </Route>
-              <Route path="/docs/guides/search-integration">
-                <PlaceholderPage 
-                  title="Search Integration" 
-                  description="Implement global search across enterprises, people, and opportunities."
-                  testId="search-integration-guide-page"
-                />
-              </Route>
-              <Route path="/docs/guides/ai-copilot">
-                <PlaceholderPage 
-                  title="AI Copilot Integration" 
-                  description="Add intelligent lead scoring and suggestions to your application."
-                  testId="ai-copilot-guide-page"
-                />
-              </Route>
-              
-              {/* API Reference */}
-              <Route path="/docs/api" component={APIOverview} />
-              <Route path="/docs/api/authentication" component={AuthenticationAPI} />
-              <Route path="/docs/api/enterprises" component={EnterprisesAPI} />
-              <Route path="/docs/api/people" component={PeopleAPI} />
-              <Route path="/docs/api/opportunities" component={OpportunitiesAPI} />
-              <Route path="/docs/api/tasks" component={TasksAPI} />
-              <Route path="/docs/api/search" component={SearchAPI} />
-              <Route path="/docs/api/ai-copilot" component={AICopilotAPI} />
-              
-              {/* Code Examples */}
-              <Route path="/docs/examples" component={ExamplesPage} />
-              <Route path="/docs/examples/javascript" component={ExamplesPage} />
-              <Route path="/docs/examples/python" component={ExamplesPage} />
-              <Route path="/docs/examples/curl" component={ExamplesPage} />
-              <Route path="/docs/examples/react" component={ExamplesPage} />
-              
-              {/* Tools & Resources */}
-              <Route path="/docs/tools/api-explorer">
-                <PlaceholderPage 
-                  title="API Explorer" 
-                  description="Interactive tool to explore and test all API endpoints."
-                  testId="api-explorer-page"
-                />
-              </Route>
-              <Route path="/docs/tools/postman-collection">
-                <PlaceholderPage 
-                  title="Postman Collection" 
-                  description="Download our comprehensive Postman collection for API testing."
-                  testId="postman-collection-page"
-                />
-              </Route>
-              <Route path="/docs/reference/errors">
-                <PlaceholderPage 
-                  title="Error Codes Reference" 
-                  description="Complete reference of API error codes and troubleshooting guide."
-                  testId="error-codes-page"
-                />
-              </Route>
-              <Route path="/docs/reference/rate-limits">
-                <PlaceholderPage 
-                  title="Rate Limits" 
-                  description="API rate limiting policies, quotas, and best practices."
-                  testId="rate-limits-page"
-                />
-              </Route>
-              <Route path="/docs/reference/webhooks">
-                <PlaceholderPage 
-                  title="Webhooks" 
-                  description="Real-time event notifications and webhook configuration."
-                  testId="webhooks-page"
-                />
-              </Route>
-              
-              {/* 404 for docs */}
-              <Route>
-                <div className="max-w-4xl" data-testid="docs-not-found">
-                  <h1 className="text-4xl font-bold mb-4">Documentation Not Found</h1>
-                  <p className="text-muted-foreground">
-                    The documentation page you're looking for doesn't exist.
-                  </p>
-                </div>
-              </Route>
-            </Switch>
+            {children}
           </div>
         </div>
       </main>

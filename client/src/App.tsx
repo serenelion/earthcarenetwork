@@ -42,8 +42,29 @@ import DocsHome from "@/pages/docs/DocsHome";
 import GettingStarted from "@/pages/docs/GettingStarted";
 import APIOverview from "@/pages/docs/APIOverview";
 import EnterprisesAPI from "@/pages/docs/EnterprisesAPI";
+import AuthenticationAPI from "@/pages/docs/AuthenticationAPI";
+import PeopleAPI from "@/pages/docs/PeopleAPI";
+import OpportunitiesAPI from "@/pages/docs/OpportunitiesAPI";
+import TasksAPI from "@/pages/docs/TasksAPI";
+import SearchAPI from "@/pages/docs/SearchAPI";
+import AICopilotAPI from "@/pages/docs/AICopilotAPI";
+import ExamplesPage from "@/pages/docs/ExamplesPage";
 // CRM Shell
 import CrmShell from "@/pages/crm/CrmShell";
+
+function PlaceholderDocPage({ title, description, testId }: { title: string; description: string; testId: string }) {
+  return (
+    <DocsLayout>
+      <div className="max-w-4xl" data-testid={testId}>
+        <h1 className="text-4xl font-bold mb-4">{title}</h1>
+        <p className="text-xl text-muted-foreground mb-6">{description}</p>
+        <div className="bg-muted/30 rounded-lg p-6">
+          <p>Documentation coming soon...</p>
+        </div>
+      </div>
+    </DocsLayout>
+  );
+}
 
 function Router() {
   return (
@@ -63,8 +84,174 @@ function Router() {
           <Route path="/plans" component={Pricing} />
           
           {/* Documentation routes - accessible to all */}
-          <Route path="/docs*">
-            <DocsLayout />
+          <Route path="/docs">
+            <DocsLayout>
+              <DocsHome />
+            </DocsLayout>
+          </Route>
+          
+          {/* Getting Started Guides */}
+          <Route path="/docs/guides/getting-started">
+            <DocsLayout>
+              <GettingStarted />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/guides/authentication">
+            <PlaceholderDocPage 
+              title="Authentication" 
+              description="Learn how to authenticate with the Earth Care Network API using Replit Auth."
+              testId="auth-guide-page"
+            />
+          </Route>
+          <Route path="/docs/guides/first-api-call">
+            <PlaceholderDocPage 
+              title="First API Call" 
+              description="Make your first request to the Earth Care Network API."
+              testId="first-api-call-page"
+            />
+          </Route>
+          
+          {/* Integration Guides */}
+          <Route path="/docs/guides/enterprise-directory">
+            <PlaceholderDocPage 
+              title="Enterprise Directory Integration" 
+              description="Build a searchable enterprise directory with filters and categories."
+              testId="enterprise-directory-guide-page"
+            />
+          </Route>
+          <Route path="/docs/guides/contact-management">
+            <PlaceholderDocPage 
+              title="Contact Management Integration" 
+              description="Implement comprehensive contact and relationship management."
+              testId="contact-management-guide-page"
+            />
+          </Route>
+          <Route path="/docs/guides/crm-workflow">
+            <PlaceholderDocPage 
+              title="CRM Workflow Setup" 
+              description="Implement opportunity management and pipeline tracking."
+              testId="crm-workflow-guide-page"
+            />
+          </Route>
+          <Route path="/docs/guides/search-integration">
+            <PlaceholderDocPage 
+              title="Search Integration" 
+              description="Implement global search across enterprises, people, and opportunities."
+              testId="search-integration-guide-page"
+            />
+          </Route>
+          <Route path="/docs/guides/ai-copilot">
+            <PlaceholderDocPage 
+              title="AI Copilot Integration" 
+              description="Add intelligent lead scoring and suggestions to your application."
+              testId="ai-copilot-guide-page"
+            />
+          </Route>
+          
+          {/* API Reference */}
+          <Route path="/docs/api">
+            <DocsLayout>
+              <APIOverview />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/authentication">
+            <DocsLayout>
+              <AuthenticationAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/enterprises">
+            <DocsLayout>
+              <EnterprisesAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/people">
+            <DocsLayout>
+              <PeopleAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/opportunities">
+            <DocsLayout>
+              <OpportunitiesAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/tasks">
+            <DocsLayout>
+              <TasksAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/search">
+            <DocsLayout>
+              <SearchAPI />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/api/ai-copilot">
+            <DocsLayout>
+              <AICopilotAPI />
+            </DocsLayout>
+          </Route>
+          
+          {/* Code Examples */}
+          <Route path="/docs/examples">
+            <DocsLayout>
+              <ExamplesPage />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/examples/javascript">
+            <DocsLayout>
+              <ExamplesPage />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/examples/python">
+            <DocsLayout>
+              <ExamplesPage />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/examples/curl">
+            <DocsLayout>
+              <ExamplesPage />
+            </DocsLayout>
+          </Route>
+          <Route path="/docs/examples/react">
+            <DocsLayout>
+              <ExamplesPage />
+            </DocsLayout>
+          </Route>
+          
+          {/* Tools & Resources */}
+          <Route path="/docs/tools/api-explorer">
+            <PlaceholderDocPage 
+              title="API Explorer" 
+              description="Interactive tool to explore and test all API endpoints."
+              testId="api-explorer-page"
+            />
+          </Route>
+          <Route path="/docs/tools/postman-collection">
+            <PlaceholderDocPage 
+              title="Postman Collection" 
+              description="Download our comprehensive Postman collection for API testing."
+              testId="postman-collection-page"
+            />
+          </Route>
+          <Route path="/docs/reference/errors">
+            <PlaceholderDocPage 
+              title="Error Codes Reference" 
+              description="Complete reference of API error codes and troubleshooting guide."
+              testId="error-codes-page"
+            />
+          </Route>
+          <Route path="/docs/reference/rate-limits">
+            <PlaceholderDocPage 
+              title="Rate Limits" 
+              description="API rate limiting policies, quotas, and best practices."
+              testId="rate-limits-page"
+            />
+          </Route>
+          <Route path="/docs/reference/webhooks">
+            <PlaceholderDocPage 
+              title="Webhooks" 
+              description="Real-time event notifications and webhook configuration."
+              testId="webhooks-page"
+            />
           </Route>
           
           {/* Role-specific dashboard routes */}
