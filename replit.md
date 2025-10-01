@@ -5,6 +5,13 @@ This is a CRM (Customer Relationship Management) application focused on regenera
 # Recent Changes
 
 ## October 2025
+- **Searchable Comboboxes in Opportunities**: Enhanced UX for enterprise and contact selection
+  - Replaced basic Select dropdowns with searchable Combobox components (Popover + Command pattern)
+  - Real-time search/filter by typing enterprise or contact names
+  - Contact search includes enterprise affiliation for better context
+  - Proper state management ensures popovers close immediately after selection
+  - "No Enterprise" and "No Contact" options display correctly when null is selected
+  - Significantly improved usability when dealing with large lists
 - **CRM UI Refactoring**: Complete overhaul of CRM navigation for single source of truth
   - Created standalone CrmLayout component (removed PageLayout dependency)
   - Moved all CRM pages to `client/src/pages/crm/` folder for coherent organization
