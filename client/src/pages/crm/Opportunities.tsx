@@ -57,6 +57,8 @@ import {
   Mail,
   Briefcase,
   MapPin,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import {
   Tooltip,
@@ -65,6 +67,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import { insertOpportunitySchema, type Opportunity, type InsertOpportunity, type Enterprise, type Person } from "@shared/schema";
 const opportunityStatuses = [
@@ -100,6 +116,8 @@ export default function Opportunities() {
   const [isExporting, setIsExporting] = useState(false);
   const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [enterprisePopoverOpen, setEnterprisePopoverOpen] = useState(false);
+  const [contactPopoverOpen, setContactPopoverOpen] = useState(false);
 
   const form = useForm<InsertOpportunity>({
     resolver: zodResolver(insertOpportunitySchema),
@@ -569,23 +587,74 @@ export default function Opportunities() {
                       control={form.control}
                       name="enterpriseId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel>Enterprise</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-opportunity-enterprise">
-                                <SelectValue placeholder="Select enterprise" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">No Enterprise</SelectItem>
-                              {enterprises.map((enterprise) => (
-                                <SelectItem key={enterprise.id} value={enterprise.id}>
-                                  {enterprise.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover open={enterprisePopoverOpen} onOpenChange={setEnterprisePopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={enterprisePopoverOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                  data-testid="select-opportunity-enterprise"
+                                >
+                                  {field.value
+                                    ? enterprises.find((e) => e.id === field.value)?.name
+                                    : field.value === null
+                                    ? "No Enterprise"
+                                    : "Select enterprise..."}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search enterprises..." />
+                                <CommandList>
+                                  <CommandEmpty>No enterprise found.</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="none"
+                                      onSelect={() => {
+                                        form.setValue("enterpriseId", null);
+                                        setEnterprisePopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value === null ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      No Enterprise
+                                    </CommandItem>
+                                    {enterprises.map((enterprise) => (
+                                      <CommandItem
+                                        key={enterprise.id}
+                                        value={enterprise.name}
+                                        onSelect={() => {
+                                          form.setValue("enterpriseId", enterprise.id);
+                                          setEnterprisePopoverOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            enterprise.id === field.value ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {enterprise.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -595,23 +664,92 @@ export default function Opportunities() {
                       control={form.control}
                       name="primaryContactId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel>Primary Contact</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-opportunity-contact">
-                                <SelectValue placeholder="Select contact" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">No Contact</SelectItem>
-                              {people.map((person) => (
-                                <SelectItem key={person.id} value={person.id}>
-                                  {person.firstName} {person.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover open={contactPopoverOpen} onOpenChange={setContactPopoverOpen}>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={contactPopoverOpen}
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                  data-testid="select-opportunity-contact"
+                                >
+                                  {field.value
+                                    ? (() => {
+                                        const person = people.find((p) => p.id === field.value);
+                                        return person ? `${person.firstName} ${person.lastName}` : "Select contact...";
+                                      })()
+                                    : field.value === null
+                                    ? "No Contact"
+                                    : "Select contact..."}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search contacts..." />
+                                <CommandList>
+                                  <CommandEmpty>No contact found.</CommandEmpty>
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="none"
+                                      onSelect={() => {
+                                        form.setValue("primaryContactId", null);
+                                        setContactPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value === null ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      No Contact
+                                    </CommandItem>
+                                    {people.map((person) => {
+                                      const enterprise = enterprises.find(e => e.id === person.enterpriseId);
+                                      const displayName = `${person.firstName} ${person.lastName}`;
+                                      const searchValue = enterprise 
+                                        ? `${displayName} ${enterprise.name}`
+                                        : displayName;
+                                      
+                                      return (
+                                        <CommandItem
+                                          key={person.id}
+                                          value={searchValue}
+                                          onSelect={() => {
+                                            form.setValue("primaryContactId", person.id);
+                                            setContactPopoverOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              person.id === field.value ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span>{displayName}</span>
+                                            {enterprise && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {enterprise.name}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
