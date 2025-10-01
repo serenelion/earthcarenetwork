@@ -4,6 +4,18 @@ This is a CRM (Customer Relationship Management) application focused on regenera
 
 # Recent Changes
 
+## October 2025
+- **CRM UI Refactoring**: Complete overhaul of CRM navigation for single source of truth
+  - Created standalone CrmLayout component (removed PageLayout dependency)
+  - Moved all CRM pages to `client/src/pages/crm/` folder for coherent organization
+  - Removed duplicate navigation elements from individual pages
+  - Each CRM page now renders only domain content (forms, tables, cards)
+  - Navigation centralized in CrmLayout with CrmSidebar, CrmMobileSidebar, CrmBreadcrumbs
+- **Documentation Routing**: Fixed all documentation routes using explicit route definitions
+  - All 28 documentation pages now working correctly
+  - Removed nested routing issues with DocsLayout
+  - Documentation accessible at /docs with full sidebar navigation
+
 ## September 2025
 - **Enhanced Navigation**: Added context badges (Directory/CRM indicators) and breadcrumbs for improved wayfinding
 - **CSV Export**: Implemented CSV export for opportunities with linked entities (probability=0 handled correctly)
@@ -35,7 +47,14 @@ The application features a complete separation between public directory browsing
 - **Access**: Requires authentication with enterprise_owner or admin role
 - **Purpose**: Full CRUD management of enterprises, contacts, and opportunities
 - **Features**: Create/edit/delete operations, advanced filtering, data tables, analytics
-- **Layout**: `client/src/pages/crm/CrmShell.tsx` provides sidebar navigation and nested routing
+- **Layout**: Standalone CrmLayout component with single source of truth navigation
+  - `client/src/components/crm/CrmLayout.tsx` - Main CRM layout (no PageLayout dependency)
+  - `client/src/components/crm/CrmSidebar.tsx` - Desktop navigation
+  - `client/src/components/crm/CrmMobileSidebar.tsx` - Mobile menu drawer
+  - `client/src/components/crm/CrmBreadcrumbs.tsx` - Navigation breadcrumbs
+  - `client/src/config/crmNavigation.ts` - Central navigation configuration
+- **Pages**: All CRM pages in `client/src/pages/crm/` folder render only domain content
+- **Routing**: `client/src/pages/crm/CrmShell.tsx` handles route definitions with CrmLayout wrapper
 - **API**: Separate `/api/crm/*` endpoints with role-based authorization
 
 ### API Architecture
