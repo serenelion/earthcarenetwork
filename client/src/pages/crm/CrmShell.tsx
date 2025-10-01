@@ -1,11 +1,11 @@
 import { Route, Switch } from "wouter";
 import CrmLayout from "@/components/crm/CrmLayout";
-import Dashboard from "@/pages/Dashboard";
-import People from "@/pages/People";
-import Opportunities from "@/pages/Opportunities";
-import Tasks from "@/pages/Tasks";
-import Copilot from "@/pages/Copilot";
-import BulkImport from "@/pages/BulkImport";
+import Dashboard from "@/pages/crm/Dashboard";
+import People from "@/pages/crm/People";
+import Opportunities from "@/pages/crm/Opportunities";
+import Tasks from "@/pages/crm/Tasks";
+import Copilot from "@/pages/crm/Copilot";
+import BulkImport from "@/pages/crm/BulkImport";
 import CRMEnterprises from "@/pages/crm/CRMEnterprises";
 
 const Reports = () => (
