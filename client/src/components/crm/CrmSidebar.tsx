@@ -30,6 +30,7 @@ export default function CrmSidebar() {
                         "w-full justify-start",
                         isActive && "bg-secondary text-secondary-foreground"
                       )}
+                      aria-current={isActive ? "page" : undefined}
                       data-testid={`nav-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <Icon className="mr-2 h-4 w-4" />
