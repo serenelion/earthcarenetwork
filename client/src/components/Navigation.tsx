@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Building2, Target, BarChart3, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book, LayoutDashboard } from "lucide-react";
+import { Globe, User, ChevronDown, Home, Heart, UserCircle, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -99,37 +99,6 @@ export default function Navigation() {
                         <Link href="/profile" data-testid="nav-profile">
                           <UserCircle className="mr-2 h-4 w-4" />
                           Profile
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-
-                {/* Enterprise Owner-specific navigation */}
-                {hasRole(user, ["enterprise_owner", "admin"]) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="nav-enterprise-menu">
-                        Enterprise <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem asChild>
-                        <Link href="/enterprise/dashboard" data-testid="nav-enterprise-dashboard">
-                          <Building2 className="mr-2 h-4 w-4" />
-                          My Enterprise
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/opportunities" data-testid="nav-opportunities">
-                          <Target className="mr-2 h-4 w-4" />
-                          Opportunities
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/crm" data-testid="nav-crm">
-                          <BarChart3 className="mr-2 h-4 w-4" />
-                          CRM
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -281,8 +250,8 @@ export default function Navigation() {
                         data-testid="button-enterprise-cta"
                         asChild
                       >
-                        <Link href="/opportunities">
-                          View Opportunities
+                        <Link href="/crm">
+                          Open CRM
                         </Link>
                       </Button>
                     ) : (
