@@ -51,7 +51,7 @@ export default function Navigation() {
               </Link>
               
               {/* Directory - accessible to everyone */}
-              <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="nav-directory">
+              <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors flex items-center" data-testid="nav-directory">
                 Directory
               </Link>
               
