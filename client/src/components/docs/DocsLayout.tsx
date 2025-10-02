@@ -214,9 +214,9 @@ function Breadcrumbs() {
 
 export default function DocsLayout({ children }: DocsLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-shrink-0">
+    <div className="flex min-h-screen bg-background pt-16">
+      {/* Desktop/Tablet Sidebar - visible from md breakpoint (768px) */}
+      <aside className="hidden md:flex md:flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-hidden">
         <div className="flex flex-col w-64 border-r border-border bg-card/50">
           <div className="flex-shrink-0 px-4 py-6">
             <Link href="/docs" className="flex items-center gap-2" data-testid="docs-logo">
@@ -224,26 +224,25 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
               <span className="font-semibold text-lg">Documentation</span>
             </Link>
           </div>
-          <ScrollArea className="flex-1 px-4">
+          <ScrollArea className="flex-1 px-4 pb-4">
             <NavigationContent />
           </ScrollArea>
-          <div className="p-4 border-t">
+          <div className="p-4 border-t flex-shrink-0">
             <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
               <ExternalLink className="h-4 w-4" />
-              Back to Earth Network
+              Back to Earth Care Network
             </Link>
           </div>
         </div>
       </aside>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden">
+      {/* Mobile Navigation - visible only on small screens */}
+      <div className="md:hidden fixed top-20 left-4 z-40">
         <Sheet>
           <SheetTrigger asChild>
             <Button
               variant="outline"
               size="icon"
-              className="fixed top-4 left-4 z-40"
               data-testid="mobile-nav-trigger"
             >
               <Menu className="h-4 w-4" />
@@ -263,7 +262,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
               <div className="p-4 border-t">
                 <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                   <ExternalLink className="h-4 w-4" />
-                  Back to Earth Network
+                  Back to Earth Care Network
                 </Link>
               </div>
             </div>
@@ -272,10 +271,10 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
-        <div className="h-full overflow-auto">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-            <Breadcrumbs />
+      <main className="flex-1 min-w-0">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 md:pl-6">
+          <Breadcrumbs />
+          <div className="prose prose-slate dark:prose-invert max-w-none">
             {children}
           </div>
         </div>
