@@ -23,7 +23,7 @@ export default function CrmSidebar() {
                 const isActive = location === link.href;
                 
                 return (
-                  <Link key={link.href} href={link.href}>
+                  <Link key={link.href} href={link.href} className="block">
                     <Button
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
