@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import Navigation from "@/components/Navigation";
 import {
   Building,
   Clock,
@@ -277,30 +276,27 @@ export default function AdminPartnerApplications() {
   // Check if user is admin
   if (!isLoading && (!user || (user as any).role !== 'admin')) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="max-w-2xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
-          <Card className="text-center p-8">
-            <CardHeader>
-              <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-                <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
-              </div>
-              <CardTitle className="text-2xl text-red-700 dark:text-red-400">Access Denied</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-6">
-                You don't have permission to access the admin partner applications page.
-              </p>
-              <Button 
-                onClick={() => window.location.href = "/"}
-                data-testid="button-back-home"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="max-w-2xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
+        <Card className="text-center p-8">
+          <CardHeader>
+            <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+              <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <CardTitle className="text-2xl text-red-700 dark:text-red-400">Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-6">
+              You don't have permission to access the admin partner applications page.
+            </p>
+            <Button 
+              onClick={() => window.location.href = "/"}
+              data-testid="button-back-home"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -365,13 +361,10 @@ export default function AdminPartnerApplications() {
 
   if (isLoading || isLoadingApplications) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center pt-24">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading applications...</p>
-          </div>
+      <div className="flex items-center justify-center pt-24">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading applications...</p>
         </div>
       </div>
     );
@@ -379,8 +372,6 @@ export default function AdminPartnerApplications() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
-      
       <div className="max-w-7xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
