@@ -92,7 +92,7 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline" 
-              className="bg-white/20 backdrop-blur text-white border-white/30 hover:bg-white/30 px-8 py-3"
+              className="bg-white/90 backdrop-blur text-gray-900 border-white hover:bg-white px-8 py-3 font-semibold"
               data-testid="button-explore-directory"
               onClick={() => {
                 document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' });
