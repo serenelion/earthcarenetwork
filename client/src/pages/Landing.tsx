@@ -69,7 +69,7 @@ export default function Landing() {
           <h1 className="text-4xl md:text-6xl font-bold mb-6 text-[#000000]">
             Discover Regenerative Enterprise
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-white">
+          <p className="text-xl md:text-2xl mb-8 text-gray-800 font-medium">
             Connect with ecological champions from the land to the cloud.
           </p>
           
