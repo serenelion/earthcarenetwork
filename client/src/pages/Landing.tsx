@@ -257,7 +257,7 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline"
-              className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 px-8 py-3"
+              className="bg-white/90 border-white text-gray-900 hover:bg-white px-8 py-3 font-semibold"
               data-testid="button-claim-profile"
               onClick={() => window.open("https://thespatialnetwork.net", "_blank")}
             >
