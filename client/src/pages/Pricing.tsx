@@ -40,12 +40,13 @@ export default function Pricing() {
       id: 'free',
       planType: 'free' as const,
       name: 'Free',
-      description: 'Perfect for exploring the Earth Care Network',
+      description: 'Claim your project and manage your profile',
       priceMonthly: 0,
       priceYearly: 0,
       features: [
         'Browse enterprise directory',
-        'Access member benefits',
+        'Claim a project profile',
+        'Edit your profile information',
         'Basic search functionality',
         'Community access',
         '1,000 AI tokens/month'
@@ -84,9 +85,9 @@ export default function Pricing() {
       id: 'build_pro_bundle',
       planType: 'build_pro_bundle' as const,
       name: 'Build Pro Bundle',
-      description: 'Coming soon - CRM + Spatial Network Build Pro',
-      priceMonthly: 9900, // $99 in cents
-      priceYearly: 99000, // $990/year
+      description: 'CRM + Spatial Network Build Pro',
+      priceMonthly: 8811, // $88.11 in cents
+      priceYearly: 88110, // $881.10/year
       features: [
         'Everything in CRM Basic',
         'Spatial Network Build Pro access',
@@ -98,7 +99,7 @@ export default function Pricing() {
         'Dedicated account manager'
       ],
       tokenQuotaLimit: 1000000,
-      isActive: false, // Coming soon
+      isActive: true,
       displayOrder: 2,
       stripePriceIdMonthly: 'price_build_pro_monthly',
       stripePriceIdYearly: 'price_build_pro_yearly'
@@ -114,11 +115,14 @@ export default function Pricing() {
       <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Accelerate Your Regenerative Impact
+            Free & Open Source CRM for Regenerative Enterprise
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Join Earth Care Network's CRM platform designed specifically for regenerative 
-            enterprises, land projects, and capital sources.
+          <p className="text-xl text-muted-foreground mb-4 max-w-3xl mx-auto">
+            Earth Care Network is completely free and open source. Self-host it yourself or 
+            choose professional hosting with CRM features for regenerative enterprises.
+          </p>
+          <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto">
+            💚 All code is open source and available for self-hosting at no cost
           </p>
           
           {/* Billing Toggle */}
@@ -285,11 +289,20 @@ export default function Pricing() {
           
           <div className="space-y-8">
             <div>
+              <h3 className="text-xl font-semibold mb-2">Is Earth Care Network really free and open source?</h3>
+              <p className="text-muted-foreground">
+                Yes! The entire Earth Care Network platform is completely free and open source. Anyone can 
+                self-host the application at no cost. Our paid plans are for professionally hosted instances 
+                with additional CRM features and support.
+              </p>
+            </div>
+            
+            <div>
               <h3 className="text-xl font-semibold mb-2">What's included in the CRM Basic plan?</h3>
               <p className="text-muted-foreground">
-                CRM Basic gives you full access to our platform designed specifically for regenerative 
-                enterprises. This includes opportunity management, lead scoring, AI insights, advanced search, 
-                task management, and contact relationship mapping.
+                CRM Basic gives you full access to our professionally hosted platform designed specifically 
+                for regenerative enterprises. This includes opportunity management, lead scoring, AI insights, 
+                advanced search, task management, and contact relationship mapping.
               </p>
             </div>
             
@@ -303,19 +316,28 @@ export default function Pricing() {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-2">Can I cancel anytime?</h3>
+              <h3 className="text-xl font-semibold mb-2">Can I self-host instead of using paid hosting?</h3>
               <p className="text-muted-foreground">
-                Yes, you can cancel your subscription at any time. You'll continue to have access to 
-                your plan features until the end of your current billing period.
+                Absolutely! Earth Care Network is open source, so you can self-host the entire platform 
+                for free on your own infrastructure. Paid plans are for those who prefer managed hosting 
+                with professional support and additional CRM features.
               </p>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-2">What's the Build Pro Bundle?</h3>
               <p className="text-muted-foreground">
-                The Build Pro Bundle is coming soon and will include everything in CRM Basic plus 
-                access to Spatial Network Build Pro for advanced project management and geographic 
-                visualization tools.
+                The Build Pro Bundle includes everything in CRM Basic plus access to Spatial Network Build Pro 
+                for advanced project management and geographic visualization tools. Perfect for teams managing 
+                complex regenerative projects.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Can I cancel anytime?</h3>
+              <p className="text-muted-foreground">
+                Yes, you can cancel your subscription at any time. You'll continue to have access to 
+                your plan features until the end of your current billing period.
               </p>
             </div>
           </div>
