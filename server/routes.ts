@@ -15,6 +15,7 @@ import {
   importScrapedEnterprises,
   scrapeRegenerativeSources 
 } from "./scraperService";
+import { generateMurmurationsProfile } from "./murmurations";
 import { 
   insertEnterpriseSchema,
   insertPersonSchema,
@@ -275,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const favorite = await storage.addUserFavorite(
         userId,
         validatedData.enterpriseId,
-        validatedData.notes
+        validatedData.notes || undefined
       );
       res.status(201).json(favorite);
     } catch (error) {
@@ -1283,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is enterprise owner or admin
       const user = await storage.getUser(userId);
-      if (!user || !['enterprise_owner', 'admin'].includes(user.role)) {
+      if (!user || !user.role || !['enterprise_owner', 'admin'].includes(user.role)) {
         return res.status(403).json({ message: "Enterprise owner or admin access required" });
       }
 
@@ -2063,7 +2064,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateSubscriptionByStripeId(subscription.id, {
               status: subscription.status as any,
               currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              nextBillingDate: new Date(subscription.current_period_end * 1000)
             });
 
             await storage.updateUserSubscriptionStatus(
@@ -2165,6 +2167,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating subscription plan:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(400).json({ message: "Failed to create subscription plan", error: errorMessage });
+    }
+  });
+
+  // Murmurations profile hosting endpoint (public, no auth required)
+  app.get('/api/murmurations/profiles/:enterpriseId.json', async (req, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      if (!enterprise) {
+        return res.status(404).json({ error: "Enterprise not found" });
+      }
+
+      const profile = generateMurmurationsProfile(enterprise);
+
+      res.set({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      });
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Error generating Murmurations profile:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to generate profile", message: errorMessage });
     }
   });
 

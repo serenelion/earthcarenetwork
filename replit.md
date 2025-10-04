@@ -1,10 +1,26 @@
 # Overview
 
-This is a CRM (Customer Relationship Management) application focused on regenerative enterprises and sustainability projects. The system allows users to discover, track, and manage relationships with organizations working on land projects, capital sources, open source tools, and network organizers in the regenerative/sustainability space. It features AI-powered lead scoring, web scraping for bulk data import, and a comprehensive dashboard for managing enterprises, people, opportunities, and tasks.
+Earth Care Network is a **federated, open-source CRM and directory platform** for regenerative enterprises, modeled after Ghost.org's sustainable funding approach. The system enables:
+- **Free Self-Hosting**: Anyone can clone, customize, and run their own instance
+- **Paid Professional Hosting**: Replit-hosted with full CRM features and AI Sales Autopilot
+- **Federated Discovery**: All instances contribute to a global commons via Murmurations protocol
+- **Enterprise Directory**: Discover organizations working on land projects, capital sources, open source tools, and network organizers
+
+Anyone can self-host "Earth Care Network" and rebrand it (e.g., "Regenerative Agriculture Hub"), while their enterprise profiles automatically join the global directory via Murmurations federation.
 
 # Recent Changes
 
-## October 2025
+## October 2025 - Federated Architecture
+- **Murmurations Protocol Integration**: Added federated directory system enabling cross-instance discovery
+  - murmurationsProfiles table tracks published enterprise JSON profiles
+  - instanceConfig table for custom branding in self-hosted deployments
+  - Profile generator converts Enterprise → Murmurations JSON Schema
+  - Public API endpoint `/api/murmurations/profiles/:enterpriseId.json` serves profiles
+  - Integration with Murmurations Index for global discovery
+- **Multi-Tenant Ownership Model**: enterpriseOwners table with owner/editor/viewer roles for RLS
+- **Free Tier Profile Limits**: maxClaimedProfiles (1 for free, unlimited for paid)
+- **Open Source Positioning**: Ghost.org-style "Free & Open Source OR Paid Hosting" model
+- **Searchable Comboboxes in Opportunities**: Enhanced UX for enterprise and contact selection
 - **Searchable Comboboxes in Opportunities**: Enhanced UX for enterprise and contact selection
   - Replaced basic Select dropdowns with searchable Combobox components (Popover + Command pattern)
   - Real-time search/filter by typing enterprise or contact names
