@@ -80,6 +80,9 @@ export const users = pgTable("users", {
   tokenUsageThisMonth: integer("token_usage_this_month").default(0),
   tokenQuotaLimit: integer("token_quota_limit").default(10000), // Default free tier limit
   lastTokenUsageReset: timestamp("last_token_usage_reset").defaultNow(),
+  // Free tier limits for claimed profiles
+  maxClaimedProfiles: integer("max_claimed_profiles").default(1), // free users can claim 1, paid unlimited
+  claimedProfilesCount: integer("claimed_profiles_count").default(0), // track current count
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -409,6 +412,20 @@ export const profileClaimStatusEnum = pgEnum('profile_claim_status', [
   'expired'
 ]);
 
+// Murmurations profile status enum
+export const profileStatusEnum = pgEnum('profile_status', [
+  'pending',
+  'published',
+  'error'
+]);
+
+// Enterprise ownership role enum
+export const ownershipRoleEnum = pgEnum('ownership_role', [
+  'owner',
+  'editor',
+  'viewer'
+]);
+
 // Profile claims table - for enterprise profile ownership invitations
 export const profileClaims = pgTable("profile_claims", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -425,6 +442,49 @@ export const profileClaims = pgTable("profile_claims", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Murmurations profiles table - Track published enterprise profiles
+export const murmurationsProfiles = pgTable("murmurations_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  profileUrl: varchar("profile_url").notNull(), // where the JSON profile is hosted
+  murmurationsNodeId: varchar("murmurations_node_id"), // ID returned from Murmurations Index
+  linkedSchemas: text("linked_schemas").array(), // schema names used (e.g., ["organizations_schema-v1.0.0"])
+  lastSubmittedAt: timestamp("last_submitted_at"),
+  lastIndexedAt: timestamp("last_indexed_at"), // when Index last crawled
+  status: profileStatusEnum("status").default('pending').notNull(),
+  errorMessage: text("error_message"),
+  isPublic: boolean("is_public").default(true), // whether to share in global index
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Instance configuration table - Self-hosted instance configuration
+export const instanceConfig = pgTable("instance_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`), // single row
+  instanceName: varchar("instance_name"), // custom branding for self-hosted instances
+  instanceUrl: varchar("instance_url"), // base URL of this instance
+  murmurationsEnabled: boolean("murmurations_enabled").default(true),
+  publishToGlobalIndex: boolean("publish_to_global_index").default(true), // opt-in/out of federation
+  contactEmail: varchar("contact_email"),
+  description: text("description"),
+  logoUrl: varchar("logo_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Enterprise owners table - Multi-tenant ownership tracking for RLS
+export const enterpriseOwners = pgTable("enterprise_owners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  role: ownershipRoleEnum("role").default('viewer').notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Ensure unique user-enterprise combination
+  index("enterprise_owners_unique_idx").on(table.enterpriseId, table.userId)
+]);
 
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
@@ -520,6 +580,24 @@ export const insertProfileClaimSchema = createInsertSchema(profileClaims).omit({
   updatedAt: true,
 });
 
+export const insertMurmurationsProfileSchema = createInsertSchema(murmurationsProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInstanceConfigSchema = createInsertSchema(instanceConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEnterpriseOwnerSchema = createInsertSchema(enterpriseOwners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -555,3 +633,9 @@ export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertProfileClaim = z.infer<typeof insertProfileClaimSchema>;
 export type ProfileClaim = typeof profileClaims.$inferSelect;
+export type InsertMurmurationsProfile = z.infer<typeof insertMurmurationsProfileSchema>;
+export type MurmurationsProfile = typeof murmurationsProfiles.$inferSelect;
+export type InsertInstanceConfig = z.infer<typeof insertInstanceConfigSchema>;
+export type InstanceConfig = typeof instanceConfig.$inferSelect;
+export type InsertEnterpriseOwner = z.infer<typeof insertEnterpriseOwnerSchema>;
+export type EnterpriseOwner = typeof enterpriseOwners.$inferSelect;
