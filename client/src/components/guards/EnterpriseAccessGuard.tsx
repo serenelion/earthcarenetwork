@@ -86,10 +86,10 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="heading-welcome">
-                Welcome to Your CRM Workspace
+                Activate Your Enterprise
               </h1>
               <p className="text-lg text-muted-foreground mb-6">
-                Get started by setting up your enterprise profile and workspace
+                Join the regenerative economy with your free enterprise profile and full-featured CRM workspace
               </p>
             </div>
 
@@ -124,7 +124,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-create-first-workspace"
               >
                 <Building2 className="mr-2 h-5 w-5" />
-                Set Up My Workspace
+                Activate My Enterprise
               </Button>
               
               <Button
@@ -142,18 +142,18 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
             {/* Help Text */}
             <div className="mt-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                <strong>Brand new?</strong> Click "Set Up My Workspace" to create your enterprise profile and CRM.
+                <strong>New to Earth Care Network?</strong> Activation is instant and free forever. Get your enterprise online in minutes.
               </p>
               <p className="text-sm text-muted-foreground">
-                <strong>Already listed in the directory?</strong>{" "}
+                <strong>Already in our directory?</strong>{" "}
                 <button
                   onClick={() => setLocation("/enterprises")}
                   className="text-primary hover:underline font-medium"
                   data-testid="link-browse-directory"
                 >
-                  Claim your existing profile
+                  Claim your profile
                 </button>{" "}
-                to unlock your workspace.
+                to activate your workspace and start managing partnerships.
               </p>
             </div>
           </div>

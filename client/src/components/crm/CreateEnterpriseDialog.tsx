@@ -44,7 +44,6 @@ const createEnterpriseFormSchema = insertEnterpriseSchema.extend({
   name: z.string().min(1, "Enterprise name is required").max(255),
   description: z.string().optional(),
   category: z.enum(["land_projects", "capital_sources", "open_source_tools", "network_organizers"]),
-  contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   location: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   signPledge: z.boolean().optional().default(false),
@@ -88,7 +87,6 @@ export default function CreateEnterpriseDialog({
       name: "",
       description: "",
       category: "land_projects",
-      contactEmail: user?.email || "",
       location: "",
       website: "",
       signPledge: false,
@@ -140,12 +138,12 @@ export default function CreateEnterpriseDialog({
       await queryClient.invalidateQueries({ queryKey: ['/api/crm/user/enterprises'] });
 
       toast({
-        title: pledgeSignedSuccessfully ? "Workspace Created!" : "Workspace Created!",
+        title: pledgeSignedSuccessfully ? "🌱 Enterprise Activated!" : "Enterprise Activated!",
         description: pledgeSignedSuccessfully
-          ? "Your workspace is ready and you've signed the Earth Care Pledge. Welcome!"
+          ? "Welcome to the regenerative economy! You've signed the Earth Care Pledge and your workspace is ready."
           : signPledge
-            ? "Your workspace is ready! There was an issue with the pledge, but you can sign it later."
-            : "Your workspace and CRM are ready to use. Start managing your partnerships!",
+            ? "Your enterprise is now live! There was an issue with the pledge - you can sign it later from your profile."
+            : "Your enterprise is live and your CRM workspace is ready. Start building partnerships!",
       });
 
       onOpenChange(false);
@@ -160,8 +158,8 @@ export default function CreateEnterpriseDialog({
     } catch (error) {
       console.error("Error creating enterprise:", error);
       toast({
-        title: "Workspace creation failed",
-        description: error instanceof Error ? error.message : "Please try again or contact support if the issue persists.",
+        title: "Activation failed",
+        description: error instanceof Error ? error.message : "Unable to activate your enterprise. Please try again or contact support.",
         variant: "destructive",
       });
     } finally {
@@ -175,30 +173,28 @@ export default function CreateEnterpriseDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Create Your Enterprise Workspace
+            Activate Your Enterprise
           </DialogTitle>
           <DialogDescription className="text-base">
-            Set up your free enterprise profile and workspace. Get discovered in the global directory and access powerful CRM tools to manage your partnerships and opportunities.
+            Join the regenerative economy by activating your free enterprise profile. Get global visibility and access powerful tools to grow meaningful partnerships.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Your Free Workspace */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-sm">What You Get (Free):</h3>
+          {/* What You Get */}
+          <div className="bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg p-4 space-y-3 border border-primary/20">
+            <h3 className="font-semibold text-sm">Activation Benefits (Free Forever):</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <Globe className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Global Visibility:</span> A public profile in the regenerative enterprise directory. 
-                  Get discovered by potential partners, customers, and collaborators.
+                  <span className="font-semibold">Global Presence:</span> Appear in the regenerative enterprise directory where partners, investors, and collaborators discover aligned organizations.
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Private CRM Workspace:</span> Manage contacts, track opportunities, 
-                  and build meaningful partnerships. Invite team members and work together.
+                  <span className="font-semibold">Full CRM Suite:</span> Track contacts, opportunities, and partnerships. Invite your team to collaborate and grow together.
                 </div>
               </div>
             </div>
@@ -280,28 +276,6 @@ export default function CreateEnterpriseDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="contactEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="email"
-                        placeholder="contact@example.com"
-                        {...field}
-                        data-testid="input-contact-email"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Public email for inquiries (defaults to your account email)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -342,30 +316,42 @@ export default function CreateEnterpriseDialog({
               </div>
 
               {/* Earth Care Pledge Invitation */}
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-3">
                 <FormField
                   control={form.control}
                   name="signPledge"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="mt-1"
-                          data-testid="checkbox-sign-pledge"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="font-semibold text-sm">
-                          Sign the Earth Care Pledge (Optional)
-                        </FormLabel>
-                        <FormDescription className="text-sm">
-                          Showcase yourself as a pioneer of ethical enterprise. The Earth Care Pledge is a 
-                          commitment to regenerative practices that helps others recognize your values. 
-                          By signing, you'll be featured in our directory of pledge signatories.
-                        </FormDescription>
+                    <FormItem className="space-y-3">
+                      <div className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="mt-1"
+                            data-testid="checkbox-sign-pledge"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none flex-1">
+                          <FormLabel className="font-semibold text-sm">
+                            Sign the Earth Care Pledge (Optional)
+                          </FormLabel>
+                          <FormDescription className="text-sm">
+                            Stand out as a verified regenerative enterprise and get featured in our pledge directory.
+                          </FormDescription>
+                        </div>
+                      </div>
+                      
+                      {/* The Pledge Text */}
+                      <div className="ml-6 pl-4 border-l-2 border-green-300 dark:border-green-700 space-y-2 text-sm">
+                        <p className="font-medium italic text-green-800 dark:text-green-200">
+                          "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+                        </p>
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          <p><strong>Earth Care:</strong> We commit to operating in a way that minimizes our environmental impact and promotes ecological sustainability.</p>
+                          <p><strong>People Care:</strong> We commit to fostering a positive and equitable environment for our employees, partners, and communities.</p>
+                          <p><strong>Fair Share:</strong> We commit to transparent and ethical business practices, ensuring fair distribution of resources and opportunities.</p>
+                        </div>
                       </div>
                     </FormItem>
                   )}
@@ -386,16 +372,17 @@ export default function CreateEnterpriseDialog({
                   type="submit"
                   disabled={isSubmitting}
                   data-testid="button-create-enterprise"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating workspace...
+                      Activating...
                     </>
                   ) : (
                     <>
                       <Building2 className="mr-2 h-4 w-4" />
-                      Create My Workspace
+                      Activate My Enterprise
                     </>
                   )}
                 </Button>
