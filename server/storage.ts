@@ -277,19 +277,11 @@ export interface IStorage {
     pendingCount: number;
     revokedCount: number;
     recentSignups: number;
-    pillarBreakdown: {
-      earthCare: number;
-      peopleCare: number;
-      fairShare: number;
-    };
     recentPledges: Array<{
       id: string;
       enterpriseId: string;
       enterpriseName: string;
       signedAt: string;
-      earthCare: boolean;
-      peopleCare: boolean;
-      fairShare: boolean;
       narrative: string | null;
     }>;
   }>;
@@ -1936,7 +1928,12 @@ export class DatabaseStorage implements IStorage {
 
   // Earth Care Pledge operations
   async createPledge(pledge: InsertEarthCarePledge): Promise<EarthCarePledge> {
-    const [newPledge] = await db.insert(earthCarePledges).values(pledge).returning();
+    const [newPledge] = await db.insert(earthCarePledges).values({
+      ...pledge,
+      earthCare: true,
+      peopleCare: true,
+      fairShare: true,
+    }).returning();
     return newPledge;
   }
 
@@ -1956,7 +1953,13 @@ export class DatabaseStorage implements IStorage {
   async updatePledge(id: string, pledge: Partial<InsertEarthCarePledge>): Promise<EarthCarePledge> {
     const [updated] = await db
       .update(earthCarePledges)
-      .set({ ...pledge, updatedAt: new Date() })
+      .set({ 
+        ...pledge, 
+        earthCare: true,
+        peopleCare: true,
+        fairShare: true,
+        updatedAt: new Date() 
+      })
       .where(eq(earthCarePledges.id, id))
       .returning();
     return updated;
@@ -2004,28 +2007,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getPledgeStats(): Promise<{
-    totalEnterprises: number;
-    affirmedCount: number;
-    pendingCount: number;
-    revokedCount: number;
-    recentSignups: number;
-    pillarBreakdown: {
-      earthCare: number;
-      peopleCare: number;
-      fairShare: number;
-    };
-    recentPledges: Array<{
-      id: string;
-      enterpriseId: string;
-      enterpriseName: string;
-      signedAt: string;
-      earthCare: boolean;
-      peopleCare: boolean;
-      fairShare: boolean;
-      narrative: string | null;
-    }>;
-  }> {
+  async getPledgeStats() {
     const [totalEnterprisesResult] = await db
       .select({ count: count() })
       .from(enterprises);
@@ -2063,45 +2045,12 @@ export class DatabaseStorage implements IStorage {
       );
     const recentSignups = recentSignupsResult?.count || 0;
 
-    const [earthCareCountResult] = await db
-      .select({ count: count() })
-      .from(earthCarePledges)
-      .where(
-        and(
-          eq(earthCarePledges.status, 'affirmed'),
-          eq(earthCarePledges.earthCare, true)
-        )
-      );
-
-    const [peopleCareCountResult] = await db
-      .select({ count: count() })
-      .from(earthCarePledges)
-      .where(
-        and(
-          eq(earthCarePledges.status, 'affirmed'),
-          eq(earthCarePledges.peopleCare, true)
-        )
-      );
-
-    const [fairShareCountResult] = await db
-      .select({ count: count() })
-      .from(earthCarePledges)
-      .where(
-        and(
-          eq(earthCarePledges.status, 'affirmed'),
-          eq(earthCarePledges.fairShare, true)
-        )
-      );
-
     const recentPledgesData = await db
       .select({
         id: earthCarePledges.id,
         enterpriseId: earthCarePledges.enterpriseId,
         enterpriseName: enterprises.name,
         signedAt: earthCarePledges.signedAt,
-        earthCare: earthCarePledges.earthCare,
-        peopleCare: earthCarePledges.peopleCare,
-        fairShare: earthCarePledges.fairShare,
         narrative: earthCarePledges.narrative,
       })
       .from(earthCarePledges)
@@ -2116,19 +2065,11 @@ export class DatabaseStorage implements IStorage {
       pendingCount,
       revokedCount,
       recentSignups,
-      pillarBreakdown: {
-        earthCare: earthCareCountResult?.count || 0,
-        peopleCare: peopleCareCountResult?.count || 0,
-        fairShare: fairShareCountResult?.count || 0,
-      },
       recentPledges: recentPledgesData.map(pledge => ({
         id: pledge.id,
         enterpriseId: pledge.enterpriseId,
         enterpriseName: pledge.enterpriseName,
         signedAt: pledge.signedAt.toISOString(),
-        earthCare: pledge.earthCare ?? false,
-        peopleCare: pledge.peopleCare ?? false,
-        fairShare: pledge.fairShare ?? false,
         narrative: pledge.narrative,
       })),
     };

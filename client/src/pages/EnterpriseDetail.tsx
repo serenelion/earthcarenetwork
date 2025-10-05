@@ -111,11 +111,6 @@ export default function EnterpriseDetail() {
   
   const pledge = pledgeData?.pledge;
   const isAffirmed = pledge?.status === 'affirmed';
-  const affirmedPillars = isAffirmed ? [
-    pledge?.earthCare && 'Earth Care',
-    pledge?.peopleCare && 'People Care',
-    pledge?.fairShare && 'Fair Share'
-  ].filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,22 +175,25 @@ export default function EnterpriseDetail() {
                       <Sprout className="w-3 h-3 mr-1" />
                       Earth Care Enterprise
                     </Badge>
-                    {affirmedPillars.length > 0 && (
-                      <p className="text-sm text-muted-foreground mt-2" data-testid="text-affirmed-pillars">
-                        Affirmed: {affirmedPillars.join(', ')}
-                      </p>
-                    )}
+                    <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30 mt-3" data-testid="card-pledge-statement">
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium text-foreground italic mb-2">
+                          "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+                        </p>
+                        {pledge?.narrative && (
+                          <>
+                            <Separator className="my-3" />
+                            <p className="text-xs text-muted-foreground font-semibold mb-1">
+                              How we demonstrate these values:
+                            </p>
+                            <p className="text-sm text-muted-foreground italic">
+                              "{pledge.narrative}"
+                            </p>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
-                )}
-                
-                {isAffirmed && pledge?.narrative && (
-                  <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30 mb-4" data-testid="card-pledge-narrative">
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground italic">
-                        "{pledge.narrative}"
-                      </p>
-                    </CardContent>
-                  </Card>
                 )}
                 
                 {enterprise.location && (

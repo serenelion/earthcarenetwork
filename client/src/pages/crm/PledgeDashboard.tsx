@@ -14,19 +14,11 @@ interface PledgeStats {
   pendingCount: number;
   revokedCount: number;
   recentSignups: number;
-  pillarBreakdown: {
-    earthCare: number;
-    peopleCare: number;
-    fairShare: number;
-  };
   recentPledges: Array<{
     id: string;
     enterpriseId: string;
     enterpriseName: string;
     signedAt: string;
-    earthCare: boolean;
-    peopleCare: boolean;
-    fairShare: boolean;
     narrative: string | null;
   }>;
 }
@@ -35,9 +27,6 @@ const COLORS = {
   affirmed: '#10b981',
   noPledge: '#94a3b8',
   revoked: '#ef4444',
-  earthCare: '#059669',
-  peopleCare: '#3b82f6',
-  fairShare: '#f59e0b',
 };
 
 export default function PledgeDashboard() {
@@ -86,12 +75,6 @@ export default function PledgeDashboard() {
     { name: 'No Pledge', value: noPledgeCount, color: COLORS.noPledge },
     { name: 'Revoked', value: revokedCount, color: COLORS.revoked },
   ].filter(item => item.value > 0);
-
-  const pillarData = [
-    { name: 'Earth Care', value: stats?.pillarBreakdown.earthCare || 0, color: COLORS.earthCare },
-    { name: 'People Care', value: stats?.pillarBreakdown.peopleCare || 0, color: COLORS.peopleCare },
-    { name: 'Fair Share', value: stats?.pillarBreakdown.fairShare || 0, color: COLORS.fairShare },
-  ];
 
   const statsCards = [
     {
@@ -165,56 +148,34 @@ export default function PledgeDashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-6 md:mb-8">
-        <Card data-testid="chart-pledge-breakdown">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="font-lato text-base md:text-lg">Pledge Status Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pledgeStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value, percent }) => 
-                    `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pledgeStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="chart-values-breakdown">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="font-lato text-base md:text-lg">Values Affirmation Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={pillarData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8">
-                  {pillarData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <Card data-testid="chart-pledge-breakdown" className="mb-6 md:mb-8">
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="font-lato text-base md:text-lg">Pledge Status Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 md:p-6">
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={pledgeStatusData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value, percent }) => 
+                  `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
+                }
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {pledgeStatusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="p-4 md:p-6">
@@ -227,8 +188,7 @@ export default function PledgeDashboard() {
                 <TableRow>
                   <TableHead>Enterprise Name</TableHead>
                   <TableHead>Date Signed</TableHead>
-                  <TableHead>Pillars Affirmed</TableHead>
-                  <TableHead className="hidden md:table-cell">Narrative Preview</TableHead>
+                  <TableHead className="hidden md:table-cell">How They Demonstrate These Values</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,47 +211,16 @@ export default function PledgeDashboard() {
                           year: 'numeric'
                         })}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {pledge.earthCare && (
-                            <Badge 
-                              variant="secondary" 
-                              className="bg-green-100 text-green-800 text-xs"
-                              data-testid={`badge-earth-care-${pledge.id}`}
-                            >
-                              Earth Care
-                            </Badge>
-                          )}
-                          {pledge.peopleCare && (
-                            <Badge 
-                              variant="secondary" 
-                              className="bg-blue-100 text-blue-800 text-xs"
-                              data-testid={`badge-people-care-${pledge.id}`}
-                            >
-                              People Care
-                            </Badge>
-                          )}
-                          {pledge.fairShare && (
-                            <Badge 
-                              variant="secondary" 
-                              className="bg-yellow-100 text-yellow-800 text-xs"
-                              data-testid={`badge-fair-share-${pledge.id}`}
-                            >
-                              Fair Share
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell max-w-xs">
-                        <p className="text-sm text-muted-foreground truncate">
-                          {pledge.narrative || 'No narrative provided'}
+                      <TableCell className="hidden md:table-cell max-w-md">
+                        <p className="text-sm text-muted-foreground">
+                          {pledge.narrative || 'Not specified'}
                         </p>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
+                    <TableCell colSpan={3} className="text-center py-8">
                       <Sprout className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No pledges signed yet</p>
                     </TableCell>

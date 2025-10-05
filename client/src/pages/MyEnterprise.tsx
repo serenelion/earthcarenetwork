@@ -653,30 +653,17 @@ export default function MyEnterprise() {
                         </p>
                       </div>
                       
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Affirmed Principles:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {pledge.earthCare && (
-                            <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-                              Earth Care
-                            </Badge>
-                          )}
-                          {pledge.peopleCare && (
-                            <Badge variant="outline" className="border-blue-500 text-blue-700 dark:text-blue-400">
-                              People Care
-                            </Badge>
-                          )}
-                          {pledge.fairShare && (
-                            <Badge variant="outline" className="border-purple-500 text-purple-700 dark:text-purple-400">
-                              Fair Share
-                            </Badge>
-                          )}
+                      <div className="space-y-3">
+                        <div className="border-l-4 border-primary pl-4 py-2">
+                          <p className="text-sm font-medium text-foreground italic">
+                            "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+                          </p>
                         </div>
                       </div>
 
                       {pledge.narrative && (
                         <div>
-                          <h4 className="text-sm font-medium mb-2">Commitment:</h4>
+                          <h4 className="text-sm font-medium mb-2">How we demonstrate these values:</h4>
                           <p className="text-sm text-muted-foreground italic">
                             "{pledge.narrative}"
                           </p>

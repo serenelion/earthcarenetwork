@@ -39,12 +39,6 @@ export interface NavDropdownMenu {
  */
 export const publicNavLinks: NavLinkItem[] = [
   {
-    href: "/docs",
-    label: "Docs",
-    icon: Book,
-    testId: "nav-docs"
-  },
-  {
     href: "/enterprises",
     label: "Directory",
     icon: Home,

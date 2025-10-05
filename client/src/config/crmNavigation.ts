@@ -4,7 +4,6 @@ import {
   Users,
   TrendingUp,
   CheckSquare,
-  BarChart3,
   Sparkles,
   Upload,
   Sprout,
@@ -35,8 +34,6 @@ export const crmNavSections: NavSection[] = [
   {
     title: "Insights",
     links: [
-      { href: "/crm/reports", label: "Reports", icon: BarChart3 },
-      { href: "/crm/pledge-dashboard", label: "Pledge Dashboard", icon: TrendingUp },
       { href: "/crm/copilot", label: "Copilot", icon: Sparkles },
     ],
   },

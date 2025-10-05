@@ -905,6 +905,11 @@ export const insertEarthCarePledgeSchema = createInsertSchema(earthCarePledges).
   id: true,
   createdAt: true,
   updatedAt: true,
+  earthCare: true,
+  peopleCare: true,
+  fairShare: true,
+}).extend({
+  narrative: z.string().optional(),
 });
 
 export const insertExternalApiTokenSchema = createInsertSchema(externalApiTokens).omit({

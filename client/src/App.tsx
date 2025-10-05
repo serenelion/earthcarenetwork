@@ -10,6 +10,7 @@ import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import ScrollToTop from "@/components/ScrollToTop";
 import { Link } from "wouter";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -72,6 +73,7 @@ function PlaceholderDocPage({ title, description, testId }: { title: string; des
 function Router() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <ScrollToTop />
       <Navigation />
       <main>
         <Switch>

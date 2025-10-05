@@ -411,20 +411,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Pledge already exists for this enterprise" });
       }
 
-      const pledgeSchema = insertEarthCarePledgeSchema.pick({
-        earthCare: true,
-        peopleCare: true,
-        fairShare: true,
-        narrative: true
+      const pledgeSchema = z.object({
+        narrative: z.string().optional()
       });
       const validatedData = pledgeSchema.parse(req.body);
 
       const pledge = await storage.createPledge({
         enterpriseId,
         status: 'affirmed',
-        earthCare: validatedData.earthCare,
-        peopleCare: validatedData.peopleCare,
-        fairShare: validatedData.fairShare,
         narrative: validatedData.narrative,
         signedAt: new Date(),
         signedBy: userId,
@@ -481,15 +475,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updateSchema = z.object({
-        earthCare: z.boolean().optional(),
-        peopleCare: z.boolean().optional(),
-        fairShare: z.boolean().optional(),
         narrative: z.string().optional()
       });
       const validatedData = updateSchema.parse(req.body);
 
-      const updatedFields: any = { ...validatedData };
-      updatedFields.updatedAt = new Date();
+      const updatedFields: any = {
+        narrative: validatedData.narrative,
+      };
 
       const pledge = await storage.updatePledge(existingPledge.id, updatedFields);
 

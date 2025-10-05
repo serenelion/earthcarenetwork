@@ -21,9 +21,7 @@ interface PledgeAffirmationModalProps {
 }
 
 const pledgeFormSchema = z.object({
-  earthCare: z.boolean().refine(val => val === true, "Must affirm Earth Care"),
-  peopleCare: z.boolean().refine(val => val === true, "Must affirm People Care"),
-  fairShare: z.boolean().refine(val => val === true, "Must affirm Fair Share"),
+  affirmed: z.boolean().refine(val => val === true, "You must affirm the commitment to proceed"),
   narrative: z.string().optional(),
 });
 
@@ -42,9 +40,7 @@ export default function PledgeAffirmationModal({
   const form = useForm<PledgeFormValues>({
     resolver: zodResolver(pledgeFormSchema),
     defaultValues: {
-      earthCare: existingPledge?.earthCare || false,
-      peopleCare: existingPledge?.peopleCare || false,
-      fairShare: existingPledge?.fairShare || false,
+      affirmed: existingPledge?.status === 'affirmed' || false,
       narrative: existingPledge?.narrative || "",
     },
   });
@@ -52,7 +48,9 @@ export default function PledgeAffirmationModal({
   const pledgeMutation = useMutation({
     mutationFn: async (data: PledgeFormValues) => {
       const method = existingPledge ? "PATCH" : "POST";
-      const response = await apiRequest(method, `/api/enterprises/${enterpriseId}/pledge`, data);
+      const response = await apiRequest(method, `/api/enterprises/${enterpriseId}/pledge`, {
+        narrative: data.narrative
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -92,80 +90,35 @@ export default function PledgeAffirmationModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Earth Care Checkbox */}
-            <FormField
-              control={form.control}
-              name="earthCare"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={pledgeMutation.isPending}
-                      data-testid="checkbox-earth-care"
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Earth Care</FormLabel>
-                    <FormDescription>
-                      We commit to regenerative practices that restore and protect our planet
-                    </FormDescription>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {/* People Care Checkbox */}
-            <FormField
-              control={form.control}
-              name="peopleCare"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={pledgeMutation.isPending}
-                      data-testid="checkbox-people-care"
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>People Care</FormLabel>
-                    <FormDescription>
-                      We prioritize the wellbeing of all people in our operations and supply chains
-                    </FormDescription>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {/* Fair Share Checkbox */}
-            <FormField
-              control={form.control}
-              name="fairShare"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={pledgeMutation.isPending}
-                      data-testid="checkbox-fair-share"
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Fair Share</FormLabel>
-                    <FormDescription>
-                      We ensure equitable distribution of resources and benefits
-                    </FormDescription>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
+            {/* Unified Commitment Statement */}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+              <p className="text-lg font-medium text-foreground mb-4 leading-relaxed">
+                "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+              </p>
+              
+              <FormField
+                control={form.control}
+                name="affirmed"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={pledgeMutation.isPending}
+                        data-testid="checkbox-affirm-commitment"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base font-medium">
+                        I affirm this commitment on behalf of {enterpriseName}
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Narrative Textarea */}
             <FormField
