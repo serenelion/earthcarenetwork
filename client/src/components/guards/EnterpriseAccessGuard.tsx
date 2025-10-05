@@ -87,10 +87,10 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="heading-welcome">
-                Setup Your Enterprise
+                Get Started with Your Workspace
               </h1>
               <p className="text-lg text-muted-foreground mb-6">
-                Create your public profile and private CRM workspace to grow your regenerative business
+                Create your enterprise profile with a public directory listing and private CRM workspace
               </p>
             </div>
 
@@ -103,15 +103,15 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Get discovered in the global directory</span>
+                  <span className="text-muted-foreground">Public profile in the global directory for visibility</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Manage contacts and opportunities privately</span>
+                  <span className="text-muted-foreground">Private CRM to manage contacts and opportunities</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Features scale with your membership tier</span>
+                  <span className="text-muted-foreground">Collaborate with your team and track progress</span>
                 </li>
               </ul>
             </div>
@@ -125,7 +125,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-create-first-workspace"
               >
                 <Building2 className="mr-2 h-5 w-5" />
-                Setup Your Enterprise
+                Create New Enterprise Profile
               </Button>
               
               <Button
@@ -136,25 +136,25 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-claim-enterprise"
               >
                 <Globe className="mr-2 h-5 w-5" />
-                Claim Your Enterprise
+                Find & Claim Existing Profile
               </Button>
             </div>
 
             {/* Help Text */}
             <div className="mt-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                Don't have an enterprise yet? Create one to get started with your CRM workspace.
+                <strong>New here?</strong> Create a brand new enterprise profile to get started with your workspace.
               </p>
               <p className="text-sm text-muted-foreground">
-                Already listed in our directory?{" "}
+                <strong>Already in the directory?</strong>{" "}
                 <button
                   onClick={() => setLocation("/enterprises")}
                   className="text-primary hover:underline font-medium"
                   data-testid="link-browse-directory"
                 >
-                  Find and claim your profile
+                  Search for and claim your existing profile
                 </button>{" "}
-                to gain workspace access.
+                to access your workspace.
               </p>
             </div>
           </div>
