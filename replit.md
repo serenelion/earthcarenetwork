@@ -55,7 +55,14 @@ The application maintains a clear separation between a public-facing directory a
 - **Bulk Import**: Web scraping for enterprise data.
 - **Full Page Search**: Unified search across entities with URL state persistence.
 - **CSV Export**: Opportunities export with linked entity data.
-- **Profile Claim Invitations**: Token-based invitations with automatic role upgrade.
+- **Profile Claiming System**: 
+  - Dual-flow claiming: token-based invitations and direct claiming
+  - Direct claiming requires user email to match enterprise contact email for security
+  - Email verification prevents unauthorized enterprise takeover
+  - Plan limit enforcement: free users limited to 1 claimed enterprise, paid users to plan limits
+  - Automatic role upgrade from 'member' to 'enterprise_owner' upon successful claim
+  - Duplicate claim detection with proper 409 error handling
+  - Upgrade prompts for users at plan limits
 - **Murmurations Protocol**: Integration for federated directory system.
 - **Multi-Tenant Ownership**: `enterpriseOwners` table with roles for RLS.
 - **Onboarding System**: Tier-specific guided tours with progress tracking.
