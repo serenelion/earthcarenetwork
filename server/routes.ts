@@ -109,6 +109,11 @@ function requireSubscription(planType: 'crm_basic' | 'crm_pro' | 'build_pro_bund
         return res.status(401).json({ error: "User not found" });
       }
 
+      // Allow platform admins to bypass subscription checks
+      if (user.role === 'admin') {
+        return next();
+      }
+
       const planHierarchy: Record<string, number> = {
         'free': 0,
         'crm_basic': 1,
@@ -185,6 +190,110 @@ function requireEnterpriseRole(minRole: TeamMemberRole): RequestHandler {
     }
   };
 }
+
+// Middleware to check if user is platform admin
+const requireAdmin: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = (req.user as any)?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error checking admin role:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Middleware for person/opportunity editing: allows admin OR team member with appropriate role
+const requireAdminOrEnterpriseAccess = (minRole: TeamMemberRole = 'editor'): RequestHandler => {
+  return async (req: any, res, next) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Admins can access anything
+      if (user.role === 'admin') {
+        return next();
+      }
+
+      // For non-admins, check enterprise membership
+      // Get the enterprise ID from the related entity (person or opportunity)
+      const entityId = req.params.id;
+      if (!entityId) {
+        return res.status(400).json({ message: "Entity ID is required" });
+      }
+
+      let enterpriseId: string | null = null;
+
+      // Determine if this is a person or opportunity based on the route
+      if (req.path.includes('/people/')) {
+        const person = await storage.getPerson(entityId);
+        if (!person) {
+          return res.status(404).json({ message: "Person not found" });
+        }
+        enterpriseId = person.enterpriseId;
+      } else if (req.path.includes('/opportunities/')) {
+        const opportunity = await storage.getOpportunity(entityId);
+        if (!opportunity) {
+          return res.status(404).json({ message: "Opportunity not found" });
+        }
+        enterpriseId = opportunity.enterpriseId;
+      }
+
+      if (!enterpriseId) {
+        return res.status(403).json({ 
+          message: "Forbidden - no enterprise association found" 
+        });
+      }
+
+      // Check if user has appropriate role in the enterprise
+      const roleHierarchy: Record<TeamMemberRole, number> = {
+        'viewer': 1,
+        'editor': 2,
+        'admin': 3,
+        'owner': 4
+      };
+
+      const userRole = await getUserEnterpriseRole(userId, enterpriseId);
+      
+      if (!userRole) {
+        return res.status(403).json({ 
+          message: "Forbidden - not a member of the associated enterprise" 
+        });
+      }
+
+      const userRoleLevel = roleHierarchy[userRole];
+      const requiredRoleLevel = roleHierarchy[minRole];
+
+      if (userRoleLevel < requiredRoleLevel) {
+        return res.status(403).json({ 
+          message: "Forbidden - insufficient permissions on the associated enterprise",
+          requiredRole: minRole,
+          currentRole: userRole
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error checking admin or enterprise access:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  };
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -492,27 +601,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      let updateSchema;
-      if (userRole === 'editor') {
-        updateSchema = editorEnterpriseUpdateSchema;
-      } else if (userRole === 'admin') {
-        updateSchema = adminEnterpriseUpdateSchema;
-      } else if (userRole === 'owner') {
-        updateSchema = ownerEnterpriseUpdateSchema;
-      } else {
-        return res.status(403).json({ 
-          message: "Forbidden - insufficient permissions" 
-        });
-      }
-
-      const validatedData = updateSchema.parse(req.body);
-      
       const allowedFields: Record<string, any> = {};
+      
       if (userRole === 'editor') {
+        const validatedData = editorEnterpriseUpdateSchema.parse(req.body);
         if (validatedData.description !== undefined) allowedFields.description = validatedData.description;
         if (validatedData.contactEmail !== undefined) allowedFields.contactEmail = validatedData.contactEmail;
         if (validatedData.tags !== undefined) allowedFields.tags = validatedData.tags;
-      } else if (userRole === 'admin' || userRole === 'owner') {
+      } else if (userRole === 'admin') {
+        const validatedData = adminEnterpriseUpdateSchema.parse(req.body);
         if (validatedData.description !== undefined) allowedFields.description = validatedData.description;
         if (validatedData.contactEmail !== undefined) allowedFields.contactEmail = validatedData.contactEmail;
         if (validatedData.tags !== undefined) allowedFields.tags = validatedData.tags;
@@ -521,6 +618,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (validatedData.category !== undefined) allowedFields.category = validatedData.category;
         if (validatedData.website !== undefined) allowedFields.website = validatedData.website;
         if (validatedData.imageUrl !== undefined) allowedFields.imageUrl = validatedData.imageUrl;
+      } else if (userRole === 'owner') {
+        const validatedData = ownerEnterpriseUpdateSchema.parse(req.body);
+        if (validatedData.description !== undefined) allowedFields.description = validatedData.description;
+        if (validatedData.contactEmail !== undefined) allowedFields.contactEmail = validatedData.contactEmail;
+        if (validatedData.tags !== undefined) allowedFields.tags = validatedData.tags;
+        if (validatedData.name !== undefined) allowedFields.name = validatedData.name;
+        if (validatedData.location !== undefined) allowedFields.location = validatedData.location;
+        if (validatedData.category !== undefined) allowedFields.category = validatedData.category;
+        if (validatedData.website !== undefined) allowedFields.website = validatedData.website;
+        if (validatedData.imageUrl !== undefined) allowedFields.imageUrl = validatedData.imageUrl;
+      } else {
+        return res.status(403).json({ 
+          message: "Forbidden - insufficient permissions" 
+        });
       }
       
       const updatedEnterprise = await storage.updateEnterprise(enterpriseId, allowedFields);
@@ -597,8 +708,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CRM Enterprise management (protected - admin/enterprise_owner only)
-  app.post('/api/crm/enterprises', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
+  // CRM Enterprise management (protected - admin only for global editing)
+  app.post('/api/crm/enterprises', isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const validatedData = insertEnterpriseSchema.parse(req.body);
       const enterprise = await storage.createEnterprise(validatedData);
@@ -612,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/enterprises/:id', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
+  app.put('/api/crm/enterprises/:id', isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const validatedData = insertEnterpriseSchema.parse(req.body);
       const enterprise = await storage.updateEnterprise(req.params.id, validatedData);
@@ -626,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/enterprises/:id', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
+  app.delete('/api/crm/enterprises/:id', isAuthenticated, requireAdmin, async (req, res) => {
     try {
       await storage.deleteEnterprise(req.params.id);
       res.status(204).send();
@@ -767,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/people/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/crm/people/:id', isAuthenticated, requireAdminOrEnterpriseAccess('editor'), async (req, res) => {
     try {
       const person = await storage.updatePerson(req.params.id, req.body);
       res.json(person);
@@ -778,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/people/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/crm/people/:id', isAuthenticated, requireAdminOrEnterpriseAccess('admin'), async (req, res) => {
     try {
       await storage.deletePerson(req.params.id);
       res.status(204).send();
@@ -822,7 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/opportunities/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/crm/opportunities/:id', isAuthenticated, requireAdminOrEnterpriseAccess('editor'), async (req, res) => {
     try {
       // Transform date string to Date object if present
       const body = { ...req.body };
@@ -839,7 +950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/opportunities/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/crm/opportunities/:id', isAuthenticated, requireAdminOrEnterpriseAccess('admin'), async (req, res) => {
     try {
       await storage.deleteOpportunity(req.params.id);
       res.status(204).send();

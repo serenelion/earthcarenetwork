@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -19,6 +21,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -40,6 +46,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CheckSquare,
   Plus,
   Search,
@@ -52,6 +64,10 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
+  Lock,
+  Info,
+  Shield,
+  Users,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import { insertTaskSchema, type Task, type InsertTask, type Enterprise, type Person, type Opportunity } from "@shared/schema";
@@ -71,7 +87,10 @@ const taskStatuses = [
 
 export default function Tasks() {
   const { toast } = useToast();
+  const { userSubscription } = useSubscription();
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
@@ -295,7 +314,7 @@ export default function Tasks() {
       relatedEnterpriseId: task.relatedEnterpriseId || "",
       relatedPersonId: task.relatedPersonId || "",
       relatedOpportunityId: task.relatedOpportunityId || "",
-      dueDate: task.dueDate ? (task.dueDate instanceof Date ? task.dueDate.toISOString().split('T')[0] : String(task.dueDate).split('T')[0]) : null,
+      dueDate: task.dueDate ? new Date(task.dueDate) : null,
     });
     setIsDialogOpen(true);
   };
@@ -337,12 +356,35 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-lato">Tasks</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground font-lato">Tasks</h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {isAdmin ? (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700" data-testid="badge-admin-mode">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin Mode
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" data-testid="badge-team-member">
+                      <Users className="h-3 w-3 mr-1" />
+                      Team Member
+                    </Badge>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isAdmin ? "You have global access to edit any task" : "You can edit tasks where you're a member"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-muted-foreground">Manage your team's tasks and workflow</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openCreateDialog} data-testid="button-create-task">
+            <Button onClick={openCreateDialog} disabled={isFreeUser} data-testid="button-create-task">
+              {isFreeUser && <Lock className="w-4 h-4 mr-2" />}
               <Plus className="w-4 h-4 mr-2" />
               Add Task
             </Button>
@@ -598,6 +640,19 @@ export default function Tasks() {
           </Dialog>
         </div>
 
+        {/* Upgrade Alert for Free Users */}
+        {isFreeUser && (
+          <Alert className="mb-6" data-testid="alert-upgrade-prompt">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
+              <Link href="/pricing" className="font-medium underline">
+                View plans
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Search and Filter */}
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -706,8 +761,10 @@ export default function Tasks() {
                         <Checkbox
                           checked={task.status === "completed"}
                           onCheckedChange={() => handleStatusToggle(task)}
+                          disabled={isFreeUser}
                           className="mt-1"
                           data-testid={`checkbox-task-${task.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                         />
                         <div className="flex-1">
                           <h3 className={`text-lg font-semibold font-lato ${
@@ -740,7 +797,9 @@ export default function Tasks() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(task)}
+                          disabled={isFreeUser}
                           data-testid={`button-edit-${task.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -748,8 +807,10 @@ export default function Tasks() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(task.id)}
+                          disabled={isFreeUser}
                           className="text-destructive hover:text-destructive"
                           data-testid={`button-delete-${task.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

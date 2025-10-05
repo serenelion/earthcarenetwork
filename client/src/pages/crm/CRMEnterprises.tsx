@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -36,6 +39,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
+import {
   Form,
   FormControl,
   FormField,
@@ -57,6 +64,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Building,
   Plus,
   Edit,
@@ -67,6 +80,9 @@ import {
   Filter,
   X,
   Sprout,
+  Lock,
+  Info,
+  Shield,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PledgeAffirmationModal from "@/components/PledgeAffirmationModal";
@@ -107,6 +123,10 @@ function PledgeIndicator({ enterpriseId }: { enterpriseId: string }) {
 
 export default function CRMEnterprises() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { userSubscription } = useSubscription();
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
+  const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -300,19 +320,55 @@ export default function CRMEnterprises() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-            <Building className="w-8 h-8 text-primary" />
-            Enterprise Management
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+              <Building className="w-8 h-8 text-primary" />
+              Enterprise Management
+            </h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {isAdmin ? (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700" data-testid="badge-admin-mode">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin Mode
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" data-testid="badge-team-member">
+                      <Users className="h-3 w-3 mr-1" />
+                      Team Member
+                    </Badge>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isAdmin ? "You have global access to edit any enterprise" : "You can edit enterprises where you're a member"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-muted-foreground mt-1">
             Manage enterprises in the CRM system
           </p>
         </div>
-        <Button onClick={handleCreate} data-testid="button-create-enterprise">
+        <Button onClick={handleCreate} disabled={isFreeUser} data-testid="button-create-enterprise">
+          {isFreeUser && <Lock className="w-4 h-4 mr-2" />}
           <Plus className="w-4 h-4 mr-2" />
           Create Enterprise
         </Button>
       </div>
+
+      {/* Upgrade Alert for Free Users */}
+      {isFreeUser && (
+        <Alert data-testid="alert-upgrade-prompt">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
+            <Link href="/pricing" className="font-medium underline">
+              View plans
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Search and Filters */}
       <Card>
@@ -488,8 +544,9 @@ export default function CRMEnterprises() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleManagePledge(enterprise)}
+                              disabled={isFreeUser}
                               data-testid="button-manage-pledge"
-                              title="Manage Earth Care Pledge"
+                              title={isFreeUser ? "Upgrade to CRM Pro to edit" : "Manage Earth Care Pledge"}
                             >
                               <Sprout className="w-4 h-4" />
                             </Button>
@@ -497,7 +554,9 @@ export default function CRMEnterprises() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(enterprise)}
+                              disabled={isFreeUser}
                               data-testid={`button-edit-${enterprise.id}`}
+                              title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -505,7 +564,9 @@ export default function CRMEnterprises() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleDelete(enterprise.id)}
+                              disabled={isFreeUser}
                               data-testid={`button-delete-${enterprise.id}`}
+                              title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
                             >
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>

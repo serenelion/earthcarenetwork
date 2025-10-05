@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -20,6 +21,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -40,6 +45,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Users,
   Plus,
   Search,
@@ -50,6 +61,9 @@ import {
   ExternalLink,
   Filter,
   Building,
+  Lock,
+  Info,
+  Shield,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import { insertPersonSchema, type Person, type InsertPerson, type Enterprise } from "@shared/schema";
@@ -76,7 +90,10 @@ const buildProStatuses = [
 
 export default function People() {
   const { toast } = useToast();
+  const { userSubscription } = useSubscription();
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -312,10 +329,33 @@ export default function People() {
       {/* Desktop Header */}
       <div className="hidden md:flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-lato">People</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground font-lato">People</h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {isAdmin ? (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700" data-testid="badge-admin-mode">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin Mode
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" data-testid="badge-team-member">
+                      <Users className="h-3 w-3 mr-1" />
+                      Team Member
+                    </Badge>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isAdmin ? "You have global access to edit any person" : "You can edit people where you're a member"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-muted-foreground">Manage contacts and track user journeys</p>
         </div>
-        <Button onClick={openCreateDialog} data-testid="button-create-person">
+        <Button onClick={openCreateDialog} disabled={isFreeUser} data-testid="button-create-person">
+          {isFreeUser && <Lock className="w-4 h-4 mr-2" />}
           <Plus className="w-4 h-4 mr-2" />
           Add Person
         </Button>
@@ -325,6 +365,19 @@ export default function People() {
       <div className="md:hidden mb-4">
         <p className="text-sm text-muted-foreground">Manage contacts and track user journeys</p>
       </div>
+
+      {/* Upgrade Alert for Free Users */}
+      {isFreeUser && (
+        <Alert className="mb-6" data-testid="alert-upgrade-prompt">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
+            <Link href="/pricing" className="font-medium underline">
+              View plans
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
       
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -703,7 +756,9 @@ export default function People() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(person)}
+                          disabled={isFreeUser}
                           data-testid={`button-edit-${person.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -711,8 +766,10 @@ export default function People() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(person.id)}
+                          disabled={isFreeUser}
                           className="text-destructive hover:text-destructive"
                           data-testid={`button-delete-${person.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

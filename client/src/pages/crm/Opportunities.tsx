@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -19,6 +21,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -59,6 +65,10 @@ import {
   MapPin,
   ChevronsUpDown,
   Check,
+  Lock,
+  Info,
+  Shield,
+  Users,
 } from "lucide-react";
 import {
   Tooltip,
@@ -108,7 +118,10 @@ const categoryLabels = {
 
 export default function Opportunities() {
   const { toast } = useToast();
+  const { userSubscription } = useSubscription();
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -445,22 +458,46 @@ export default function Opportunities() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-lato">Opportunities</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground font-lato">Opportunities</h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {isAdmin ? (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700" data-testid="badge-admin-mode">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin Mode
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" data-testid="badge-team-member">
+                      <Users className="h-3 w-3 mr-1" />
+                      Team Member
+                    </Badge>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isAdmin ? "You have global access to edit any opportunity" : "You can edit opportunities where you're a member"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-muted-foreground">Track deals and partnership opportunities</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
             onClick={handleExportCSV} 
-            disabled={isExporting}
+            disabled={isExporting || isFreeUser}
             data-testid="button-export-csv"
+            title={isFreeUser ? "Upgrade to CRM Pro to export" : undefined}
           >
             <Download className="w-4 h-4 mr-2" />
             {isExporting ? "Exporting..." : "Export CSV"}
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openCreateDialog} data-testid="button-create-opportunity">
+              <Button onClick={openCreateDialog} disabled={isFreeUser} data-testid="button-create-opportunity">
+                {isFreeUser && <Lock className="w-4 h-4 mr-2" />}
                 <Plus className="w-4 h-4 mr-2" />
                 Add Opportunity
               </Button>
@@ -824,6 +861,19 @@ export default function Opportunities() {
           </div>
         </div>
 
+        {/* Upgrade Alert for Free Users */}
+        {isFreeUser && (
+          <Alert className="mb-6" data-testid="alert-upgrade-prompt">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
+              <Link href="/pricing" className="font-medium underline">
+                View plans
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Search and Filter */}
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -927,8 +977,9 @@ export default function Opportunities() {
                           variant="ghost"
                           size="sm"
                           onClick={() => generateLeadScoreMutation.mutate(opportunity.id)}
-                          disabled={generateLeadScoreMutation.isPending}
+                          disabled={generateLeadScoreMutation.isPending || isFreeUser}
                           data-testid={`button-generate-score-${opportunity.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to generate lead score" : undefined}
                         >
                           <Lightbulb className="w-4 h-4" />
                         </Button>
@@ -936,7 +987,9 @@ export default function Opportunities() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(opportunity)}
+                          disabled={isFreeUser}
                           data-testid={`button-edit-${opportunity.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -944,8 +997,10 @@ export default function Opportunities() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(opportunity.id)}
+                          disabled={isFreeUser}
                           className="text-destructive hover:text-destructive"
                           data-testid={`button-delete-${opportunity.id}`}
+                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
