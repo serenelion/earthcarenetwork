@@ -76,10 +76,12 @@ export const users = pgTable("users", {
   subscriptionStatus: subscriptionStatusEnum("subscription_status"),
   currentPlanType: planTypeEnum("current_plan_type").default('free'),
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
-  // AI Usage tracking
-  tokenUsageThisMonth: integer("token_usage_this_month").default(0),
-  tokenQuotaLimit: integer("token_quota_limit").default(10000), // Default free tier limit
-  lastTokenUsageReset: timestamp("last_token_usage_reset").defaultNow(),
+  // AI Credit system (dollar-based, amounts in cents)
+  creditBalance: integer("credit_balance").default(0), // Current credit balance in cents
+  creditLimit: integer("credit_limit").default(10), // Monthly credit allocation in cents
+  monthlyAllocation: integer("monthly_allocation").default(10), // Resets each month in cents
+  creditResetDate: timestamp("credit_reset_date"),
+  overageAllowed: boolean("overage_allowed").default(false), // Can go negative
   // Free tier limits for claimed profiles
   maxClaimedProfiles: integer("max_claimed_profiles").default(1), // free users can claim 1, paid unlimited
   claimedProfilesCount: integer("claimed_profiles_count").default(0), // track current count
@@ -356,7 +358,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   stripePriceIdMonthly: varchar("stripe_price_id_monthly"), // Stripe price ID for monthly billing
   stripePriceIdYearly: varchar("stripe_price_id_yearly"), // Stripe price ID for yearly billing
   features: text("features").array(), // Array of feature descriptions
-  tokenQuotaLimit: integer("token_quota_limit").default(10000), // AI usage token limit
+  creditAllocation: integer("credit_allocation").default(0), // Monthly credit amount in cents
   isActive: boolean("is_active").default(true),
   displayOrder: integer("display_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -389,20 +391,43 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// AI usage tracking table - detailed token usage logs
+// AI usage tracking table - detailed dollar cost tracking
 export const aiUsageLogs = pgTable("ai_usage_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
   // Usage details
   operationType: varchar("operation_type").notNull(), // 'chat', 'lead_score', 'content_generation', etc.
-  tokensUsed: integer("tokens_used").notNull(),
-  cost: integer("cost"), // in cents, for future billing
+  modelUsed: varchar("model_used"), // AI model used (e.g., 'gpt-4', 'gpt-3.5-turbo')
+  tokensPrompt: integer("tokens_prompt").notNull(), // Tokens in prompt
+  tokensCompletion: integer("tokens_completion"), // Tokens in completion
+  providerCost: integer("provider_cost"), // Actual cost from provider in cents
+  cost: integer("cost"), // Actual provider cost in cents
   // Context
   entityType: varchar("entity_type"), // 'opportunity', 'person', 'enterprise', etc.
   entityId: varchar("entity_id"), // ID of the related entity
-  metadata: jsonb("metadata"), // Additional context, request details
+  metadata: jsonb("metadata"), // Additional context, request details, provider response
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Credit purchase status enum
+export const creditPurchaseStatusEnum = pgEnum('credit_purchase_status', [
+  'pending',
+  'completed',
+  'failed'
+]);
+
+// Credit purchases table - Track credit top-ups
+export const creditPurchases = pgTable("credit_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  amount: integer("amount").notNull(), // Credits purchased in cents
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  stripePriceId: varchar("stripe_price_id"),
+  status: creditPurchaseStatusEnum("status").default('pending').notNull(),
+  purchasedAt: timestamp("purchased_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Profile claim status enum
@@ -569,6 +594,12 @@ export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({
   createdAt: true,
 });
 
+export const insertCreditPurchaseSchema = createInsertSchema(creditPurchases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
   id: true,
   createdAt: true,
@@ -629,6 +660,8 @@ export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type InsertCreditPurchase = z.infer<typeof insertCreditPurchaseSchema>;
+export type CreditPurchase = typeof creditPurchases.$inferSelect;
 export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertProfileClaim = z.infer<typeof insertProfileClaimSchema>;
