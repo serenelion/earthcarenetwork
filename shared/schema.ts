@@ -200,7 +200,7 @@ export const people = pgTable("people", {
   email: varchar("email").unique(),
   phone: varchar("phone"),
   title: varchar("title"),
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable for non-CRM people
   linkedinUrl: varchar("linkedin_url"),
   notes: text("notes"),
   invitationStatus: invitationStatusEnum("invitation_status").default('not_invited'),
@@ -231,7 +231,7 @@ export const opportunities = pgTable("opportunities", {
   value: integer("value"), // in cents
   status: opportunityStatusEnum("status").default('lead'),
   probability: integer("probability").default(0), // 0-100
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
   primaryContactId: varchar("primary_contact_id").references(() => people.id),
   expectedCloseDate: timestamp("expected_close_date"),
   notes: text("notes"),
@@ -255,7 +255,7 @@ export const tasks = pgTable("tasks", {
   status: taskStatusEnum("status").default('pending'),
   dueDate: timestamp("due_date"),
   assignedToId: varchar("assigned_to_id").references(() => users.id),
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
   relatedPersonId: varchar("related_person_id").references(() => people.id),
   relatedOpportunityId: varchar("related_opportunity_id").references(() => opportunities.id),
   createdAt: timestamp("created_at").defaultNow(),
