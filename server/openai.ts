@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { callAIWithBilling, InsufficientCreditsError } from "./ai-billing";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -21,6 +22,7 @@ export interface CopilotSuggestion {
 }
 
 export async function generateLeadScore(
+  userId: string,
   enterpriseData: any,
   personData?: any,
   context?: any
@@ -52,9 +54,10 @@ Respond with JSON in this exact format:
 }
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
+    const billingResult = await callAIWithBilling(
+      userId,
+      "gpt-5",
+      [
         {
           role: "system",
           content: "You are an expert CRM analyst for regenerative enterprises. Provide accurate lead scoring with actionable insights."
@@ -64,10 +67,15 @@ Respond with JSON in this exact format:
           content: prompt
         }
       ],
-      response_format: { type: "json_object" },
-    });
+      "lead_score",
+      {
+        entityType: "enterprise",
+        entityId: enterpriseData?.id,
+        responseFormat: { type: "json_object" },
+      }
+    );
 
-    const content = response.choices[0].message.content;
+    const content = billingResult.response.choices[0].message.content;
     if (!content) {
       throw new Error("No content received from OpenAI");
     }
@@ -87,6 +95,7 @@ Respond with JSON in this exact format:
 }
 
 export async function generateCopilotSuggestions(
+  userId: string,
   recentActivity: any[],
   stats: any,
   context?: any
@@ -121,9 +130,10 @@ Respond with JSON array in this exact format:
 ]
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
+    const billingResult = await callAIWithBilling(
+      userId,
+      "gpt-5",
+      [
         {
           role: "system",
           content: "You are an AI copilot for regenerative enterprise CRM. Generate practical, actionable suggestions."
@@ -133,10 +143,13 @@ Respond with JSON array in this exact format:
           content: prompt
         }
       ],
-      response_format: { type: "json_object" },
-    });
+      "copilot_suggestions",
+      {
+        responseFormat: { type: "json_object" },
+      }
+    );
 
-    const content = response.choices[0].message.content;
+    const content = billingResult.response.choices[0].message.content;
     if (!content) {
       throw new Error("No content received from OpenAI");
     }
@@ -210,6 +223,7 @@ Respond with JSON in this exact format:
 }
 
 export async function generateCopilotResponse(
+  userId: string,
   userMessage: string,
   conversationHistory: any[],
   businessContext?: any,
@@ -319,38 +333,44 @@ When users want to add an enterprise or send invitations, use the appropriate fu
     });
 
     console.log("Sending OpenAI request with messages:", messages.length);
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
+    const billingResult = await callAIWithBilling(
+      userId,
+      "gpt-5",
       messages,
-      tools,
-      tool_choice: "auto",
-      max_completion_tokens: 3000,
-    });
+      "copilot_chat",
+      {
+        tools,
+        toolChoice: "auto",
+        maxCompletionTokens: 3000,
+      }
+    );
 
     console.log("OpenAI response received:", {
-      id: response.id,
-      choices: response.choices?.length,
-      firstChoice: response.choices?.[0] || "No choices",
+      id: billingResult.response.id,
+      choices: billingResult.response.choices?.length,
+      firstChoice: billingResult.response.choices?.[0] || "No choices",
     });
 
-    const message = response.choices[0].message;
+    const message = billingResult.response.choices[0].message;
 
     // Check if AI wants to call a function
     if (message.tool_calls && message.tool_calls.length > 0) {
       const toolCall = message.tool_calls[0];
-      console.log("Function call detected:", toolCall.function.name);
-      return {
-        functionCall: {
-          name: toolCall.function.name,
-          arguments: JSON.parse(toolCall.function.arguments)
-        }
-      };
+      if (toolCall.type === 'function' && toolCall.function) {
+        console.log("Function call detected:", toolCall.function.name);
+        return {
+          functionCall: {
+            name: toolCall.function.name,
+            arguments: JSON.parse(toolCall.function.arguments)
+          }
+        };
+      }
     }
 
     // Regular text response
     const content = message.content;
     if (!content) {
-      console.error("OpenAI returned empty content. Full response:", JSON.stringify(response, null, 2));
+      console.error("OpenAI returned empty content. Full response:", JSON.stringify(billingResult.response, null, 2));
       throw new Error("No content received from OpenAI");
     }
 

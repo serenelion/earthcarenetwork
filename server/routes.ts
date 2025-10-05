@@ -9,6 +9,7 @@ import {
   generateCopilotSuggestions,
   generateCopilotResponse,
 } from "./openai";
+import { InsufficientCreditsError } from "./ai-billing";
 import { 
   scrapeUrl, 
   bulkScrapeUrls, 
@@ -45,7 +46,7 @@ import { z } from "zod";
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2023-10-16",
+    apiVersion: "2025-08-27.basil",
   });
 }
 
@@ -626,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const context = await storage.getCopilotContext(userId);
       
-      const leadScore = await generateLeadScore(enterprise, person, context);
+      const leadScore = await generateLeadScore(userId, enterprise, person, context);
       
       // Update opportunity with AI score if it exists
       if (req.body.opportunityId) {
@@ -639,6 +640,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(leadScore);
     } catch (error) {
       console.error("Error generating lead score:", error);
+      if (error instanceof InsufficientCreditsError) {
+        return res.status(402).json({ message: error.message, code: "INSUFFICIENT_CREDITS" });
+      }
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to generate lead score", error: errorMessage });
     }
@@ -664,10 +668,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...recentOpportunities.map(o => ({ type: 'opportunity', data: o })),
       ];
 
-      const suggestions = await generateCopilotSuggestions(recentActivity, stats, context);
+      const suggestions = await generateCopilotSuggestions(userId, recentActivity, stats, context);
       res.json(suggestions);
     } catch (error) {
       console.error("Error generating suggestions:", error);
+      if (error instanceof InsufficientCreditsError) {
+        return res.status(402).json({ message: error.message, code: "INSUFFICIENT_CREDITS" });
+      }
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to generate suggestions", error: errorMessage });
     }
@@ -844,6 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate AI response using OpenAI
       const aiResponse = await generateCopilotResponse(
+        userId,
         message,
         messages,
         businessContext,
@@ -921,6 +929,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error in chat:", error);
+      if (error instanceof InsufficientCreditsError) {
+        return res.status(402).json({ message: error.message, code: "INSUFFICIENT_CREDITS" });
+      }
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to process chat", error: errorMessage });
     }
@@ -1792,7 +1803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionStatus: user?.subscriptionStatus,
           subscriptionCurrentPeriodEnd: user?.subscriptionCurrentPeriodEnd,
           tokenUsageThisMonth: tokenUsage,
-          tokenQuotaLimit: user?.tokenQuotaLimit || 10000
+          creditAllocation: user?.monthlyAllocation || 10
         },
         subscription: subscription || null
       });
@@ -1940,10 +1951,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const { operationType, tokensUsed, entityType, entityId, metadata } = req.body;
+      const { operationType, tokensPrompt, entityType, entityId, metadata } = req.body;
       
       // Check quota before logging
-      const quotaCheck = await storage.checkUserTokenQuota(userId, tokensUsed);
+      const quotaCheck = await storage.checkUserTokenQuota(userId, tokensPrompt);
       if (!quotaCheck.allowed) {
         return res.status(429).json({ 
           message: "Token quota exceeded", 
@@ -1956,7 +1967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         subscriptionId: subscription?.id || null,
         operationType,
-        tokensUsed,
+        tokensPrompt,
         entityType: entityType || null,
         entityId: entityId || null,
         metadata: metadata || null
@@ -1964,7 +1975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         usage, 
-        remainingTokens: quotaCheck.remainingTokens - tokensUsed 
+        remainingTokens: quotaCheck.remainingTokens - tokensPrompt 
       });
     } catch (error) {
       console.error("Error logging AI usage:", error);
@@ -2061,17 +2072,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const user = await storage.getUserByStripeCustomerId(subscription.customer as string);
           
           if (user) {
+            const sub = subscription as any;
             await storage.updateSubscriptionByStripeId(subscription.id, {
               status: subscription.status as any,
-              currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              nextBillingDate: new Date(subscription.current_period_end * 1000)
+              currentPeriodStart: new Date(sub.current_period_start * 1000),
+              currentPeriodEnd: new Date(sub.current_period_end * 1000),
+              nextBillingDate: new Date(sub.current_period_end * 1000)
             });
 
             await storage.updateUserSubscriptionStatus(
               user.id, 
               subscription.status as any,
-              new Date(subscription.current_period_end * 1000)
+              new Date(sub.current_period_end * 1000)
             );
             console.log('Subscription updated for user:', user.id);
           }
