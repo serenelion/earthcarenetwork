@@ -15,6 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -715,167 +723,282 @@ export default function Tasks() {
           </CardContent>
         </Card>
 
-        {/* Tasks Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-4 bg-muted rounded mb-2"></div>
-                  <div className="h-6 bg-muted rounded mb-4"></div>
-                  <div className="h-16 bg-muted rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredTasks.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <CheckSquare className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No tasks found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery || statusFilter || priorityFilter
-                  ? "Try adjusting your search or filters"
-                  : "Get started by adding your first task"}
-              </p>
-              <Button onClick={openCreateDialog} data-testid="button-add-first-task">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTasks.map((task) => {
-              const enterprise = enterprises.find(e => e.id === task.relatedEnterpriseId);
-              const person = people.find(p => p.id === task.relatedPersonId);
-              const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
-              const priority = taskPriorities.find(p => p.value === task.priority);
-              const status = taskStatuses.find(s => s.value === task.status);
-              const overdue = isOverdue(task);
+        {/* Tasks List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Tasks ({filteredTasks.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+                ))}
+              </div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="text-center py-12">
+                <CheckSquare className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No tasks found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery || statusFilter || priorityFilter
+                    ? "Try adjusting your search or filters"
+                    : "Get started by adding your first task"}
+                </p>
+                <Button onClick={openCreateDialog} disabled={isFreeUser} data-testid="button-add-first-task">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Task
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="block lg:hidden space-y-3">
+                  {filteredTasks.map((task) => {
+                    const enterprise = enterprises.find(e => e.id === task.relatedEnterpriseId);
+                    const person = people.find(p => p.id === task.relatedPersonId);
+                    const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
+                    const priority = taskPriorities.find(p => p.value === task.priority);
+                    const status = taskStatuses.find(s => s.value === task.status);
+                    const overdue = isOverdue(task);
 
-              return (
-                <Card 
-                  key={task.id} 
-                  className={`hover:shadow-lg transition-shadow ${overdue ? 'border-red-200' : ''}`} 
-                  data-testid={`task-card-${task.id}`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-start space-x-3 flex-1">
-                        <Checkbox
-                          checked={task.status === "completed"}
-                          onCheckedChange={() => handleStatusToggle(task)}
-                          disabled={isFreeUser}
-                          className="mt-1"
-                          data-testid={`checkbox-task-${task.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
-                        />
-                        <div className="flex-1">
-                          <h3 className={`text-lg font-semibold font-lato ${
-                            task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"
-                          }`}>
-                            {task.title}
-                          </h3>
-                          <div className="flex gap-2 mt-1">
-                            {status && (
-                              <Badge className={`text-xs ${status.color}`}>
-                                {status.label}
-                              </Badge>
+                    return (
+                      <Card key={task.id} className="touch-manipulation" data-testid={`card-task-${task.id}`}>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={task.status === "completed"}
+                                onCheckedChange={() => handleStatusToggle(task)}
+                                disabled={isFreeUser}
+                                className="mt-1"
+                                data-testid={`checkbox-task-${task.id}`}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <h3 className={`font-semibold text-foreground ${
+                                  task.status === "completed" ? "line-through text-muted-foreground" : ""
+                                }`}>
+                                  {task.title}
+                                </h3>
+                                {task.description && (
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                    {task.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5">
+                              {status && (
+                                <Badge className={status.color}>
+                                  {status.label}
+                                </Badge>
+                              )}
+                              {priority && (
+                                <Badge className={priority.color}>
+                                  {priority.label}
+                                </Badge>
+                              )}
+                              {overdue && (
+                                <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                  <AlertCircle className="w-3 h-3 mr-1" />
+                                  Overdue
+                                </Badge>
+                              )}
+                            </div>
+
+                            {(task.dueDate || enterprise || person || opportunity) && (
+                              <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+                                {task.dueDate && (
+                                  <div className={`flex items-center gap-1.5 ${overdue ? 'text-red-600' : ''}`}>
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    <span>Due {new Date(task.dueDate).toLocaleDateString()}</span>
+                                  </div>
+                                )}
+                                {enterprise && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Building className="w-3.5 h-3.5" />
+                                    <span className="truncate">{enterprise.name}</span>
+                                  </div>
+                                )}
+                                {person && (
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5" />
+                                    <span>{person.firstName} {person.lastName}</span>
+                                  </div>
+                                )}
+                                {opportunity && (
+                                  <div className="flex items-center gap-1.5">
+                                    <CheckSquare className="w-3.5 h-3.5" />
+                                    <span className="truncate">{opportunity.title}</span>
+                                  </div>
+                                )}
+                              </div>
                             )}
-                            {priority && (
-                              <Badge className={`text-xs ${priority.color}`}>
-                                {priority.label}
-                              </Badge>
-                            )}
-                            {overdue && (
-                              <Badge className="text-xs bg-red-100 text-red-800">
-                                <AlertCircle className="w-3 h-3 mr-1" />
-                                Overdue
-                              </Badge>
-                            )}
+
+                            <div className="flex gap-2 pt-2 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => handleEdit(task)}
+                                disabled={isFreeUser}
+                                data-testid={`button-edit-${task.id}`}
+                              >
+                                <Edit className="w-4 h-4 mr-1.5" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(task.id)}
+                                disabled={isFreeUser}
+                                data-testid={`button-delete-${task.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(task)}
-                          disabled={isFreeUser}
-                          data-testid={`button-edit-${task.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(task.id)}
-                          disabled={isFreeUser}
-                          className="text-destructive hover:text-destructive"
-                          data-testid={`button-delete-${task.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
 
-                    {task.description && (
-                      <p className={`text-sm mb-4 line-clamp-2 ${
-                        task.status === "completed" ? "text-muted-foreground" : "text-muted-foreground"
-                      }`}>
-                        {task.description}
-                      </p>
-                    )}
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead>Task</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Related</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTasks.map((task) => {
+                        const enterprise = enterprises.find(e => e.id === task.relatedEnterpriseId);
+                        const person = people.find(p => p.id === task.relatedPersonId);
+                        const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
+                        const priority = taskPriorities.find(p => p.value === task.priority);
+                        const status = taskStatuses.find(s => s.value === task.status);
+                        const overdue = isOverdue(task);
 
-                    <div className="space-y-2 mb-4">
-                      {task.dueDate && (
-                        <div className={`flex items-center text-sm ${overdue ? 'text-red-600' : 'text-muted-foreground'}`}>
-                          <Calendar className="w-3 h-3 mr-2" />
-                          Due {new Date(task.dueDate).toLocaleDateString()}
-                        </div>
-                      )}
-
-                      {task.assignedToId && user && (user as any).id && task.assignedToId === (user as any).id && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-3 h-3 mr-2" />
-                          Assigned to me
-                        </div>
-                      )}
-
-                      {enterprise && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Building className="w-3 h-3 mr-2" />
-                          {enterprise.name}
-                        </div>
-                      )}
-
-                      {person && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-3 h-3 mr-2" />
-                          {person.firstName} {person.lastName}
-                        </div>
-                      )}
-
-                      {opportunity && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <CheckSquare className="w-3 h-3 mr-2" />
-                          {opportunity.title}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-muted-foreground">
-                      Created {task.createdAt ? new Date(task.createdAt).toLocaleDateString() : 'Unknown'}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                        return (
+                          <TableRow key={task.id} data-testid={`row-task-${task.id}`}>
+                            <TableCell>
+                              <Checkbox
+                                checked={task.status === "completed"}
+                                onCheckedChange={() => handleStatusToggle(task)}
+                                disabled={isFreeUser}
+                                data-testid={`checkbox-task-${task.id}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-md">
+                                <div className={`font-semibold text-foreground ${
+                                  task.status === "completed" ? "line-through text-muted-foreground" : ""
+                                }`}>
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                    {task.description}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {priority && (
+                                <Badge className={priority.color}>
+                                  {priority.label}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {status && (
+                                <Badge className={status.color}>
+                                  {status.label}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {task.dueDate ? (
+                                <div className={`flex items-center gap-1.5 ${overdue ? 'text-red-600' : ''}`}>
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                                  {overdue && (
+                                    <Badge className="ml-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                      Overdue
+                                    </Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                {enterprise && (
+                                  <div className="flex items-center gap-1.5 text-sm">
+                                    <Building className="w-3.5 h-3.5" />
+                                    <span className="truncate max-w-[200px]">{enterprise.name}</span>
+                                  </div>
+                                )}
+                                {person && (
+                                  <div className="flex items-center gap-1.5 text-sm">
+                                    <User className="w-3.5 h-3.5" />
+                                    <span>{person.firstName} {person.lastName}</span>
+                                  </div>
+                                )}
+                                {opportunity && (
+                                  <div className="flex items-center gap-1.5 text-sm">
+                                    <CheckSquare className="w-3.5 h-3.5" />
+                                    <span className="truncate max-w-[200px]">{opportunity.title}</span>
+                                  </div>
+                                )}
+                                {!enterprise && !person && !opportunity && (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEdit(task)}
+                                  disabled={isFreeUser}
+                                  data-testid={`button-edit-${task.id}`}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(task.id)}
+                                  disabled={isFreeUser}
+                                  data-testid={`button-delete-${task.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
     </>
   );
 }

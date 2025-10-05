@@ -15,6 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -731,120 +739,200 @@ export default function People() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPeople.map((person) => {
-              const enterprise = enterprises.find(e => e.id === person.enterpriseId);
-              const invitationStatus = invitationStatuses.find(s => s.value === person.invitationStatus);
-              const claimStatus = claimStatuses.find(s => s.value === person.claimStatus);
-              const buildProStatus = buildProStatuses.find(s => s.value === person.buildProStatus);
+          <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-3">
+              {filteredPeople.map((person) => {
+                const enterprise = enterprises.find(e => e.id === person.enterpriseId);
+                const invitationStatus = invitationStatuses.find(s => s.value === person.invitationStatus);
+                const claimStatus = claimStatuses.find(s => s.value === person.claimStatus);
+                const buildProStatus = buildProStatuses.find(s => s.value === person.buildProStatus);
 
-              return (
-                <Card key={person.id} className="hover:shadow-lg transition-shadow" data-testid={`person-card-${person.id}`}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-foreground font-lato">
-                          {person.firstName} {person.lastName}
-                        </h3>
-                        {person.title && (
-                          <p className="text-muted-foreground text-sm">{person.title}</p>
-                        )}
+                return (
+                  <Card key={person.id} className="touch-manipulation" data-testid={`person-card-${person.id}`}>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base font-semibold text-foreground font-lato">
+                              {person.firstName} {person.lastName}
+                            </h3>
+                            {person.title && (
+                              <p className="text-sm text-muted-foreground">{person.title}</p>
+                            )}
+                            {person.email && (
+                              <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                <Mail className="w-3.5 h-3.5 mr-1.5" />
+                                <a href={`mailto:${person.email}`} className="hover:text-primary truncate">
+                                  {person.email}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {enterprise && (
-                          <div className="flex items-center text-sm text-muted-foreground mt-1">
-                            <Building className="w-3 h-3 mr-1" />
-                            {enterprise.name}
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-xs">
+                              <Building className="w-3 h-3 mr-1" />
+                              {enterprise.name}
+                            </Badge>
                           </div>
                         )}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(person)}
-                          disabled={isFreeUser}
-                          data-testid={`button-edit-${person.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(person.id)}
-                          disabled={isFreeUser}
-                          className="text-destructive hover:text-destructive"
-                          data-testid={`button-delete-${person.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2 mb-4">
-                      {person.email && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Mail className="w-3 h-3 mr-2" />
-                          <a href={`mailto:${person.email}`} className="hover:text-primary">
-                            {person.email}
-                          </a>
+                        <div className="flex flex-wrap gap-1.5">
+                          {invitationStatus && (
+                            <Badge className={`text-xs ${invitationStatus.color}`} data-testid={`badge-invitation-${person.id}`}>
+                              {invitationStatus.label}
+                            </Badge>
+                          )}
+                          {claimStatus && (
+                            <Badge className={`text-xs ${claimStatus.color}`} data-testid={`badge-claim-${person.id}`}>
+                              {claimStatus.label}
+                            </Badge>
+                          )}
+                          {buildProStatus && (
+                            <Badge className={`text-xs ${buildProStatus.color}`} data-testid={`badge-buildpro-${person.id}`}>
+                              {buildProStatus.label}
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      {person.phone && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="w-3 h-3 mr-2" />
-                          <a href={`tel:${person.phone}`} className="hover:text-primary">
-                            {person.phone}
-                          </a>
-                        </div>
-                      )}
-                      {person.linkedinUrl && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <ExternalLink className="w-3 h-3 mr-2" />
-                          <a
-                            href={person.linkedinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-primary"
+
+                        <div className="flex gap-2 pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleEdit(person)}
+                            disabled={isFreeUser}
+                            data-testid={`button-edit-${person.id}`}
                           >
-                            LinkedIn Profile
-                          </a>
+                            <Edit className="w-4 h-4 mr-1.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(person.id)}
+                            disabled={isFreeUser}
+                            data-testid={`button-delete-${person.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1">
-                        {invitationStatus && (
-                          <Badge className={`text-xs ${invitationStatus.color}`}>
-                            {invitationStatus.label}
-                          </Badge>
-                        )}
-                        {claimStatus && (
-                          <Badge className={`text-xs ${claimStatus.color}`}>
-                            {claimStatus.label}
-                          </Badge>
-                        )}
-                        {buildProStatus && (
-                          <Badge className={`text-xs ${buildProStatus.color}`}>
-                            {buildProStatus.label}
-                          </Badge>
-                        )}
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
 
-                    {person.notes && (
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {person.notes}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Enterprise</TableHead>
+                    <TableHead>Invitation Status</TableHead>
+                    <TableHead>Claim Status</TableHead>
+                    <TableHead>Build Pro Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPeople.map((person) => {
+                    const enterprise = enterprises.find(e => e.id === person.enterpriseId);
+                    const invitationStatus = invitationStatuses.find(s => s.value === person.invitationStatus);
+                    const claimStatus = claimStatuses.find(s => s.value === person.claimStatus);
+                    const buildProStatus = buildProStatuses.find(s => s.value === person.buildProStatus);
+
+                    return (
+                      <TableRow key={person.id} data-testid={`person-card-${person.id}`}>
+                        <TableCell>
+                          <div className="font-semibold text-foreground">
+                            {person.firstName} {person.lastName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">
+                            {person.title || "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {person.email ? (
+                            <a href={`mailto:${person.email}`} className="text-sm hover:text-primary">
+                              {person.email}
+                            </a>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {enterprise ? (
+                            <Badge variant="outline" className="text-xs">
+                              <Building className="w-3 h-3 mr-1" />
+                              {enterprise.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {invitationStatus && (
+                            <Badge className={`text-xs ${invitationStatus.color}`} data-testid={`badge-invitation-${person.id}`}>
+                              {invitationStatus.label}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {claimStatus && (
+                            <Badge className={`text-xs ${claimStatus.color}`} data-testid={`badge-claim-${person.id}`}>
+                              {claimStatus.label}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {buildProStatus && (
+                            <Badge className={`text-xs ${buildProStatus.color}`} data-testid={`badge-buildpro-${person.id}`}>
+                              {buildProStatus.label}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(person)}
+                              disabled={isFreeUser}
+                              data-testid={`button-edit-${person.id}`}
+                              title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(person.id)}
+                              disabled={isFreeUser}
+                              className="text-destructive hover:text-destructive"
+                              data-testid={`button-delete-${person.id}`}
+                              title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
     </>
   );

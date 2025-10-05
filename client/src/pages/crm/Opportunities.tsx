@@ -15,6 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -919,261 +927,337 @@ export default function Opportunities() {
           </CardContent>
         </Card>
 
-        {/* Opportunities Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-4 bg-muted rounded mb-2"></div>
-                  <div className="h-6 bg-muted rounded mb-4"></div>
-                  <div className="h-16 bg-muted rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredOpportunities.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Handshake className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No opportunities found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery || statusFilter
-                  ? "Try adjusting your search or filters"
-                  : "Get started by adding your first opportunity"}
-              </p>
-              <Button onClick={openCreateDialog} data-testid="button-add-first-opportunity">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Opportunity
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOpportunities.map((opportunity) => {
-              const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
-              const contact = people.find(p => p.id === opportunity.primaryContactId);
-              const status = opportunityStatuses.find(s => s.value === opportunity.status);
+        {/* Opportunities List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Opportunities ({filteredOpportunities.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-24 bg-muted rounded animate-pulse"></div>
+                ))}
+              </div>
+            ) : filteredOpportunities.length === 0 ? (
+              <div className="text-center py-12">
+                <Handshake className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No opportunities found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery || statusFilter
+                    ? "Try adjusting your search or filters"
+                    : "Create your first opportunity to get started"}
+                </p>
+                {!searchQuery && !statusFilter && (
+                  <Button onClick={openCreateDialog} data-testid="button-add-first-opportunity">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Opportunity
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="block lg:hidden space-y-3">
+                  {filteredOpportunities.map((opportunity) => {
+                    const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
+                    const contact = people.find(p => p.id === opportunity.primaryContactId);
+                    const status = opportunityStatuses.find(s => s.value === opportunity.status);
 
-              return (
-                <Card 
-                  key={opportunity.id} 
-                  className="hover:shadow-lg transition-shadow cursor-pointer" 
-                  data-testid={`opportunity-card-${opportunity.id}`}
-                  onClick={() => {
-                    setViewingOpportunity(opportunity);
-                    setIsDetailDialogOpen(true);
-                  }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-foreground font-lato">
-                          {opportunity.title}
-                        </h3>
-                        {status && (
-                          <Badge className={`text-xs mt-1 ${status.color}`}>
-                            {status.label}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => generateLeadScoreMutation.mutate(opportunity.id)}
-                          disabled={generateLeadScoreMutation.isPending || isFreeUser}
-                          data-testid={`button-generate-score-${opportunity.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to generate lead score" : undefined}
-                        >
-                          <Lightbulb className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(opportunity)}
-                          disabled={isFreeUser}
-                          data-testid={`button-edit-${opportunity.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(opportunity.id)}
-                          disabled={isFreeUser}
-                          className="text-destructive hover:text-destructive"
-                          data-testid={`button-delete-${opportunity.id}`}
-                          title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    return (
+                      <Card key={opportunity.id} className="touch-manipulation" data-testid={`card-opportunity-${opportunity.id}`}>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-base font-semibold text-foreground truncate">
+                                  {opportunity.title}
+                                </h3>
+                                {opportunity.description && (
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                    {opportunity.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-1.5">
+                              {status && (
+                                <Badge className={`text-xs ${status.color}`}>
+                                  {status.label}
+                                </Badge>
+                              )}
+                              {enterprise && enterprise.category && (
+                                <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
+                                  {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
+                                </Badge>
+                              )}
+                            </div>
 
-                    {opportunity.description && (
-                      <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                        {opportunity.description}
-                      </p>
-                    )}
+                            {enterprise && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Building className="w-4 h-4 text-muted-foreground" />
+                                <span className="truncate" data-testid={`enterprise-name-${opportunity.id}`}>{enterprise.name}</span>
+                              </div>
+                            )}
 
-                    {/* Enterprise and Contact Badges Section */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {enterprise ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
-                                  <Building className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-muted-foreground">Enterprise</p>
-                                    <p className="text-sm font-medium truncate" data-testid={`enterprise-name-${opportunity.id}`}>
+                            {contact && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <User className="w-4 h-4" />
+                                <span className="truncate" data-testid={`contact-name-${opportunity.id}`}>
+                                  {contact.firstName} {contact.lastName}
+                                </span>
+                              </div>
+                            )}
+
+                            {opportunity.value && opportunity.value > 0 && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <DollarSign className="w-4 h-4 text-green-600" />
+                                <span className="font-medium">
+                                  ${(opportunity.value / 100).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+
+                            {opportunity.probability !== null && opportunity.probability > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Probability</span>
+                                  <span className="font-medium">{opportunity.probability}%</span>
+                                </div>
+                                <Progress value={opportunity.probability} className="h-2" />
+                              </div>
+                            )}
+
+                            {opportunity.aiScore && (
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground flex items-center">
+                                    <TrendingUp className="w-3 h-3 mr-1" />
+                                    AI Score
+                                  </span>
+                                  <span className="font-medium">{opportunity.aiScore}/100</span>
+                                </div>
+                                <Progress value={opportunity.aiScore} className="h-2" />
+                              </div>
+                            )}
+
+                            {opportunity.aiInsights && (
+                              <div className="text-xs text-muted-foreground line-clamp-2">
+                                <strong>AI Insights:</strong> {opportunity.aiInsights}
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 pt-2 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => {
+                                  setViewingOpportunity(opportunity);
+                                  setIsDetailDialogOpen(true);
+                                }}
+                                data-testid={`button-view-${opportunity.id}`}
+                              >
+                                <ExternalLink className="w-4 h-4 mr-1.5" />
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => handleEdit(opportunity)}
+                                disabled={isFreeUser}
+                                data-testid={`button-edit-${opportunity.id}`}
+                              >
+                                <Edit className="w-4 h-4 mr-1.5" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(opportunity.id)}
+                                disabled={isFreeUser}
+                                data-testid={`button-delete-${opportunity.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Opportunity</TableHead>
+                        <TableHead>Enterprise</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Probability</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOpportunities.map((opportunity) => {
+                        const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
+                        const contact = people.find(p => p.id === opportunity.primaryContactId);
+                        const status = opportunityStatuses.find(s => s.value === opportunity.status);
+
+                        return (
+                          <TableRow key={opportunity.id} data-testid={`row-opportunity-${opportunity.id}`}>
+                            <TableCell>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-foreground truncate">
+                                  {opportunity.title}
+                                </div>
+                                {opportunity.description && (
+                                  <div className="text-xs text-muted-foreground truncate max-w-xs">
+                                    {opportunity.description}
+                                  </div>
+                                )}
+                                {opportunity.aiScore && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <TrendingUp className="w-3 h-3 text-purple-600" />
+                                    <span className="text-xs text-muted-foreground">
+                                      AI Score: {opportunity.aiScore}/100
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {enterprise ? (
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Building className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm truncate" data-testid={`enterprise-name-${opportunity.id}`}>
                                       {enterprise.name}
-                                    </p>
+                                    </span>
                                   </div>
+                                  {enterprise.category && (
+                                    <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
+                                      {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
+                                    </Badge>
+                                  )}
                                 </div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <div className="space-y-1">
-                                <p className="font-semibold">{enterprise.name}</p>
-                                {enterprise.category && (
-                                  <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
-                                    {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
-                                  </Badge>
-                                )}
-                                {enterprise.location && (
-                                  <p className="text-xs flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {enterprise.location}
-                                  </p>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
-                            <Building className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground">No enterprise linked</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {contact ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border hover:bg-muted transition-colors">
-                                  <User className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-muted-foreground">Contact</p>
-                                    <p className="text-sm font-medium truncate" data-testid={`contact-name-${opportunity.id}`}>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {contact ? (
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm truncate" data-testid={`contact-name-${opportunity.id}`}>
                                       {contact.firstName} {contact.lastName}
-                                    </p>
+                                    </span>
                                   </div>
+                                  {contact.title && (
+                                    <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                      {contact.title}
+                                    </div>
+                                  )}
                                 </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {opportunity.value && opportunity.value > 0 ? (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <DollarSign className="w-3 h-3 text-green-600" />
+                                  <span className="font-medium">
+                                    ${(opportunity.value / 100).toLocaleString()}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {opportunity.probability !== null && opportunity.probability > 0 ? (
+                                <div className="space-y-1 min-w-[100px]">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="font-medium">{opportunity.probability}%</span>
+                                  </div>
+                                  <Progress value={opportunity.probability} className="h-2" />
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {status && (
+                                <Badge className={`${status.color}`}>
+                                  {status.label}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => generateLeadScoreMutation.mutate(opportunity.id)}
+                                  disabled={generateLeadScoreMutation.isPending || isFreeUser}
+                                  data-testid={`button-generate-score-${opportunity.id}`}
+                                  title={isFreeUser ? "Upgrade to CRM Pro to generate lead score" : "Generate AI lead score"}
+                                >
+                                  <Lightbulb className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setViewingOpportunity(opportunity);
+                                    setIsDetailDialogOpen(true);
+                                  }}
+                                  data-testid={`button-view-${opportunity.id}`}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(opportunity)}
+                                  disabled={isFreeUser}
+                                  data-testid={`button-edit-${opportunity.id}`}
+                                  title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(opportunity.id)}
+                                  disabled={isFreeUser}
+                                  data-testid={`button-delete-${opportunity.id}`}
+                                  title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <div className="space-y-1">
-                                <p className="font-semibold">{contact.firstName} {contact.lastName}</p>
-                                {contact.title && (
-                                  <p className="text-xs flex items-center gap-1">
-                                    <Briefcase className="w-3 h-3" />
-                                    {contact.title}
-                                  </p>
-                                )}
-                                {contact.email && (
-                                  <p className="text-xs flex items-center gap-1">
-                                    <Mail className="w-3 h-3" />
-                                    {contact.email}
-                                  </p>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/30">
-                            <User className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground">No contact assigned</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-3 mb-4">
-                      {opportunity.value && opportunity.value > 0 && (
-                        <div className="flex items-center text-sm">
-                          <DollarSign className="w-4 h-4 mr-2 text-green-600" />
-                          <span className="font-medium">
-                            ${(opportunity.value / 100).toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-
-                      {opportunity.probability !== null && opportunity.probability > 0 && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Probability</span>
-                            <span className="font-medium">{opportunity.probability}%</span>
-                          </div>
-                          <Progress value={opportunity.probability} className="h-2" />
-                        </div>
-                      )}
-
-                      {opportunity.aiScore && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground flex items-center">
-                              <TrendingUp className="w-3 h-3 mr-1" />
-                              AI Score
-                            </span>
-                            <span className="font-medium">{opportunity.aiScore}/100</span>
-                          </div>
-                          <Progress value={opportunity.aiScore} className="h-2" />
-                        </div>
-                      )}
-
-                      {opportunity.expectedCloseDate && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3 mr-2" />
-                          {new Date(opportunity.expectedCloseDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-
-                    {opportunity.aiInsights && (
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          <strong>AI Insights:</strong> {opportunity.aiInsights}
-                        </p>
-                      </div>
-                    )}
-
-                    {opportunity.notes && !opportunity.aiInsights && (
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {opportunity.notes}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Opportunity Detail Dialog */}
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>

@@ -420,7 +420,7 @@ export default function CRMEnterprises() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* Enterprises List */}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -451,120 +451,104 @@ export default function CRMEnterprises() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Followers</TableHead>
-                    <TableHead>Tags</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEnterprises.map((enterprise) => {
-                    const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors];
-                    const categoryLabel = categories.find(c => c.value === enterprise.category)?.label;
-                    
-                    return (
-                      <TableRow key={enterprise.id} data-testid={`row-enterprise-${enterprise.id}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
-                              <Building className="w-4 h-4 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-semibold text-foreground truncate flex items-center gap-1">
-                                {enterprise.name}
-                                {enterprise.isVerified && (
-                                  <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                )}
-                                <PledgeIndicator enterpriseId={enterprise.id} />
+            <>
+              {/* Mobile Card View */}
+              <div className="block lg:hidden space-y-3">
+                {filteredEnterprises.map((enterprise) => {
+                  const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors];
+                  const categoryLabel = categories.find(c => c.value === enterprise.category)?.label;
+                  
+                  return (
+                    <Card key={enterprise.id} className="touch-manipulation" data-testid={`card-enterprise-${enterprise.id}`}>
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <div className="w-10 h-10 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                                <Building className="w-5 h-5 text-primary" />
                               </div>
-                              {enterprise.description && (
-                                <div className="text-xs text-muted-foreground truncate max-w-xs">
-                                  {enterprise.description}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                                  <span className="truncate">{enterprise.name}</span>
+                                  {enterprise.isVerified && (
+                                    <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                  )}
+                                  <PledgeIndicator enterpriseId={enterprise.id} />
                                 </div>
-                              )}
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                  <Badge className={categoryClass}>
+                                    {categoryLabel}
+                                  </Badge>
+                                  {enterprise.isVerified ? (
+                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                      Verified
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary">Unverified</Badge>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={categoryClass}>
-                            {categoryLabel}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {enterprise.location ? (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate max-w-[150px]">{enterprise.location}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
+                          
+                          {enterprise.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {enterprise.description}
+                            </p>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {enterprise.followerCount != null && enterprise.followerCount > 0 ? (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Users className="w-3 h-3 text-muted-foreground" />
-                              <span>{enterprise.followerCount.toLocaleString()}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {enterprise.tags && enterprise.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 max-w-xs">
-                              {enterprise.tags.slice(0, 2).map((tag, index) => (
+                          
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                            {enterprise.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{enterprise.location}</span>
+                              </div>
+                            )}
+                            {enterprise.followerCount != null && enterprise.followerCount > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>{enterprise.followerCount.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {enterprise.tags && enterprise.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {enterprise.tags.slice(0, 3).map((tag, index) => (
                                 <Badge key={index} variant="secondary" className="text-xs">
                                   {tag}
                                 </Badge>
                               ))}
-                              {enterprise.tags.length > 2 && (
+                              {enterprise.tags.length > 3 && (
                                 <Badge variant="secondary" className="text-xs">
-                                  +{enterprise.tags.length - 2}
+                                  +{enterprise.tags.length - 3}
                                 </Badge>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {enterprise.isVerified ? (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Verified
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Unverified</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          
+                          <div className="flex gap-2 pt-2 border-t">
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1"
                               onClick={() => handleManagePledge(enterprise)}
                               disabled={isFreeUser}
-                              data-testid="button-manage-pledge"
-                              title={isFreeUser ? "Upgrade to CRM Pro to edit" : "Manage Earth Care Pledge"}
+                              data-testid={`button-pledge-${enterprise.id}`}
                             >
-                              <Sprout className="w-4 h-4" />
+                              <Sprout className="w-4 h-4 mr-1.5" />
+                              Pledge
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1"
                               onClick={() => handleEdit(enterprise)}
                               disabled={isFreeUser}
                               data-testid={`button-edit-${enterprise.id}`}
-                              title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-4 h-4 mr-1.5" />
+                              Edit
                             </Button>
                             <Button
                               variant="outline"
@@ -572,18 +556,152 @@ export default function CRMEnterprises() {
                               onClick={() => handleDelete(enterprise.id)}
                               disabled={isFreeUser}
                               data-testid={`button-delete-${enterprise.id}`}
-                              title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
                             >
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Followers</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEnterprises.map((enterprise) => {
+                      const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors];
+                      const categoryLabel = categories.find(c => c.value === enterprise.category)?.label;
+                      
+                      return (
+                        <TableRow key={enterprise.id} data-testid={`row-enterprise-${enterprise.id}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                                <Building className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-foreground truncate flex items-center gap-1">
+                                  {enterprise.name}
+                                  {enterprise.isVerified && (
+                                    <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                  )}
+                                  <PledgeIndicator enterpriseId={enterprise.id} />
+                                </div>
+                                {enterprise.description && (
+                                  <div className="text-xs text-muted-foreground truncate max-w-xs">
+                                    {enterprise.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={categoryClass}>
+                              {categoryLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {enterprise.location ? (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <MapPin className="w-3 h-3" />
+                                <span className="truncate max-w-[150px]">{enterprise.location}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {enterprise.followerCount != null && enterprise.followerCount > 0 ? (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Users className="w-3 h-3 text-muted-foreground" />
+                                <span>{enterprise.followerCount.toLocaleString()}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {enterprise.tags && enterprise.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {enterprise.tags.slice(0, 2).map((tag, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {enterprise.tags.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{enterprise.tags.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {enterprise.isVerified ? (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Verified
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">Unverified</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleManagePledge(enterprise)}
+                                disabled={isFreeUser}
+                                data-testid="button-manage-pledge"
+                                title={isFreeUser ? "Upgrade to CRM Pro to edit" : "Manage Earth Care Pledge"}
+                              >
+                                <Sprout className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(enterprise)}
+                                disabled={isFreeUser}
+                                data-testid={`button-edit-${enterprise.id}`}
+                                title={isFreeUser ? "Upgrade to CRM Pro to edit" : undefined}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(enterprise.id)}
+                                disabled={isFreeUser}
+                                data-testid={`button-delete-${enterprise.id}`}
+                                title={isFreeUser ? "Upgrade to CRM Pro to delete" : undefined}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
