@@ -60,6 +60,19 @@ export default function EnterpriseDetail() {
     enabled: !!id,
   });
 
+  // Query claim status (public endpoint, no auth required)
+  const { data: claimStatus } = useQuery<{ isClaimed: boolean; canClaim: boolean }>({
+    queryKey: ["/api/enterprises", id, "claim-status"],
+    queryFn: async () => {
+      const response = await fetch(`/api/enterprises/${id}/claim-status`);
+      if (!response.ok) throw new Error("Failed to check claim status");
+      return response.json();
+    },
+    enabled: !!id && isAuthenticated,
+  });
+
+  const canClaim = claimStatus?.canClaim ?? false;
+
   // Fetch user's team membership to check role
   const { data: teamData } = useQuery<{ members: Array<{ userId: string; role: string }> }>({
     queryKey: ["/api/enterprises", id, "team"],
@@ -206,6 +219,19 @@ export default function EnterpriseDetail() {
 
               {/* Action Buttons */}
               <div className="flex gap-2">
+                {isAuthenticated && canClaim && (
+                  <Button
+                    variant="default"
+                    asChild
+                    data-testid="button-claim-enterprise"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Link href={`/claim-profile/${enterprise.id}`}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Claim This Enterprise
+                    </Link>
+                  </Button>
+                )}
                 {isAuthenticated && (
                   <FavoriteButton 
                     enterpriseId={enterprise.id} 

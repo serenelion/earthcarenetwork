@@ -359,6 +359,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint to check if enterprise is claimed
+  app.get('/api/enterprises/:id/claim-status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const hasOwner = await storage.hasEnterpriseOwner(id);
+      
+      res.json({ 
+        isClaimed: hasOwner,
+        canClaim: !hasOwner 
+      });
+    } catch (error) {
+      console.error("Error checking claim status:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to check claim status", error: errorMessage });
+    }
+  });
+
   // Pledge lifecycle routes
   app.get('/api/enterprises/:id/pledge', async (req, res) => {
     try {

@@ -341,6 +341,7 @@ export interface IStorage {
   updateTeamMember(id: string, teamMember: Partial<InsertEnterpriseTeamMember>): Promise<EnterpriseTeamMember>;
   deleteTeamMember(id: string): Promise<void>;
   getUserTeamMemberships(userId: string, limit?: number, offset?: number): Promise<Array<EnterpriseTeamMember & { enterprise: Enterprise }>>;
+  hasEnterpriseOwner(enterpriseId: string): Promise<boolean>;
 
   // Invitation operations
   createInvitation(invitation: InsertEnterpriseInvitation): Promise<EnterpriseInvitation>;
@@ -2509,6 +2510,22 @@ export class DatabaseStorage implements IStorage {
       updatedAt: result.updatedAt,
       enterprise: result.enterprise,
     }));
+  }
+
+  async hasEnterpriseOwner(enterpriseId: string): Promise<boolean> {
+    const owners = await db
+      .select()
+      .from(enterpriseTeamMembers)
+      .where(
+        and(
+          eq(enterpriseTeamMembers.enterpriseId, enterpriseId),
+          eq(enterpriseTeamMembers.role, 'owner'),
+          eq(enterpriseTeamMembers.status, 'active')
+        )
+      )
+      .limit(1);
+    
+    return owners.length > 0;
   }
 
   // Invitation operations
