@@ -332,18 +332,6 @@ export default function EnterpriseDetail() {
             )}
           </CardContent>
         </Card>
-
-        {/* Related Opportunities Section - Placeholder for future */}
-        {isAuthenticated && (
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-3">Related Opportunities</h2>
-              <p className="text-muted-foreground">
-                No opportunities associated with this enterprise yet.
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
