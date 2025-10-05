@@ -93,7 +93,7 @@ export default function PledgeAffirmationModal({
             {/* Unified Commitment Statement */}
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
               <p className="text-lg font-medium text-foreground mb-4 leading-relaxed">
-                "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+                "I align with the ethics of earth care, people care, and fair share."
               </p>
               
               <FormField
