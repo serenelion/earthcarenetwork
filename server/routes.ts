@@ -2,7 +2,7 @@ import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   generateLeadScore, 
@@ -16,7 +16,16 @@ import {
   importScrapedEnterprises,
   scrapeRegenerativeSources 
 } from "./scraperService";
+import { 
+  startBulkSeeding, 
+  getJobStatus, 
+  discoverEnterprises 
+} from "./seedingOrchestrator";
 import { generateMurmurationsProfile } from "./murmurations";
+import { 
+  startBatchInvitations, 
+  getInvitationJobStatus 
+} from "./invitationBatch";
 import { 
   insertEnterpriseSchema,
   insertPersonSchema,
@@ -34,9 +43,11 @@ import {
   insertAiUsageLogSchema,
   insertUserFavoriteSchema,
   insertProfileClaimSchema,
+  insertEarthCarePledgeSchema,
   opportunities,
   enterprises,
-  people
+  people,
+  enterpriseOwners
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
@@ -137,6 +148,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching enterprise contacts:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to fetch enterprise contacts", error: errorMessage });
+    }
+  });
+
+  // Pledge lifecycle routes
+  app.get('/api/enterprises/:id/pledge', async (req, res) => {
+    try {
+      const pledge = await storage.getPledgeByEnterpriseId(req.params.id);
+      if (!pledge) {
+        return res.status(404).json({ message: "No pledge found" });
+      }
+      res.json({ pledge });
+    } catch (error) {
+      console.error("Error fetching pledge:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch pledge", error: errorMessage });
+    }
+  });
+
+  app.post('/api/enterprises/:id/pledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const isAdmin = user.role === 'admin';
+      const [ownerRecord] = await db
+        .select()
+        .from(enterpriseOwners)
+        .where(
+          and(
+            eq(enterpriseOwners.enterpriseId, enterpriseId),
+            eq(enterpriseOwners.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      const isOwner = ownerRecord && (ownerRecord.role === 'owner' || ownerRecord.role === 'editor');
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Forbidden - must be enterprise owner or admin" });
+      }
+
+      const existingPledge = await storage.getPledgeByEnterpriseId(enterpriseId);
+      if (existingPledge) {
+        return res.status(400).json({ message: "Pledge already exists for this enterprise" });
+      }
+
+      const pledgeSchema = insertEarthCarePledgeSchema.pick({
+        earthCare: true,
+        peopleCare: true,
+        fairShare: true,
+        narrative: true
+      });
+      const validatedData = pledgeSchema.parse(req.body);
+
+      const pledge = await storage.createPledge({
+        enterpriseId,
+        status: 'affirmed',
+        earthCare: validatedData.earthCare,
+        peopleCare: validatedData.peopleCare,
+        fairShare: validatedData.fairShare,
+        narrative: validatedData.narrative,
+        signedAt: new Date(),
+        signedBy: userId,
+        revokedAt: null,
+        revokedBy: null
+      });
+
+      res.status(201).json({ message: "Pledge created successfully", pledge });
+    } catch (error) {
+      console.error("Error creating pledge:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", error: error.message });
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create pledge", error: errorMessage });
+    }
+  });
+
+  app.patch('/api/enterprises/:id/pledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const isAdmin = user.role === 'admin';
+      const [ownerRecord] = await db
+        .select()
+        .from(enterpriseOwners)
+        .where(
+          and(
+            eq(enterpriseOwners.enterpriseId, enterpriseId),
+            eq(enterpriseOwners.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      const isOwner = ownerRecord && (ownerRecord.role === 'owner' || ownerRecord.role === 'editor');
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Forbidden - must be enterprise owner or admin" });
+      }
+
+      const existingPledge = await storage.getPledgeByEnterpriseId(enterpriseId);
+      if (!existingPledge) {
+        return res.status(404).json({ message: "No pledge found for this enterprise" });
+      }
+
+      const updateSchema = z.object({
+        earthCare: z.boolean().optional(),
+        peopleCare: z.boolean().optional(),
+        fairShare: z.boolean().optional(),
+        narrative: z.string().optional()
+      });
+      const validatedData = updateSchema.parse(req.body);
+
+      const updatedFields: any = { ...validatedData };
+      updatedFields.updatedAt = new Date();
+
+      const pledge = await storage.updatePledge(existingPledge.id, updatedFields);
+
+      res.json({ message: "Pledge updated successfully", pledge });
+    } catch (error) {
+      console.error("Error updating pledge:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", error: error.message });
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to update pledge", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/enterprises/:id/pledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const isAdmin = user.role === 'admin';
+      const [ownerRecord] = await db
+        .select()
+        .from(enterpriseOwners)
+        .where(
+          and(
+            eq(enterpriseOwners.enterpriseId, enterpriseId),
+            eq(enterpriseOwners.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      const isOwner = ownerRecord && (ownerRecord.role === 'owner' || ownerRecord.role === 'editor');
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Forbidden - must be enterprise owner or admin" });
+      }
+
+      const existingPledge = await storage.getPledgeByEnterpriseId(enterpriseId);
+      if (!existingPledge) {
+        return res.status(404).json({ message: "No pledge found for this enterprise" });
+      }
+
+      const pledge = await storage.revokePledge(existingPledge.id, userId);
+
+      res.json({ message: "Pledge revoked successfully", pledge });
+    } catch (error) {
+      console.error("Error revoking pledge:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to revoke pledge", error: errorMessage });
     }
   });
 
@@ -988,6 +1191,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/pledge-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Check if user is admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const stats = await storage.getPledgeStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching pledge stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch pledge stats", error: errorMessage });
+    }
+  });
+
   app.post('/api/admin/invitations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
@@ -1079,6 +1304,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating invitation:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to update invitation", error: errorMessage });
+    }
+  });
+
+  // Bulk Enterprise Seeding Routes (Admin only)
+  app.post('/api/admin/enterprises/seed', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { urls, discover } = req.body;
+
+      let seedingUrls: string[] = [];
+      
+      if (discover) {
+        seedingUrls = await discoverEnterprises();
+      } else if (urls && Array.isArray(urls)) {
+        seedingUrls = urls;
+      } else {
+        return res.status(400).json({ 
+          message: "Either 'urls' array or 'discover' flag must be provided" 
+        });
+      }
+
+      if (seedingUrls.length === 0) {
+        return res.status(400).json({ message: "No URLs to process" });
+      }
+
+      const job = await startBulkSeeding(seedingUrls);
+      
+      res.status(201).json({
+        jobId: job.id,
+        message: "Seeding started",
+        totalUrls: job.totalUrls
+      });
+    } catch (error) {
+      console.error("Error starting bulk seeding:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to start seeding", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/enterprises/seed/:jobId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { jobId } = req.params;
+      const job = getJobStatus(jobId);
+
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job status:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch job status", error: errorMessage });
     }
   });
 
@@ -1204,6 +1501,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error claiming profile:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(400).json({ message: errorMessage });
+    }
+  });
+
+  // Batch Invitation Routes (Admin only)
+  app.post('/api/admin/enterprises/invite-batch', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { enterpriseIds } = req.body;
+
+      const job = await startBatchInvitations(userId, enterpriseIds);
+
+      res.status(202).json({
+        jobId: job.id,
+        message: "Batch invitation started",
+        totalEnterprises: job.totalEnterprises,
+        note: "Email sending not yet implemented. Invitations create claim tokens that can be used via the claim profile flow."
+      });
+    } catch (error) {
+      console.error("Error starting batch invitations:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to start batch invitations", error: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/enterprises/invite-batch/:jobId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { jobId } = req.params;
+      
+      const job = getInvitationJobStatus(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job status:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch job status", error: errorMessage });
     }
   });
 

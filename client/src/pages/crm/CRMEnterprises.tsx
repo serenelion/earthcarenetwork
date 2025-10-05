@@ -66,9 +66,11 @@ import {
   Users,
   Filter,
   X,
+  Sprout,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
-import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise } from "@shared/schema";
+import PledgeAffirmationModal from "@/components/PledgeAffirmationModal";
+import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise, type EarthCarePledge } from "@shared/schema";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -84,6 +86,25 @@ const categoryColors = {
   network_organizers: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
 };
 
+function PledgeIndicator({ enterpriseId }: { enterpriseId: string }) {
+  const { data: pledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
+    queryKey: ["/api/enterprises", enterpriseId, "pledge"],
+    queryFn: async () => {
+      const response = await fetch(`/api/enterprises/${enterpriseId}/pledge`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+  });
+
+  if (pledgeData?.pledge?.status === 'affirmed') {
+    return (
+      <Sprout className="w-4 h-4 text-green-600 flex-shrink-0" data-testid="indicator-pledge-affirmed" />
+    );
+  }
+
+  return null;
+}
+
 export default function CRMEnterprises() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,6 +112,8 @@ export default function CRMEnterprises() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEnterprise, setEditingEnterprise] = useState<Enterprise | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [pledgeModalOpen, setPledgeModalOpen] = useState(false);
+  const [selectedEnterpriseForPledge, setSelectedEnterpriseForPledge] = useState<Enterprise | null>(null);
 
   const form = useForm<InsertEnterprise>({
     resolver: zodResolver(insertEnterpriseSchema),
@@ -233,6 +256,11 @@ export default function CRMEnterprises() {
     setDeleteConfirmId(id);
   };
 
+  const handleManagePledge = (enterprise: Enterprise) => {
+    setSelectedEnterpriseForPledge(enterprise);
+    setPledgeModalOpen(true);
+  };
+
   const onSubmit = (data: InsertEnterprise) => {
     const processedData = {
       ...data,
@@ -254,6 +282,17 @@ export default function CRMEnterprises() {
       (enterprise.description?.toLowerCase() || "").includes(searchQuery.toLowerCase());
     const matchesCategory = !categoryFilter || enterprise.category === categoryFilter;
     return matchesSearch && matchesCategory;
+  });
+
+  const { data: selectedPledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
+    queryKey: ["/api/enterprises", selectedEnterpriseForPledge?.id, "pledge"],
+    queryFn: async () => {
+      if (!selectedEnterpriseForPledge) return null;
+      const response = await fetch(`/api/enterprises/${selectedEnterpriseForPledge.id}/pledge`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!selectedEnterpriseForPledge,
   });
 
   return (
@@ -381,6 +420,7 @@ export default function CRMEnterprises() {
                                 {enterprise.isVerified && (
                                   <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                 )}
+                                <PledgeIndicator enterpriseId={enterprise.id} />
                               </div>
                               {enterprise.description && (
                                 <div className="text-xs text-muted-foreground truncate max-w-xs">
@@ -444,6 +484,15 @@ export default function CRMEnterprises() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleManagePledge(enterprise)}
+                              data-testid="button-manage-pledge"
+                              title="Manage Earth Care Pledge"
+                            >
+                              <Sprout className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -767,6 +816,22 @@ export default function CRMEnterprises() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Pledge Affirmation Modal */}
+      {selectedEnterpriseForPledge && (
+        <PledgeAffirmationModal
+          enterpriseId={selectedEnterpriseForPledge.id}
+          enterpriseName={selectedEnterpriseForPledge.name}
+          existingPledge={selectedPledgeData?.pledge}
+          open={pledgeModalOpen}
+          onOpenChange={setPledgeModalOpen}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/enterprises", selectedEnterpriseForPledge.id, "pledge"] });
+            setPledgeModalOpen(false);
+            setSelectedEnterpriseForPledge(null);
+          }}
+        />
+      )}
     </div>
   );
 }

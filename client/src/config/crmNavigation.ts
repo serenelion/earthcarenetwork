@@ -7,6 +7,7 @@ import {
   BarChart3,
   Sparkles,
   Upload,
+  Sprout,
 } from "lucide-react";
 
 export interface NavLink {
@@ -35,6 +36,7 @@ export const crmNavSections: NavSection[] = [
     title: "Insights",
     links: [
       { href: "/crm/reports", label: "Reports", icon: BarChart3 },
+      { href: "/crm/pledge-dashboard", label: "Pledge Dashboard", icon: TrendingUp },
       { href: "/crm/copilot", label: "Copilot", icon: Sparkles },
     ],
   },
@@ -42,6 +44,7 @@ export const crmNavSections: NavSection[] = [
     title: "Operations",
     links: [
       { href: "/crm/bulk-import", label: "Bulk Import", icon: Upload },
+      { href: "/crm/seeding", label: "Enterprise Seeding", icon: Sprout },
     ],
   },
 ];

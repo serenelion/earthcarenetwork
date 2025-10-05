@@ -7,6 +7,8 @@ import Tasks from "@/pages/crm/Tasks";
 import Copilot from "@/pages/crm/Copilot";
 import BulkImport from "@/pages/crm/BulkImport";
 import CRMEnterprises from "@/pages/crm/CRMEnterprises";
+import EnterpriseSeeding from "@/pages/crm/EnterpriseSeeding";
+import PledgeDashboard from "@/pages/crm/PledgeDashboard";
 
 const Reports = () => (
   <div className="p-6">
@@ -24,8 +26,10 @@ export default function CrmShell() {
         <Route path="/crm/opportunities" component={Opportunities} />
         <Route path="/crm/tasks" component={Tasks} />
         <Route path="/crm/reports" component={Reports} />
+        <Route path="/crm/pledge-dashboard" component={PledgeDashboard} />
         <Route path="/crm/copilot" component={Copilot} />
         <Route path="/crm/bulk-import" component={BulkImport} />
+        <Route path="/crm/seeding" component={EnterpriseSeeding} />
         <Route path="/crm" component={Dashboard} />
       </Switch>
     </CrmLayout>

@@ -17,6 +17,7 @@ import {
   creditPurchases,
   userFavorites,
   profileClaims,
+  earthCarePledges,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -57,6 +58,8 @@ import {
   type InsertUserFavorite,
   type ProfileClaim,
   type InsertProfileClaim,
+  type EarthCarePledge,
+  type InsertEarthCarePledge,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -235,6 +238,36 @@ export interface IStorage {
   getProfileClaimById(id: string): Promise<ProfileClaim | undefined>;
   claimProfile(token: string, userId: string): Promise<{ claim: ProfileClaim; enterprise: Enterprise }>;
   updateProfileClaimStatus(id: string, status: 'pending' | 'claimed' | 'expired'): Promise<ProfileClaim>;
+
+  // Earth Care Pledge operations
+  createPledge(pledge: InsertEarthCarePledge): Promise<EarthCarePledge>;
+  getPledge(id: string): Promise<EarthCarePledge | undefined>;
+  getPledgeByEnterpriseId(enterpriseId: string): Promise<EarthCarePledge | undefined>;
+  updatePledge(id: string, pledge: Partial<InsertEarthCarePledge>): Promise<EarthCarePledge>;
+  revokePledge(id: string, revokedBy: string): Promise<EarthCarePledge>;
+  getEnterprisesWithPledgeStatus(status?: 'pending' | 'affirmed' | 'revoked', limit?: number, offset?: number): Promise<Array<{enterprise: Enterprise, pledge: EarthCarePledge | null}>>;
+  getPledgeStats(): Promise<{
+    totalEnterprises: number;
+    affirmedCount: number;
+    pendingCount: number;
+    revokedCount: number;
+    recentSignups: number;
+    pillarBreakdown: {
+      earthCare: number;
+      peopleCare: number;
+      fairShare: number;
+    };
+    recentPledges: Array<{
+      id: string;
+      enterpriseId: string;
+      enterpriseName: string;
+      signedAt: string;
+      earthCare: boolean;
+      peopleCare: boolean;
+      fairShare: boolean;
+      narrative: string | null;
+    }>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1804,6 +1837,206 @@ export class DatabaseStorage implements IStorage {
       .where(eq(profileClaims.id, id))
       .returning();
     return updatedClaim;
+  }
+
+  // Earth Care Pledge operations
+  async createPledge(pledge: InsertEarthCarePledge): Promise<EarthCarePledge> {
+    const [newPledge] = await db.insert(earthCarePledges).values(pledge).returning();
+    return newPledge;
+  }
+
+  async getPledge(id: string): Promise<EarthCarePledge | undefined> {
+    const [pledge] = await db.select().from(earthCarePledges).where(eq(earthCarePledges.id, id));
+    return pledge;
+  }
+
+  async getPledgeByEnterpriseId(enterpriseId: string): Promise<EarthCarePledge | undefined> {
+    const [pledge] = await db.select().from(earthCarePledges)
+      .where(eq(earthCarePledges.enterpriseId, enterpriseId))
+      .orderBy(desc(earthCarePledges.createdAt))
+      .limit(1);
+    return pledge;
+  }
+
+  async updatePledge(id: string, pledge: Partial<InsertEarthCarePledge>): Promise<EarthCarePledge> {
+    const [updated] = await db
+      .update(earthCarePledges)
+      .set({ ...pledge, updatedAt: new Date() })
+      .where(eq(earthCarePledges.id, id))
+      .returning();
+    return updated;
+  }
+
+  async revokePledge(id: string, revokedBy: string): Promise<EarthCarePledge> {
+    const [updated] = await db
+      .update(earthCarePledges)
+      .set({ 
+        status: 'revoked',
+        revokedAt: new Date(),
+        revokedBy,
+        updatedAt: new Date()
+      })
+      .where(eq(earthCarePledges.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getEnterprisesWithPledgeStatus(
+    status?: 'pending' | 'affirmed' | 'revoked',
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<Array<{enterprise: Enterprise, pledge: EarthCarePledge | null}>> {
+    let query = db
+      .select({
+        enterprise: enterprises,
+        pledge: earthCarePledges,
+      })
+      .from(enterprises)
+      .leftJoin(earthCarePledges, eq(enterprises.id, earthCarePledges.enterpriseId));
+
+    if (status) {
+      query = query.where(eq(earthCarePledges.status, status)) as any;
+    }
+
+    const results = await query
+      .orderBy(desc(enterprises.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      enterprise: result.enterprise,
+      pledge: result.pledge
+    }));
+  }
+
+  async getPledgeStats(): Promise<{
+    totalEnterprises: number;
+    affirmedCount: number;
+    pendingCount: number;
+    revokedCount: number;
+    recentSignups: number;
+    pillarBreakdown: {
+      earthCare: number;
+      peopleCare: number;
+      fairShare: number;
+    };
+    recentPledges: Array<{
+      id: string;
+      enterpriseId: string;
+      enterpriseName: string;
+      signedAt: string;
+      earthCare: boolean;
+      peopleCare: boolean;
+      fairShare: boolean;
+      narrative: string | null;
+    }>;
+  }> {
+    const [totalEnterprisesResult] = await db
+      .select({ count: count() })
+      .from(enterprises);
+    const totalEnterprises = totalEnterprisesResult?.count || 0;
+
+    const [affirmedCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(eq(earthCarePledges.status, 'affirmed'));
+    const affirmedCount = affirmedCountResult?.count || 0;
+
+    const [pendingCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(eq(earthCarePledges.status, 'pending'));
+    const pendingCount = pendingCountResult?.count || 0;
+
+    const [revokedCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(eq(earthCarePledges.status, 'revoked'));
+    const revokedCount = revokedCountResult?.count || 0;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const [recentSignupsResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(
+        and(
+          eq(earthCarePledges.status, 'affirmed'),
+          sql`${earthCarePledges.signedAt} >= ${sevenDaysAgo}`
+        )
+      );
+    const recentSignups = recentSignupsResult?.count || 0;
+
+    const [earthCareCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(
+        and(
+          eq(earthCarePledges.status, 'affirmed'),
+          eq(earthCarePledges.earthCare, true)
+        )
+      );
+
+    const [peopleCareCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(
+        and(
+          eq(earthCarePledges.status, 'affirmed'),
+          eq(earthCarePledges.peopleCare, true)
+        )
+      );
+
+    const [fairShareCountResult] = await db
+      .select({ count: count() })
+      .from(earthCarePledges)
+      .where(
+        and(
+          eq(earthCarePledges.status, 'affirmed'),
+          eq(earthCarePledges.fairShare, true)
+        )
+      );
+
+    const recentPledgesData = await db
+      .select({
+        id: earthCarePledges.id,
+        enterpriseId: earthCarePledges.enterpriseId,
+        enterpriseName: enterprises.name,
+        signedAt: earthCarePledges.signedAt,
+        earthCare: earthCarePledges.earthCare,
+        peopleCare: earthCarePledges.peopleCare,
+        fairShare: earthCarePledges.fairShare,
+        narrative: earthCarePledges.narrative,
+      })
+      .from(earthCarePledges)
+      .innerJoin(enterprises, eq(earthCarePledges.enterpriseId, enterprises.id))
+      .where(eq(earthCarePledges.status, 'affirmed'))
+      .orderBy(desc(earthCarePledges.signedAt))
+      .limit(10);
+
+    return {
+      totalEnterprises,
+      affirmedCount,
+      pendingCount,
+      revokedCount,
+      recentSignups,
+      pillarBreakdown: {
+        earthCare: earthCareCountResult?.count || 0,
+        peopleCare: peopleCareCountResult?.count || 0,
+        fairShare: fairShareCountResult?.count || 0,
+      },
+      recentPledges: recentPledgesData.map(pledge => ({
+        id: pledge.id,
+        enterpriseId: pledge.enterpriseId,
+        enterpriseName: pledge.enterpriseName,
+        signedAt: pledge.signedAt.toISOString(),
+        earthCare: pledge.earthCare ?? false,
+        peopleCare: pledge.peopleCare ?? false,
+        fairShare: pledge.fairShare ?? false,
+        narrative: pledge.narrative,
+      })),
+    };
   }
 }
 

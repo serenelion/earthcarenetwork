@@ -14,10 +14,11 @@ import {
   Mail, 
   Edit, 
   ArrowLeft,
-  Globe
+  Globe,
+  Sprout
 } from "lucide-react";
 import FavoriteButton from "@/components/FavoriteButton";
-import type { Enterprise } from "@shared/schema";
+import type { Enterprise, EarthCarePledge } from "@shared/schema";
 
 const categoryColors = {
   land_projects: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
@@ -43,6 +44,16 @@ export default function EnterpriseDetail() {
     queryFn: async () => {
       const response = await fetch(`/api/enterprises/${id}`);
       if (!response.ok) throw new Error("Failed to fetch enterprise");
+      return response.json();
+    },
+    enabled: !!id,
+  });
+
+  const { data: pledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
+    queryKey: ["/api/enterprises", id, "pledge"],
+    queryFn: async () => {
+      const response = await fetch(`/api/enterprises/${id}/pledge`);
+      if (!response.ok) return null;
       return response.json();
     },
     enabled: !!id,
@@ -84,6 +95,14 @@ export default function EnterpriseDetail() {
 
   const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
   const categoryLabel = categoryLabels[enterprise.category as keyof typeof categoryLabels] || enterprise.category;
+  
+  const pledge = pledgeData?.pledge;
+  const isAffirmed = pledge?.status === 'affirmed';
+  const affirmedPillars = isAffirmed ? [
+    pledge?.earthCare && 'Earth Care',
+    pledge?.peopleCare && 'People Care',
+    pledge?.fairShare && 'Fair Share'
+  ].filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,6 +160,30 @@ export default function EnterpriseDetail() {
                 <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-foreground" data-testid="text-enterprise-name">
                   {enterprise.name}
                 </h1>
+                
+                {isAffirmed && (
+                  <div className="mb-4">
+                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium" data-testid="badge-earth-care-affirmed">
+                      <Sprout className="w-3 h-3 mr-1" />
+                      Earth Care Enterprise
+                    </Badge>
+                    {affirmedPillars.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2" data-testid="text-affirmed-pillars">
+                        Affirmed: {affirmedPillars.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {isAffirmed && pledge?.narrative && (
+                  <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30 mb-4" data-testid="card-pledge-narrative">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground italic">
+                        "{pledge.narrative}"
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {enterprise.location && (
                   <div className="flex items-center text-muted-foreground mb-4">

@@ -1,9 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, ExternalLink, Users, CheckCircle, ArrowRight } from "lucide-react";
+import { MapPin, ExternalLink, Users, CheckCircle, ArrowRight, Sprout } from "lucide-react";
 import { Link } from "wouter";
-import type { Enterprise } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import type { Enterprise, EarthCarePledge } from "@shared/schema";
 
 interface EnterpriseCardProps {
   enterprise: Enterprise;
@@ -28,9 +29,25 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
   const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
   const categoryLabel = categoryLabels[enterprise.category as keyof typeof categoryLabels] || enterprise.category;
 
+  const { data: pledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
+    queryKey: ["/api/enterprises", enterprise.id, "pledge"],
+    queryFn: async () => {
+      const response = await fetch(`/api/enterprises/${enterprise.id}/pledge`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+  });
+
+  const hasAffirmedPledge = pledgeData?.pledge?.status === 'affirmed';
+
   return (
     <Link href={`/enterprises/${enterprise.id}`}>
-      <Card className="overflow-hidden shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer">
+      <Card className="overflow-hidden shadow-lg border border-border hover:shadow-xl transition-shadow group cursor-pointer relative">
+        {hasAffirmedPledge && (
+          <div className="absolute top-2 right-2 z-10 bg-green-600 text-white rounded-full p-1.5 shadow-md" data-testid="indicator-pledge-affirmed">
+            <Sprout className="w-4 h-4" />
+          </div>
+        )}
         {/* Enterprise Image Placeholder */}
         <div className="h-48 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
         {enterprise.imageUrl ? (

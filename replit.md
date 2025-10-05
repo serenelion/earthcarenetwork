@@ -10,7 +10,30 @@ Anyone can self-host "Earth Care Network" and rebrand it (e.g., "Regenerative Ag
 
 # Recent Changes
 
-## October 2025 - Federated Architecture
+## October 2025 - Earth Care Enterprise Plan & Bulk Seeding
+- **Earth Care Enterprise Plan**: Pledge system for enterprises to affirm universal ethics
+  - earthCarePledges table tracks pledge status (pending/affirmed/revoked)
+  - Three pillars: Earth Care, People Care, Fair Share
+  - Enterprises can sign pledge with narrative explaining their commitment
+  - Public pledge badges displayed on enterprise profiles
+  - Admin pledge dashboard with adoption metrics and analytics
+  - API endpoints: GET/POST/PATCH/DELETE /api/enterprises/:id/pledge
+- **Bulk Enterprise Seeding System**: AI-powered seeding for 1,000+ enterprises
+  - Batch processing orchestrator with configurable batch sizes and rate limiting
+  - Auto-discovery from regenerative sources with URL deduplication
+  - Progress tracking with job status monitoring
+  - Admin seeding console at /crm/seeding with real-time progress
+  - Error handling and retry logic for failed scrapes
+- **Batch Invitation System**: Automated invitation workflow for unclaimed enterprises
+  - Batch invitation jobs process 100s of enterprises
+  - Automatic profile claim token generation
+  - Integration with existing profile claim system
+  - Admin endpoint: POST /api/admin/enterprises/invite-batch
+- **Pledge UI Components**: Complete pledge affirmation workflow
+  - PledgeAffirmationModal for enterprise owners to sign/update pledges
+  - Pledge status badges on public enterprise profiles
+  - Pledge indicators in CRM enterprise management
+  - Collapsible narrative display for pledge commitments
 - **Murmurations Protocol Integration**: Added federated directory system enabling cross-instance discovery
   - murmurationsProfiles table tracks published enterprise JSON profiles
   - instanceConfig table for custom branding in self-hosted deployments

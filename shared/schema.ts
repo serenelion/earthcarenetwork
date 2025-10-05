@@ -451,6 +451,13 @@ export const ownershipRoleEnum = pgEnum('ownership_role', [
   'viewer'
 ]);
 
+// Pledge status enum for earth care pledges
+export const pledgeStatusEnum = pgEnum('pledge_status', [
+  'pending',
+  'affirmed',
+  'revoked'
+]);
+
 // Profile claims table - for enterprise profile ownership invitations
 export const profileClaims = pgTable("profile_claims", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -510,6 +517,23 @@ export const enterpriseOwners = pgTable("enterprise_owners", {
   // Ensure unique user-enterprise combination
   index("enterprise_owners_unique_idx").on(table.enterpriseId, table.userId)
 ]);
+
+// Earth Care Pledges table - Track enterprise pledges to earth care principles
+export const earthCarePledges = pgTable("earth_care_pledges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  status: pledgeStatusEnum("status").default('pending').notNull(),
+  earthCare: boolean("earth_care").default(false),
+  peopleCare: boolean("people_care").default(false),
+  fairShare: boolean("fair_share").default(false),
+  narrative: text("narrative"),
+  signedAt: timestamp("signed_at").notNull(),
+  signedBy: varchar("signed_by").references(() => users.id).notNull(),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
@@ -629,6 +653,12 @@ export const insertEnterpriseOwnerSchema = createInsertSchema(enterpriseOwners).
   updatedAt: true,
 });
 
+export const insertEarthCarePledgeSchema = createInsertSchema(earthCarePledges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -672,3 +702,5 @@ export type InsertInstanceConfig = z.infer<typeof insertInstanceConfigSchema>;
 export type InstanceConfig = typeof instanceConfig.$inferSelect;
 export type InsertEnterpriseOwner = z.infer<typeof insertEnterpriseOwnerSchema>;
 export type EnterpriseOwner = typeof enterpriseOwners.$inferSelect;
+export type InsertEarthCarePledge = z.infer<typeof insertEarthCarePledgeSchema>;
+export type EarthCarePledge = typeof earthCarePledges.$inferSelect;
