@@ -1,22 +1,43 @@
 import { useEffect } from "react";
-import { Globe, User, ChevronDown, Home, Heart, UserCircle, Shield, FileText, Users, Settings, Crown, ArrowRightLeft, Search, Command, Book, LayoutDashboard } from "lucide-react";
+import { Globe, User, Search, Command, Settings, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { getPrimaryRole, hasRole, hasRoleOrHigher } from "@/lib/authUtils";
+import { getPrimaryRole } from "@/lib/authUtils";
 import { Link, useLocation } from "wouter";
+import { getNavigationForRole } from "@/config/navigationConfig";
+import { NavigationLink, NavigationDropdown } from "@/components/navigation/NavigationItems";
+import { MobileMenu } from "@/components/navigation/MobileMenu";
 
+/**
+ * Global navigation component
+ * 
+ * Provides consistent navigation across the entire application with:
+ * - Responsive design (desktop and mobile)
+ * - Role-based navigation (visitor, member, enterprise_owner, admin)
+ * - Global search functionality (Cmd/Ctrl+K shortcut)
+ * - User authentication status and role indicators
+ * - Context-aware CTAs
+ * 
+ * The navigation adapts based on user role:
+ * - Visitors: Public links + auth buttons
+ * - Members: Public links + member menu + profile
+ * - Enterprise Owners: Public links + CRM + member menu
+ * - Admins: Public links + CRM + member menu + admin menu
+ */
 export default function Navigation() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const userRole = getPrimaryRole(user);
   const [location, setLocation] = useLocation();
+  const navigation = getNavigationForRole(userRole);
 
   const isInCRM = location.startsWith('/crm');
   const isInDirectory = location === '/' || location.startsWith('/enterprises') || location === '/enterprises';
 
-  // Keyboard shortcut for global search (Cmd/Ctrl+K)
+  /**
+   * Keyboard shortcut for global search (Cmd/Ctrl+K)
+   */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -36,134 +57,63 @@ export default function Navigation() {
           <div className="flex items-center space-x-6">
             {/* Logo */}
             <Link href="/">
-              <div className="flex items-center space-x-2 cursor-pointer" data-testid="nav-logo">
-                <Globe className="text-primary text-2xl" />
-                <span className="text-xl font-bold text-foreground">Earth Care Network</span>
+              <div className="flex items-center space-x-1.5 sm:space-x-2 cursor-pointer" data-testid="nav-logo">
+                <Globe className="text-primary text-xl sm:text-2xl flex-shrink-0" />
+                <span className="text-base sm:text-lg md:text-xl font-bold text-foreground whitespace-nowrap">Earth Care Network</span>
               </div>
             </Link>
             
-            {/* Navigation - includes public docs and directory */}
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-6">
-              {/* Documentation - accessible to everyone */}
-              <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="nav-docs">
-                <Book className="h-4 w-4" />
-                Docs
-              </Link>
+              {/* Public links (accessible to everyone) */}
+              {navigation.publicLinks.map((link) => (
+                <NavigationLink key={link.href} item={link} />
+              ))}
               
-              {/* Directory - accessible to everyone */}
-              <Link href="/enterprises" className="text-muted-foreground hover:text-foreground transition-colors flex items-center" data-testid="nav-directory">
-                Directory
-              </Link>
-              
+              {/* Authenticated user navigation */}
               {isAuthenticated && !isLoading && (
                 <>
-                  {/* CRM - accessible to enterprise_owner and admin */}
-                  {hasRole(user, ["enterprise_owner", "admin"]) && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link href="/crm" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="nav-crm-link">
-                            <LayoutDashboard className="h-4 w-4" />
-                            CRM
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Management Dashboard</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  {/* CRM Link (enterprise_owner and admin only) */}
+                  {navigation.crmLink && (
+                    <NavigationLink 
+                      item={navigation.crmLink} 
+                      withTooltip 
+                      tooltipText="Management Dashboard" 
+                    />
                   )}
-                
-                {/* Member-specific navigation */}
-                {hasRoleOrHigher(user, "member") && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="nav-member-menu">
-                        Member <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem asChild>
-                        <Link href="/member/dashboard" data-testid="nav-member-dashboard">
-                          <Home className="mr-2 h-4 w-4" />
-                          Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/favorites" data-testid="nav-favorites">
-                          <Heart className="mr-2 h-4 w-4" />
-                          Favorites
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" data-testid="nav-profile">
-                          <UserCircle className="mr-2 h-4 w-4" />
-                          Profile
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  
+                  {/* Member Menu (member, enterprise_owner, admin) */}
+                  {navigation.memberMenu && (
+                    <NavigationDropdown
+                      label="Member"
+                      items={navigation.memberMenu}
+                      testId="nav-member-menu"
+                    />
+                  )}
 
-                {/* Admin-specific navigation */}
-                {hasRole(user, ["admin"]) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-muted-foreground hover:text-foreground" data-testid="nav-admin-menu">
-                        Admin <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/dashboard" data-testid="nav-admin-dashboard">
-                          <Shield className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/partner-applications" data-testid="nav-admin-applications">
-                          <FileText className="mr-2 h-4 w-4" />
-                          Partner Applications
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/enterprise-claiming" data-testid="nav-admin-enterprise-claiming">
-                          <Crown className="mr-2 h-4 w-4" />
-                          Enterprise Claiming
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/opportunity-transfers" data-testid="nav-admin-opportunity-transfers">
-                          <ArrowRightLeft className="mr-2 h-4 w-4" />
-                          Opportunity Transfers
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/users" data-testid="nav-admin-users">
-                          <Users className="mr-2 h-4 w-4" />
-                          Manage Users
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/settings" data-testid="nav-admin-settings">
-                          <Settings className="mr-2 h-4 w-4" />
-                          System Settings
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  {/* Admin Menu (admin only) */}
+                  {navigation.adminMenu && (
+                    <NavigationDropdown
+                      label="Admin"
+                      items={navigation.adminMenu}
+                      testId="nav-admin-menu"
+                      hasSeparator
+                      separatorAfterIndex={4}
+                    />
+                  )}
                 </>
               )}
             </nav>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Mobile Menu (hamburger icon) */}
+            <MobileMenu />
+            
             {!isLoading && (
               <>
                 {isAuthenticated ? (
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
                     {/* Global Search Trigger */}
                     <Button
                       variant="ghost"
@@ -234,40 +184,24 @@ export default function Navigation() {
                     </DropdownMenu>
                     
                     {/* CTA Button based on role */}
-                    {userRole === "admin" ? (
-                      <Button 
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                        data-testid="button-admin-cta"
-                        asChild
-                      >
-                        <Link href="/admin/partner-applications">
-                          Review Applications
-                        </Link>
-                      </Button>
-                    ) : userRole === "enterprise_owner" ? (
-                      <Button 
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                        data-testid="button-enterprise-cta"
-                        asChild
-                      >
-                        <Link href="/crm">
-                          Open CRM
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                        data-testid="button-member-cta"
-                        asChild
-                      >
-                        <Link href="/enterprises">
-                          Explore Directory
-                        </Link>
-                      </Button>
-                    )}
+                    <Button 
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:inline-flex"
+                      data-testid={`button-${userRole}-cta`}
+                      asChild
+                    >
+                      <Link href={
+                        userRole === "admin" ? "/admin/partner-applications" :
+                        userRole === "enterprise_owner" ? "/crm" :
+                        "/enterprises"
+                      }>
+                        {userRole === "admin" ? "Review Applications" :
+                         userRole === "enterprise_owner" ? "Open CRM" :
+                         "Explore Directory"}
+                      </Link>
+                    </Button>
                   </div>
                 ) : (
-                  // Visitor navigation - search, sign in, become partner, and become member
+                  /* Visitor navigation - search, sign in, become partner, and become member */
                   <div className="flex items-center space-x-2">
                     {/* Global Search Trigger for visitors */}
                     <Button
