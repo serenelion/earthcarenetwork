@@ -18,6 +18,10 @@ import {
   userFavorites,
   profileClaims,
   earthCarePledges,
+  externalApiTokens,
+  externalSearchCache,
+  externalEntities,
+  externalSyncJobs,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -60,6 +64,14 @@ import {
   type InsertProfileClaim,
   type EarthCarePledge,
   type InsertEarthCarePledge,
+  type ExternalApiToken,
+  type InsertExternalApiToken,
+  type ExternalSearchCache,
+  type InsertExternalSearchCache,
+  type ExternalEntity,
+  type InsertExternalEntity,
+  type ExternalSyncJob,
+  type InsertExternalSyncJob,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -268,6 +280,40 @@ export interface IStorage {
       narrative: string | null;
     }>;
   }>;
+
+  // External API Token operations
+  getExternalApiTokens(userId: string, provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<ExternalApiToken[]>;
+  getExternalApiToken(id: string): Promise<ExternalApiToken | undefined>;
+  getUserProviderToken(userId: string, provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<ExternalApiToken | undefined>;
+  createExternalApiToken(token: InsertExternalApiToken): Promise<ExternalApiToken>;
+  updateExternalApiToken(id: string, token: Partial<InsertExternalApiToken>): Promise<ExternalApiToken>;
+  deleteExternalApiToken(id: string): Promise<void>;
+  updateTokenLastUsed(id: string): Promise<void>;
+
+  // External Search Cache operations
+  getCachedSearch(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', queryKey: string): Promise<ExternalSearchCache | undefined>;
+  createSearchCache(cache: InsertExternalSearchCache): Promise<ExternalSearchCache>;
+  deleteExpiredCaches(): Promise<void>;
+  clearProviderCache(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<void>;
+
+  // External Entity operations
+  getExternalEntities(provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', entityType?: 'enterprise' | 'person' | 'opportunity', limit?: number, offset?: number): Promise<ExternalEntity[]>;
+  getExternalEntity(id: string): Promise<ExternalEntity | undefined>;
+  getExternalEntityByExternalId(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', externalId: string): Promise<ExternalEntity | undefined>;
+  getExternalEntityByInternalId(internalId: string): Promise<ExternalEntity | undefined>;
+  createExternalEntity(entity: InsertExternalEntity): Promise<ExternalEntity>;
+  updateExternalEntity(id: string, entity: Partial<InsertExternalEntity>): Promise<ExternalEntity>;
+  deleteExternalEntity(id: string): Promise<void>;
+  updateEntitySyncStatus(id: string, status: 'pending' | 'synced' | 'failed' | 'stale'): Promise<void>;
+
+  // External Sync Job operations
+  getExternalSyncJobs(userId?: string, provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', limit?: number, offset?: number): Promise<ExternalSyncJob[]>;
+  getExternalSyncJob(id: string): Promise<ExternalSyncJob | undefined>;
+  createExternalSyncJob(job: InsertExternalSyncJob): Promise<ExternalSyncJob>;
+  updateExternalSyncJob(id: string, job: Partial<InsertExternalSyncJob>): Promise<ExternalSyncJob>;
+  deleteExternalSyncJob(id: string): Promise<void>;
+  updateJobProgress(id: string, progress: number, processedRecords: number): Promise<void>;
+  updateJobStatus(id: string, status: 'queued' | 'running' | 'completed' | 'failed', errorMessage?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2037,6 +2083,228 @@ export class DatabaseStorage implements IStorage {
         narrative: pledge.narrative,
       })),
     };
+  }
+
+  // External API Token operations
+  async getExternalApiTokens(userId: string, provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<ExternalApiToken[]> {
+    const conditions = [eq(externalApiTokens.userId, userId)];
+    if (provider) {
+      conditions.push(eq(externalApiTokens.provider, provider));
+    }
+    return await db.select().from(externalApiTokens).where(and(...conditions)).orderBy(desc(externalApiTokens.createdAt));
+  }
+
+  async getExternalApiToken(id: string): Promise<ExternalApiToken | undefined> {
+    const [token] = await db.select().from(externalApiTokens).where(eq(externalApiTokens.id, id));
+    return token;
+  }
+
+  async getUserProviderToken(userId: string, provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<ExternalApiToken | undefined> {
+    const [token] = await db.select().from(externalApiTokens)
+      .where(and(
+        eq(externalApiTokens.userId, userId),
+        eq(externalApiTokens.provider, provider),
+        eq(externalApiTokens.isActive, true)
+      ))
+      .orderBy(desc(externalApiTokens.createdAt))
+      .limit(1);
+    return token;
+  }
+
+  async createExternalApiToken(token: InsertExternalApiToken): Promise<ExternalApiToken> {
+    const [newToken] = await db.insert(externalApiTokens).values(token).returning();
+    return newToken;
+  }
+
+  async updateExternalApiToken(id: string, token: Partial<InsertExternalApiToken>): Promise<ExternalApiToken> {
+    const [updated] = await db
+      .update(externalApiTokens)
+      .set({ ...token, updatedAt: new Date() })
+      .where(eq(externalApiTokens.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteExternalApiToken(id: string): Promise<void> {
+    await db.delete(externalApiTokens).where(eq(externalApiTokens.id, id));
+  }
+
+  async updateTokenLastUsed(id: string): Promise<void> {
+    await db
+      .update(externalApiTokens)
+      .set({ lastUsed: new Date(), updatedAt: new Date() })
+      .where(eq(externalApiTokens.id, id));
+  }
+
+  // External Search Cache operations
+  async getCachedSearch(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', queryKey: string): Promise<ExternalSearchCache | undefined> {
+    const [cache] = await db.select().from(externalSearchCache)
+      .where(and(
+        eq(externalSearchCache.provider, provider),
+        eq(externalSearchCache.queryKey, queryKey),
+        sql`${externalSearchCache.expiresAt} > NOW()`
+      ))
+      .limit(1);
+    return cache;
+  }
+
+  async createSearchCache(cache: InsertExternalSearchCache): Promise<ExternalSearchCache> {
+    const [newCache] = await db.insert(externalSearchCache).values(cache).returning();
+    return newCache;
+  }
+
+  async deleteExpiredCaches(): Promise<void> {
+    await db.delete(externalSearchCache).where(sql`${externalSearchCache.expiresAt} <= NOW()`);
+  }
+
+  async clearProviderCache(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm'): Promise<void> {
+    await db.delete(externalSearchCache).where(eq(externalSearchCache.provider, provider));
+  }
+
+  // External Entity operations
+  async getExternalEntities(provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', entityType?: 'enterprise' | 'person' | 'opportunity', limit = 50, offset = 0): Promise<ExternalEntity[]> {
+    const conditions = [];
+    if (provider) {
+      conditions.push(eq(externalEntities.provider, provider));
+    }
+    if (entityType) {
+      conditions.push(eq(externalEntities.entityType, entityType));
+    }
+
+    if (conditions.length > 0) {
+      return await db.select().from(externalEntities)
+        .where(and(...conditions))
+        .orderBy(desc(externalEntities.createdAt))
+        .limit(limit)
+        .offset(offset);
+    }
+
+    return await db.select().from(externalEntities)
+      .orderBy(desc(externalEntities.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getExternalEntity(id: string): Promise<ExternalEntity | undefined> {
+    const [entity] = await db.select().from(externalEntities).where(eq(externalEntities.id, id));
+    return entity;
+  }
+
+  async getExternalEntityByExternalId(provider: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', externalId: string): Promise<ExternalEntity | undefined> {
+    const [entity] = await db.select().from(externalEntities)
+      .where(and(
+        eq(externalEntities.provider, provider),
+        eq(externalEntities.externalId, externalId)
+      ))
+      .limit(1);
+    return entity;
+  }
+
+  async getExternalEntityByInternalId(internalId: string): Promise<ExternalEntity | undefined> {
+    const [entity] = await db.select().from(externalEntities)
+      .where(eq(externalEntities.internalId, internalId))
+      .limit(1);
+    return entity;
+  }
+
+  async createExternalEntity(entity: InsertExternalEntity): Promise<ExternalEntity> {
+    const [newEntity] = await db.insert(externalEntities).values(entity).returning();
+    return newEntity;
+  }
+
+  async updateExternalEntity(id: string, entity: Partial<InsertExternalEntity>): Promise<ExternalEntity> {
+    const [updated] = await db
+      .update(externalEntities)
+      .set({ ...entity, updatedAt: new Date() })
+      .where(eq(externalEntities.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteExternalEntity(id: string): Promise<void> {
+    await db.delete(externalEntities).where(eq(externalEntities.id, id));
+  }
+
+  async updateEntitySyncStatus(id: string, status: 'pending' | 'synced' | 'failed' | 'stale'): Promise<void> {
+    await db
+      .update(externalEntities)
+      .set({ syncStatus: status, lastSyncedAt: new Date(), updatedAt: new Date() })
+      .where(eq(externalEntities.id, id));
+  }
+
+  // External Sync Job operations
+  async getExternalSyncJobs(userId?: string, provider?: 'apollo' | 'google_maps' | 'foursquare' | 'pipedrive' | 'twenty_crm', limit = 50, offset = 0): Promise<ExternalSyncJob[]> {
+    const conditions = [];
+    if (userId) {
+      conditions.push(eq(externalSyncJobs.userId, userId));
+    }
+    if (provider) {
+      conditions.push(eq(externalSyncJobs.provider, provider));
+    }
+
+    if (conditions.length > 0) {
+      return await db.select().from(externalSyncJobs)
+        .where(and(...conditions))
+        .orderBy(desc(externalSyncJobs.createdAt))
+        .limit(limit)
+        .offset(offset);
+    }
+
+    return await db.select().from(externalSyncJobs)
+      .orderBy(desc(externalSyncJobs.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getExternalSyncJob(id: string): Promise<ExternalSyncJob | undefined> {
+    const [job] = await db.select().from(externalSyncJobs).where(eq(externalSyncJobs.id, id));
+    return job;
+  }
+
+  async createExternalSyncJob(job: InsertExternalSyncJob): Promise<ExternalSyncJob> {
+    const [newJob] = await db.insert(externalSyncJobs).values(job).returning();
+    return newJob;
+  }
+
+  async updateExternalSyncJob(id: string, job: Partial<InsertExternalSyncJob>): Promise<ExternalSyncJob> {
+    const [updated] = await db
+      .update(externalSyncJobs)
+      .set({ ...job, updatedAt: new Date() })
+      .where(eq(externalSyncJobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteExternalSyncJob(id: string): Promise<void> {
+    await db.delete(externalSyncJobs).where(eq(externalSyncJobs.id, id));
+  }
+
+  async updateJobProgress(id: string, progress: number, processedRecords: number): Promise<void> {
+    await db
+      .update(externalSyncJobs)
+      .set({ progress, processedRecords, updatedAt: new Date() })
+      .where(eq(externalSyncJobs.id, id));
+  }
+
+  async updateJobStatus(id: string, status: 'queued' | 'running' | 'completed' | 'failed', errorMessage?: string): Promise<void> {
+    const updateData: any = { status, updatedAt: new Date() };
+    
+    if (status === 'running' && !errorMessage) {
+      updateData.startedAt = new Date();
+    }
+    
+    if (status === 'completed' || status === 'failed') {
+      updateData.completedAt = new Date();
+    }
+    
+    if (errorMessage) {
+      updateData.errorMessage = errorMessage;
+    }
+    
+    await db
+      .update(externalSyncJobs)
+      .set(updateData)
+      .where(eq(externalSyncJobs.id, id));
   }
 }
 

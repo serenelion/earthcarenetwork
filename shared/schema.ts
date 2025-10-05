@@ -141,6 +141,7 @@ export const enterprises = pgTable("enterprises", {
   tags: text("tags").array(),
   contactEmail: varchar("contact_email"),
   sourceUrl: varchar("source_url"), // Original URL if imported
+  externalSourceRef: jsonb("external_source_ref"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -173,6 +174,7 @@ export const people = pgTable("people", {
   buildProStatus: buildProStatusEnum("build_pro_status").default('not_offered'),
   supportStatus: supportStatusEnum("support_status").default('no_inquiry'),
   lastContactedAt: timestamp("last_contacted_at"),
+  externalSourceRef: jsonb("external_source_ref"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -201,6 +203,7 @@ export const opportunities = pgTable("opportunities", {
   notes: text("notes"),
   aiScore: integer("ai_score"), // AI-generated lead score 0-100
   aiInsights: text("ai_insights"),
+  externalSourceRef: jsonb("external_source_ref"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -536,6 +539,99 @@ export const earthCarePledges = pgTable("earth_care_pledges", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// External API Integration enums
+export const externalProviderEnum = pgEnum('external_provider', [
+  'apollo',
+  'google_maps',
+  'foursquare',
+  'pipedrive',
+  'twenty_crm'
+]);
+
+export const externalEntityTypeEnum = pgEnum('external_entity_type', [
+  'enterprise',
+  'person',
+  'opportunity'
+]);
+
+export const syncStatusEnum = pgEnum('sync_status', [
+  'pending',
+  'synced',
+  'failed',
+  'stale'
+]);
+
+export const syncJobTypeEnum = pgEnum('sync_job_type', [
+  'import',
+  'export',
+  'sync',
+  'refresh'
+]);
+
+export const syncJobStatusEnum = pgEnum('sync_job_status', [
+  'queued',
+  'running',
+  'completed',
+  'failed'
+]);
+
+// External API Tokens table - Store per-user API credentials/metadata
+export const externalApiTokens = pgTable("external_api_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  provider: externalProviderEnum("provider").notNull(),
+  tokenData: jsonb("token_data").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastUsed: timestamp("last_used"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// External Search Cache table - Cache API search results
+export const externalSearchCache = pgTable("external_search_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: externalProviderEnum("provider").notNull(),
+  queryKey: text("query_key").notNull(),
+  queryParams: jsonb("query_params").notNull(),
+  resultData: jsonb("result_data").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// External Entities table - Normalized external entity references
+export const externalEntities = pgTable("external_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: externalProviderEnum("provider").notNull(),
+  externalId: varchar("external_id").notNull(),
+  entityType: externalEntityTypeEnum("entity_type").notNull(),
+  internalId: varchar("internal_id"),
+  metadata: jsonb("metadata"),
+  syncStatus: syncStatusEnum("sync_status").default('pending').notNull(),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("external_entities_provider_external_id_idx").on(table.provider, table.externalId)
+]);
+
+// External Sync Jobs table - Track background sync operations
+export const externalSyncJobs = pgTable("external_sync_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  provider: externalProviderEnum("provider").notNull(),
+  jobType: syncJobTypeEnum("job_type").notNull(),
+  status: syncJobStatusEnum("status").default('queued').notNull(),
+  progress: integer("progress").default(0).notNull(),
+  totalRecords: integer("total_records"),
+  processedRecords: integer("processed_records").default(0).notNull(),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -660,6 +756,29 @@ export const insertEarthCarePledgeSchema = createInsertSchema(earthCarePledges).
   updatedAt: true,
 });
 
+export const insertExternalApiTokenSchema = createInsertSchema(externalApiTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExternalSearchCacheSchema = createInsertSchema(externalSearchCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExternalEntitySchema = createInsertSchema(externalEntities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExternalSyncJobSchema = createInsertSchema(externalSyncJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -705,3 +824,11 @@ export type InsertEnterpriseOwner = z.infer<typeof insertEnterpriseOwnerSchema>;
 export type EnterpriseOwner = typeof enterpriseOwners.$inferSelect;
 export type InsertEarthCarePledge = z.infer<typeof insertEarthCarePledgeSchema>;
 export type EarthCarePledge = typeof earthCarePledges.$inferSelect;
+export type InsertExternalApiToken = z.infer<typeof insertExternalApiTokenSchema>;
+export type ExternalApiToken = typeof externalApiTokens.$inferSelect;
+export type InsertExternalSearchCache = z.infer<typeof insertExternalSearchCacheSchema>;
+export type ExternalSearchCache = typeof externalSearchCache.$inferSelect;
+export type InsertExternalEntity = z.infer<typeof insertExternalEntitySchema>;
+export type ExternalEntity = typeof externalEntities.$inferSelect;
+export type InsertExternalSyncJob = z.infer<typeof insertExternalSyncJobSchema>;
+export type ExternalSyncJob = typeof externalSyncJobs.$inferSelect;

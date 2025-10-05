@@ -52,6 +52,7 @@ import {
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { z } from "zod";
+import integrationRouters from "./integrations/routers";
 
 // Initialize Stripe (will be used when API keys are available)
 let stripe: Stripe | null = null;
@@ -2662,6 +2663,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate profile", message: errorMessage });
     }
   });
+
+  // External API Integration routes
+  app.use('/api/integrations', isAuthenticated, integrationRouters);
 
   const httpServer = createServer(app);
   return httpServer;
