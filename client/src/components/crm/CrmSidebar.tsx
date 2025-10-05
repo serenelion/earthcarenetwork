@@ -3,15 +3,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { crmNavSections } from "@/config/crmNavigation";
+import { getCrmNavSections } from "@/config/crmNavigation";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function CrmSidebar() {
   const [location] = useLocation();
+  const { currentEnterprise } = useWorkspace();
+
+  // Use default enterpriseId if not available (fallback for loading state)
+  const enterpriseId = currentEnterprise?.id || '';
+  const navSections = getCrmNavSections(enterpriseId);
 
   return (
     <ScrollArea className="h-full py-6">
       <div className="space-y-6 px-3">
-        {crmNavSections.map((section, index) => (
+        {navSections.map((section, index) => (
           <div key={section.title}>
             {index > 0 && <Separator className="mb-4" />}
             <div className="space-y-1">

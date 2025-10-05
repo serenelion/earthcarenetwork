@@ -16,12 +16,21 @@ The application maintains a clear separation between a public-facing directory a
 - **Purpose**: Public browsing of regenerative enterprises, categories, and search.
 - **Features**: Full-page search, category filtering, enterprise details, responsive design.
 
-### CRM Management
-- **Access**: Requires authentication with `enterprise_owner` or `admin` role.
-- **Purpose**: Full CRUD management of enterprises, contacts, opportunities, and tasks.
-- **Layout**: Uses a standalone `CrmLayout` component for navigation, including sidebar, mobile sidebar, and breadcrumbs, with centralized configuration.
-- **Pages**: CRM pages are organized in `client/src/pages/crm/` and focus solely on domain content.
-- **API**: Separate `/api/crm/*` endpoints with role-based authorization.
+### CRM Management (Multi-Enterprise Workspace System)
+- **Access**: Requires authentication with workspace-scoped role (`viewer`, `editor`, `admin`, or `enterprise_owner`).
+- **Architecture**: Complete workspace isolation - each enterprise has its own isolated CRM workspace with strict data separation.
+- **Workspace Context**: WorkspaceProvider manages current enterprise, user's enterprises list, and enterprise switching.
+- **Authorization**: Three-layer security:
+  1. Middleware: `requireEnterpriseRole()` validates user permissions for requested enterprise
+  2. Routes: All `/api/crm/:enterpriseId/*` endpoints enforce enterprise-scoped access
+  3. Storage: ALL database queries filter by `WHERE enterprise_id = enterpriseId`
+- **Frontend Routing**: All CRM pages use `/crm/:enterpriseId/*` pattern with enterprise ID in URL.
+- **Enterprise Switcher**: Dropdown UI for switching between user's workspaces with role badges.
+- **Access Guard**: EnterpriseAccessGuard component validates workspace access before rendering pages.
+- **No Workspace State**: Welcoming UX for users without workspaces, guiding them to create or claim enterprises.
+- **Layout**: Uses a standalone `CrmLayout` component with integrated workspace switcher.
+- **Pages**: CRM pages are organized in `client/src/pages/crm/` and extract enterpriseId from URL params.
+- **Query Keys**: All TanStack Query keys scoped by enterpriseId: `["/api/crm", enterpriseId, "resource"]`
 
 ## Frontend Architecture
 - **Framework**: React, TypeScript, Vite.
@@ -47,27 +56,46 @@ The application maintains a clear separation between a public-facing directory a
 - **Profile Claims/Invitations**: Token-based system with expiration and role upgrades.
 
 ## Core Features
-- **Enterprise Management**: CRUD operations, categorization, verification.
-- **People Management**: Contact management, status, relationship mapping.
-- **Opportunity Tracking**: Deal pipeline with stages and value.
-- **Task Management**: Assignment and tracking.
-- **AI Copilot**: Lead scoring, suggestions, automated insights, function calling for adding enterprises.
-- **Bulk Import**: Web scraping for enterprise data.
-- **Full Page Search**: Unified search across entities with URL state persistence.
-- **CSV Export**: Opportunities export with linked entity data.
+
+### Workspace Isolation & Enterprise Management
+- **Multi-Enterprise Workspaces**: Each enterprise has isolated CRM workspace with complete data separation
+- **Workspace Switching**: Seamless switching between enterprises via EnterpriseSwitcher dropdown
+- **Enterprise Creation Flow**: Comprehensive onboarding for users without workspaces:
+  - CreateEnterpriseDialog with helpful CRM Pro value propositions
+  - Automatic workspace setup and navigation after creation
+  - Integration with landing page and quick access from switcher
+  - Tier-aware upgrade prompts for free users
+  - Pre-filled user email and intuitive form design
+- **Role-Based Access Control**: Hierarchical permissions (viewer < editor < admin < enterprise_owner)
+- **Authorization Layers**: Middleware, route, and storage-level security enforcement
+- **Enterprise Team Management**: Multi-user collaboration with role assignments via `enterpriseTeamMembers`
+
+### CRM Features (Workspace-Scoped)
+- **People Management**: Contact management, status tracking, relationship mapping (scoped to enterprise)
+- **Opportunity Tracking**: Deal pipeline with stages, value, and AI lead scoring (scoped to enterprise)
+- **Task Management**: Assignment, tracking, and due dates (scoped to enterprise)
+- **AI Copilot**: Lead scoring, intelligent suggestions, and automation (per-enterprise context)
+- **Bulk Import**: Web scraping for enterprise data (imports scoped to current workspace)
+- **CSV Export**: Opportunities export with linked entity data
+- **Custom Fields**: Extensible schema per enterprise
+
+### Directory & Discovery
+- **Full Page Search**: Unified search across all public enterprises with URL state persistence
+- **Murmurations Protocol**: Federated discovery integration for global directory
 - **Profile Claiming System**: 
-  - Dual-flow claiming: token-based invitations and direct claiming
-  - Direct claiming requires user email to match enterprise contact email for security
-  - Email verification prevents unauthorized enterprise takeover
-  - Plan limit enforcement: free users limited to 1 claimed enterprise, paid users to plan limits
-  - Automatic role upgrade from 'member' to 'enterprise_owner' upon successful claim
-  - Duplicate claim detection with proper 409 error handling
-  - Upgrade prompts for users at plan limits
-- **Murmurations Protocol**: Integration for federated directory system.
-- **Multi-Tenant Ownership**: `enterpriseOwners` table with roles for RLS.
-- **Onboarding System**: Tier-specific guided tours with progress tracking.
-- **Subscription & Tiers**: 4-tier pricing (Free, CRM Pro, Build Pro Bundle, Admin) integrated with Stripe, feature gating, and upgrade prompts.
-- **Mobile Optimization**: CRM pages are fully mobile-responsive with card views for smaller screens.
+  - Dual-flow: token-based invitations and direct claiming
+  - Email verification prevents unauthorized takeover
+  - Plan limit enforcement with upgrade prompts
+  - Automatic role upgrade to 'enterprise_owner' upon successful claim
+- **Favorites System**: Users can favorite enterprises for quick access
+
+### Platform Features
+- **Onboarding System**: Tier-specific guided tours with progress tracking
+- **Subscription & Tiers**: 4-tier pricing (Free, CRM Pro, Build Pro Bundle, Admin)
+  - Stripe integration for payments
+  - Feature gating based on subscription tier
+  - Upgrade prompts throughout the application
+- **Mobile Optimization**: Fully responsive design with card views for smaller screens
 
 # External Dependencies
 

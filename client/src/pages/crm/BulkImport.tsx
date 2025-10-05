@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useParams } from "wouter";
 import {
   Card,
   CardContent,
@@ -67,19 +68,21 @@ interface ImportResponse {
 export default function BulkImport() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const [urlsText, setUrlsText] = useState("");
   const [importResults, setImportResults] = useState<ImportResponse | null>(null);
   const [previewResults, setPreviewResults] = useState<ScrapingResult[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const urlImportMutation = useMutation({
-    mutationFn: async (urls: string[]) => {
-      return apiRequest("POST", "/api/crm/bulk-import/urls", { urls });
+    mutationFn: async (urls: string[]): Promise<ImportResponse> => {
+      const response = await apiRequest("POST", `/api/crm/${enterpriseId}/bulk-import/urls`, { urls });
+      return response as unknown as ImportResponse;
     },
     onSuccess: (data: ImportResponse) => {
       setImportResults(data);
       queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Import Complete",
         description: `Imported ${data.imported} enterprises, ${data.failed} failed`,
@@ -106,13 +109,14 @@ export default function BulkImport() {
   });
 
   const regenerativeSourcesMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/crm/bulk-import/regenerative-sources", {});
+    mutationFn: async (): Promise<ImportResponse> => {
+      const response = await apiRequest("POST", `/api/crm/${enterpriseId}/bulk-import/regenerative-sources`, {});
+      return response as unknown as ImportResponse;
     },
     onSuccess: (data: ImportResponse) => {
       setImportResults(data);
       queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Source Import Complete",
         description: data.message || `Imported ${data.imported} enterprises from regenerative sources`,
@@ -139,8 +143,9 @@ export default function BulkImport() {
   });
 
   const previewMutation = useMutation({
-    mutationFn: async (url: string) => {
-      return apiRequest("POST", "/api/crm/scrape-url", { url });
+    mutationFn: async (url: string): Promise<ScrapingResult> => {
+      const response = await apiRequest("POST", `/api/crm/${enterpriseId}/scrape-url`, { url });
+      return response as unknown as ScrapingResult;
     },
     onSuccess: (data: ScrapingResult) => {
       setPreviewResults([data]);

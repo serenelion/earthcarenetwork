@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -17,6 +18,7 @@ import { crmProFlow } from "@/lib/onboardingFlows";
 import type { Enterprise } from "@shared/schema";
 
 export default function Dashboard() {
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { userSubscription } = useSubscription();
@@ -27,9 +29,8 @@ export default function Dashboard() {
   const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro' || userSubscription?.currentPlanType === 'build_pro_bundle';
 
   const { data: stats, isLoading: statsLoading } = useQuery<CRMStats>({
-    queryKey: ["/api/crm/stats"],
-    queryFn: fetchCRMStats,
-    enabled: isAuthenticated,
+    queryKey: ["/api/crm", enterpriseId, "stats"],
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -41,9 +42,8 @@ export default function Dashboard() {
   });
 
   const { data: suggestions = [], isLoading: suggestionsLoading, error: suggestionsError } = useQuery<AISuggestion[]>({
-    queryKey: ["/api/crm/ai/suggestions"],
-    queryFn: fetchAISuggestions,
-    enabled: isAuthenticated,
+    queryKey: ["/api/crm", enterpriseId, "ai/suggestions"],
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 

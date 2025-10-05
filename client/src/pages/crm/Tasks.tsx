@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -95,6 +95,7 @@ const taskStatuses = [
 ];
 
 export default function Tasks() {
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { userSubscription } = useSubscription();
   const isFreeUser = userSubscription?.currentPlanType === 'free';
@@ -114,24 +115,24 @@ export default function Tasks() {
       priority: "medium",
       status: "pending",
       assignedToId: "",
-      relatedEnterpriseId: "",
+      enterpriseId: "",
       relatedPersonId: "",
       relatedOpportunityId: "",
     },
   });
 
   const { data: tasks = [], isLoading, error: tasksError } = useQuery({
-    queryKey: ["/api/crm/tasks", searchQuery],
+    queryKey: ["/api/crm", enterpriseId, "tasks", searchQuery],
     queryFn: async (): Promise<Task[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/tasks?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/tasks?${params}`);
       if (!response.ok) throw new Error("Failed to fetch tasks");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -184,11 +185,11 @@ export default function Tasks() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      return apiRequest("POST", "/api/crm/tasks", data);
+      return apiRequest("POST", `/api/crm/${enterpriseId}/tasks`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Task created successfully",
@@ -218,10 +219,10 @@ export default function Tasks() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertTask> }) => {
-      return apiRequest("PUT", `/api/crm/tasks/${id}`, data);
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/tasks/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -252,11 +253,11 @@ export default function Tasks() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/tasks/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Task deleted successfully",
@@ -299,7 +300,7 @@ export default function Tasks() {
     const processedData = {
       ...data,
       assignedToId: data.assignedToId || null,
-      relatedEnterpriseId: data.relatedEnterpriseId || null,
+      enterpriseId: data.enterpriseId || null,
       relatedPersonId: data.relatedPersonId || null,
       relatedOpportunityId: data.relatedOpportunityId || null,
       dueDate: data.dueDate || null,
@@ -320,7 +321,7 @@ export default function Tasks() {
       priority: task.priority,
       status: task.status,
       assignedToId: task.assignedToId || "",
-      relatedEnterpriseId: task.relatedEnterpriseId || "",
+      enterpriseId: task.enterpriseId || "",
       relatedPersonId: task.relatedPersonId || "",
       relatedOpportunityId: task.relatedOpportunityId || "",
       dueDate: task.dueDate ? new Date(task.dueDate) : null,
@@ -545,7 +546,7 @@ export default function Tasks() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
-                      name="relatedEnterpriseId"
+                      name="enterpriseId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Enterprise</FormLabel>
@@ -756,7 +757,7 @@ export default function Tasks() {
                 {/* Mobile Card View */}
                 <div className="block lg:hidden space-y-3">
                   {filteredTasks.map((task) => {
-                    const enterprise = enterprises.find(e => e.id === task.relatedEnterpriseId);
+                    const enterprise = enterprises.find(e => e.id === task.enterpriseId);
                     const person = people.find(p => p.id === task.relatedPersonId);
                     const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
                     const priority = taskPriorities.find(p => p.value === task.priority);
@@ -882,7 +883,7 @@ export default function Tasks() {
                     </TableHeader>
                     <TableBody>
                       {filteredTasks.map((task) => {
-                        const enterprise = enterprises.find(e => e.id === task.relatedEnterpriseId);
+                        const enterprise = enterprises.find(e => e.id === task.enterpriseId);
                         const person = people.find(p => p.id === task.relatedPersonId);
                         const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
                         const priority = taskPriorities.find(p => p.value === task.priority);

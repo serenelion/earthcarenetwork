@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { requireEnterpriseRole } from "./middleware/auth";
 import { 
   generateLeadScore, 
   generateCopilotSuggestions,
@@ -794,13 +795,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Protected CRM Routes
-  app.get('/api/crm/stats', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/stats', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       const [enterpriseStats, peopleStats, opportunityStats, taskStats] = await Promise.all([
-        storage.getEnterpriseStats(),
-        storage.getPeopleStats(),
-        storage.getOpportunityStats(),
-        storage.getTaskStats(),
+        storage.getEnterpriseStats(enterpriseId),
+        storage.getPeopleStats(enterpriseId),
+        storage.getOpportunityStats(enterpriseId),
+        storage.getTaskStats(enterpriseId),
       ]);
 
       res.json({
@@ -816,11 +818,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CRM Enterprise management (protected - admin only for global editing)
-  app.post('/api/crm/enterprises', isAuthenticated, requireAdmin, async (req, res) => {
+  // CRM Enterprise management - Create new enterprise (any authenticated user)
+  app.post('/api/crm/enterprises', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const validatedData = insertEnterpriseSchema.parse(req.body);
+      
+      // Create the enterprise
       const enterprise = await storage.createEnterprise(validatedData);
+      
+      // Automatically add the user as owner
+      await storage.createTeamMember({
+        enterpriseId: enterprise.id,
+        userId: userId,
+        role: 'owner',
+        invitedBy: userId,
+        invitedAt: new Date(),
+        acceptedAt: new Date(),
+        status: 'active',
+      });
+      
       res.status(201).json(enterprise);
     } catch (error) {
       console.error("Error creating enterprise:", error);
@@ -957,11 +978,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // People management
-  app.get('/api/crm/people', isAuthenticated, async (req, res) => {
+  // CRM User Enterprises - Get list of enterprises user has access to
+  app.get('/api/crm/user/enterprises', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get user's team memberships with enterprise details
+      const memberships = await storage.getUserTeamMemberships(userId, 100, 0);
+      
+      // Transform to frontend-friendly format
+      const userEnterprises = memberships.map(membership => ({
+        id: membership.enterprise.id,
+        name: membership.enterprise.name,
+        category: membership.enterprise.category,
+        isVerified: membership.enterprise.isVerified,
+        imageUrl: membership.enterprise.imageUrl,
+        role: membership.role,
+      }));
+
+      res.json(userEnterprises);
+    } catch (error) {
+      console.error("Error fetching user enterprises:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch user enterprises", error: errorMessage });
+    }
+  });
+
+  // People management
+  app.get('/api/crm/:enterpriseId/people', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
       const { search, limit = 50, offset = 0 } = req.query;
       const people = await storage.getPeople(
+        enterpriseId,
         search as string,
         parseInt(limit as string),
         parseInt(offset as string)
@@ -974,10 +1026,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/people', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       const validatedData = insertPersonSchema.parse(req.body);
-      const person = await storage.createPerson(validatedData);
+      const person = await storage.createPerson(validatedData, enterpriseId);
       res.status(201).json(person);
     } catch (error) {
       console.error("Error creating person:", error);
@@ -986,9 +1039,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/people/:id', isAuthenticated, requireAdminOrEnterpriseAccess('editor'), async (req, res) => {
+  app.put('/api/crm/:enterpriseId/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
-      const person = await storage.updatePerson(req.params.id, req.body);
+      const { enterpriseId, id } = req.params;
+      const person = await storage.updatePerson(id, req.body, enterpriseId);
       res.json(person);
     } catch (error) {
       console.error("Error updating person:", error);
@@ -997,9 +1051,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/people/:id', isAuthenticated, requireAdminOrEnterpriseAccess('admin'), async (req, res) => {
+  app.delete('/api/crm/:enterpriseId/people/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
-      await storage.deletePerson(req.params.id);
+      const { enterpriseId, id } = req.params;
+      await storage.deletePerson(id, enterpriseId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting person:", error);
@@ -1008,10 +1063,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Opportunities management
-  app.get('/api/crm/opportunities', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/opportunities', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       const { search, limit = 50, offset = 0 } = req.query;
       const opportunities = await storage.getOpportunities(
+        enterpriseId,
         search as string,
         parseInt(limit as string),
         parseInt(offset as string)
@@ -1023,8 +1080,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/opportunities', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/opportunities', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       // Transform date string to Date object if present
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
@@ -1032,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertOpportunitySchema.parse(body);
-      const opportunity = await storage.createOpportunity(validatedData);
+      const opportunity = await storage.createOpportunity(validatedData, enterpriseId);
       res.status(201).json(opportunity);
     } catch (error) {
       console.error("Error creating opportunity:", error);
@@ -1041,15 +1099,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/opportunities/:id', isAuthenticated, requireAdminOrEnterpriseAccess('editor'), async (req, res) => {
+  app.put('/api/crm/:enterpriseId/opportunities/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
+      const { enterpriseId, id } = req.params;
       // Transform date string to Date object if present
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
-      const opportunity = await storage.updateOpportunity(req.params.id, body);
+      const opportunity = await storage.updateOpportunity(id, body, enterpriseId);
       res.json(opportunity);
     } catch (error) {
       console.error("Error updating opportunity:", error);
@@ -1058,9 +1117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/opportunities/:id', isAuthenticated, requireAdminOrEnterpriseAccess('admin'), async (req, res) => {
+  app.delete('/api/crm/:enterpriseId/opportunities/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
-      await storage.deleteOpportunity(req.params.id);
+      const { enterpriseId, id } = req.params;
+      await storage.deleteOpportunity(id, enterpriseId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting opportunity:", error);
@@ -1069,8 +1129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export opportunities as CSV
-  app.get('/api/crm/opportunities/export', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req, res) => {
+  app.get('/api/crm/:enterpriseId/opportunities/export', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       // Query opportunities with related enterprises and people using left joins
       const opportunitiesData = await db
         .select({
@@ -1091,6 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(opportunities)
         .leftJoin(enterprises, eq(opportunities.enterpriseId, enterprises.id))
         .leftJoin(people, eq(opportunities.primaryContactId, people.id))
+        .where(eq(opportunities.enterpriseId, enterpriseId))
         .orderBy(desc(opportunities.createdAt));
 
       // CSV helper function to escape special characters
@@ -1176,10 +1238,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks management
-  app.get('/api/crm/tasks', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/tasks', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       const { search, limit = 50, offset = 0 } = req.query;
       const tasks = await storage.getTasks(
+        enterpriseId,
         search as string,
         parseInt(limit as string),
         parseInt(offset as string)
@@ -1191,10 +1255,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/tasks', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       const validatedData = insertTaskSchema.parse(req.body);
-      const task = await storage.createTask(validatedData);
+      const task = await storage.createTask(validatedData, enterpriseId);
       res.status(201).json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1203,9 +1268,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/crm/tasks/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/crm/:enterpriseId/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
-      const task = await storage.updateTask(req.params.id, req.body);
+      const { enterpriseId, id } = req.params;
+      const task = await storage.updateTask(id, req.body, enterpriseId);
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -1214,9 +1280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/crm/tasks/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/crm/:enterpriseId/tasks/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
-      await storage.deleteTask(req.params.id);
+      const { enterpriseId, id } = req.params;
+      await storage.deleteTask(id, enterpriseId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -1225,9 +1292,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Copilot routes
-  app.post('/api/crm/ai/lead-score', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/ai/lead-score', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
-      const { enterpriseId, personId } = req.body;
+      const { enterpriseId } = req.params;
+      const { personId } = req.body;
       
       const enterprise = await storage.getEnterprise(enterpriseId);
       const person = personId ? await storage.getPerson(personId) : null;
@@ -1240,7 +1308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const context = await storage.getCopilotContext(userId);
+      const context = await storage.getCopilotContext(userId, enterpriseId);
       
       const leadScore = await generateLeadScore(userId, enterprise, person, context);
       
@@ -1249,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateOpportunity(req.body.opportunityId, {
           aiScore: leadScore.score,
           aiInsights: leadScore.insights,
-        });
+        }, enterpriseId);
       }
       
       res.json(leadScore);
@@ -1263,20 +1331,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/crm/ai/suggestions', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/ai/suggestions', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       // Get recent activity and stats for context
       const [recentEnterprises, recentOpportunities, stats] = await Promise.all([
         storage.getEnterprises(undefined, undefined, 10, 0),
-        storage.getOpportunities(undefined, 10, 0),
-        storage.getEnterpriseStats(),
+        storage.getOpportunities(enterpriseId, undefined, 10, 0),
+        storage.getEnterpriseStats(enterpriseId),
       ]);
 
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const context = await storage.getCopilotContext(userId);
+      const context = await storage.getCopilotContext(userId, enterpriseId);
 
       const recentActivity = [
         ...recentEnterprises.map(e => ({ type: 'enterprise', data: e })),
@@ -1295,13 +1364,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/crm/ai/context', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/ai/context', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const context = await storage.getCopilotContext(userId);
+      const { enterpriseId } = req.params;
+      const context = await storage.getCopilotContext(userId, enterpriseId);
       res.json(context || { focusAreas: [], leadScoringCriteria: {}, automationRules: {} });
     } catch (error) {
       console.error("Error fetching copilot context:", error);
@@ -1310,18 +1380,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/ai/context', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/ai/context', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const { enterpriseId } = req.params;
       const validatedData = insertCopilotContextSchema.parse({
         ...req.body,
         userId,
       });
       
-      const context = await storage.upsertCopilotContext(validatedData);
+      const context = await storage.upsertCopilotContext(validatedData, enterpriseId);
       res.json(context);
     } catch (error) {
       console.error("Error updating copilot context:", error);
@@ -1331,13 +1402,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Business context routes
-  app.get('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/ai/business-context', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const context = await storage.getBusinessContext(userId);
+      const { enterpriseId } = req.params;
+      const context = await storage.getBusinessContext(userId, enterpriseId);
       res.json(context || { companyName: '', website: '', description: '', awards: '', outreachGoal: '', customerProfiles: [], guidanceRules: [] });
     } catch (error) {
       console.error("Error fetching business context:", error);
@@ -1346,18 +1418,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/ai/business-context', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/ai/business-context', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const { enterpriseId } = req.params;
       const validatedData = insertBusinessContextSchema.parse({
         ...req.body,
         userId,
       });
       
-      const context = await storage.upsertBusinessContext(validatedData);
+      const context = await storage.upsertBusinessContext(validatedData, enterpriseId);
       res.json(context);
     } catch (error) {
       console.error("Error updating business context:", error);
@@ -1367,15 +1440,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Chat conversation routes
-  app.get('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/ai/conversations', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const { enterpriseId } = req.params;
       const { limit = 50, offset = 0 } = req.query;
       const conversations = await storage.getConversations(
         userId,
+        enterpriseId,
         parseInt(limit as string),
         parseInt(offset as string)
       );
@@ -1387,18 +1462,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/ai/conversations', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/ai/conversations', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const { enterpriseId } = req.params;
       const validatedData = insertConversationSchema.parse({
         ...req.body,
         userId,
       });
       
-      const conversation = await storage.createConversation(validatedData);
+      const conversation = await storage.createConversation(validatedData, enterpriseId);
       res.status(201).json(conversation);
     } catch (error) {
       console.error("Error creating conversation:", error);
@@ -1407,7 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/crm/ai/conversations/:id/messages', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/ai/conversations/:id/messages', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const { limit = 100, offset = 0 } = req.query;
       const messages = await storage.getChatMessages(
@@ -1423,13 +1499,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/ai/chat', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/ai/chat', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      const { enterpriseId } = req.params;
       const { message, conversationId } = req.body;
       if (!message) {
         return res.status(400).json({ message: "Message is required" });
@@ -1450,7 +1527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conversation = await storage.createConversation({
           userId,
           title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-        });
+        }, enterpriseId);
       }
 
       // Save user message
@@ -1461,8 +1538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Get business context for AI
-      const businessContext = await storage.getBusinessContext(userId);
-      const copilotContext = await storage.getCopilotContext(userId);
+      const businessContext = await storage.getBusinessContext(userId, enterpriseId);
+      const copilotContext = await storage.getCopilotContext(userId, enterpriseId);
 
       // Generate AI response using OpenAI
       const aiResponse = await generateCopilotResponse(
@@ -2283,8 +2360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Schema information routes
-  app.get('/api/crm/schema', isAuthenticated, async (req, res) => {
+  app.get('/api/crm/:enterpriseId/schema', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       // Define schema information for all entities
       const schemaInfo = {
         enterprises: {
@@ -2416,7 +2494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get custom fields for each entity and merge them with standard fields
       const entities = Object.keys(schemaInfo);
       for (const entityName of entities) {
-        const customFields = await storage.getCustomFields(entityName);
+        const customFields = await storage.getCustomFields(entityName, enterpriseId);
         
         // Convert custom fields to the same format as standard fields
         const customFieldsFormatted = customFields.map(field => ({
@@ -2443,9 +2521,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Custom fields management
-  app.post('/api/crm/schema/entities/:entityName/fields', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/schema/entities/:entityName/fields', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
-      const { entityName } = req.params;
+      const { entityName, enterpriseId } = req.params;
       
       // Validate entity name exists in our schema
       const validEntities = ['enterprises', 'people', 'opportunities', 'tasks', 'users'];
@@ -2458,7 +2536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityName,
       });
 
-      const customField = await storage.createCustomField(validatedData);
+      const customField = await storage.createCustomField(validatedData, enterpriseId);
       res.status(201).json(customField);
     } catch (error) {
       console.error("Error creating custom field:", error);
@@ -2468,9 +2546,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk import routes
-  app.post('/api/crm/bulk-import/urls', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/bulk-import/urls', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
       const { urls } = req.body;
+      const { enterpriseId } = req.params;
       
       if (!Array.isArray(urls) || urls.length === 0) {
         return res.status(400).json({ message: "URLs array is required" });
@@ -2492,8 +2571,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/bulk-import/regenerative-sources', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/bulk-import/regenerative-sources', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
+      const { enterpriseId } = req.params;
       // Discover URLs from regenerative sources
       const sourceUrls = await scrapeRegenerativeSources();
       
@@ -2526,9 +2606,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/crm/scrape-url', isAuthenticated, async (req, res) => {
+  app.post('/api/crm/:enterpriseId/scrape-url', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { url } = req.body;
+      const { enterpriseId } = req.params;
       
       if (!url) {
         return res.status(400).json({ message: "URL is required" });

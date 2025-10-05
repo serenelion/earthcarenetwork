@@ -5,11 +5,14 @@ import CrmSidebar from "./CrmSidebar";
 import CrmMobileSidebar from "./CrmMobileSidebar";
 import CrmBreadcrumbs from "./CrmBreadcrumbs";
 import CreditPurchaseModal from "./CreditPurchaseModal";
+import EnterpriseSwitcher from "./EnterpriseSwitcher";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { currentEnterprise } = useWorkspace();
   const [showCreditModal, setShowCreditModal] = useState(false);
 
   const { data: subscriptionStatus } = useQuery<{
@@ -41,7 +44,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center space-x-2">
               <Building className="text-primary text-lg" />
               <span className="text-base font-bold text-foreground font-lato" data-testid="crm-title-mobile">
-                Earth Network CRM
+                CRM
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -64,16 +67,23 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </div>
+          <div className="mt-3">
+            <EnterpriseSwitcher />
+          </div>
         </div>
         
         {/* Desktop Header */}
         <header className="hidden md:block bg-card border-b border-border p-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Building className="text-primary text-xl" />
-              <span className="text-lg font-bold text-foreground font-lato" data-testid="crm-title-desktop">
-                Earth Network CRM
-              </span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Building className="text-primary text-xl" />
+                <span className="text-lg font-bold text-foreground font-lato" data-testid="crm-title-desktop">
+                  Earth Network CRM
+                </span>
+              </div>
+              <div className="border-l border-border h-6"></div>
+              <EnterpriseSwitcher />
             </div>
             <div className="flex items-center space-x-4">
               {/* Credit Balance Display */}

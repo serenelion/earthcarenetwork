@@ -9,6 +9,7 @@ import SearchBar from "@/components/SearchBar";
 import EnterpriseCard from "@/components/directory/EnterpriseCard";
 import CategorySection from "@/components/directory/CategorySection";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import CreateEnterpriseDialog from "@/components/crm/CreateEnterpriseDialog";
 import { visitorFlow, freeMemberFlow } from "@/lib/onboardingFlows";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -19,6 +20,7 @@ export default function Landing() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showFreeMemberOnboarding, setShowFreeMemberOnboarding] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   
   const { user, isAuthenticated } = useAuth();
   const { isFlowComplete } = useOnboarding();
@@ -44,6 +46,14 @@ export default function Landing() {
   const handleOnboardingDismiss = () => {
     localStorage.setItem('visitor_onboarding_shown', 'true');
     setShowOnboarding(false);
+  };
+
+  const handleAddEnterpriseClick = () => {
+    if (isAuthenticated) {
+      setShowCreateDialog(true);
+    } else {
+      window.location.href = "/api/login";
+    }
   };
 
   const { data: enterprises = [], isLoading } = useQuery<Enterprise[]>({
@@ -118,9 +128,9 @@ export default function Landing() {
             <Button 
               className="bg-secondary hover:bg-secondary/90 text-white px-8 py-3"
               data-testid="button-add-enterprise"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={handleAddEnterpriseClick}
             >
-              Add Your Enterprise
+              {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
             </Button>
             <Button 
               variant="outline" 
@@ -202,10 +212,10 @@ export default function Landing() {
                 </p>
               </div>
               <Button 
-                onClick={() => window.location.href = "/api/login"}
+                onClick={handleAddEnterpriseClick}
                 data-testid="button-add-first-enterprise"
               >
-                Add Your Enterprise
+                {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
               </Button>
             </div>
           ) : (
@@ -283,9 +293,9 @@ export default function Landing() {
             <Button 
               className="bg-white text-primary hover:bg-gray-100 px-8 py-3"
               data-testid="button-add-enterprise-cta"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={handleAddEnterpriseClick}
             >
-              Add Your Enterprise
+              {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
             </Button>
             <Button 
               variant="outline"
@@ -334,6 +344,12 @@ export default function Landing() {
         isOpen={showFreeMemberOnboarding}
         onComplete={() => setShowFreeMemberOnboarding(false)}
         onDismiss={() => setShowFreeMemberOnboarding(false)}
+      />
+
+      {/* Create Enterprise Dialog */}
+      <CreateEnterpriseDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useParams } from "wouter";
 import {
   Card,
   CardContent,
@@ -94,6 +95,7 @@ type ContextFormData = z.infer<typeof contextFormSchema>;
 export default function Copilot() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<CopilotSuggestion | null>(null);
   const [leadScoreTarget, setLeadScoreTarget] = useState<{ enterpriseId: string; personId?: string } | null>(null);
@@ -112,8 +114,8 @@ export default function Copilot() {
   });
 
   const { data: suggestions = [], isLoading: suggestionsLoading, refetch: refetchSuggestions, error: suggestionsError } = useQuery({
-    queryKey: ["/api/crm/ai/suggestions"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/crm", enterpriseId, "ai", "suggestions"],
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -132,8 +134,8 @@ export default function Copilot() {
   }, [suggestionsError, toast]);
 
   const { data: context, isLoading: contextLoading } = useQuery({
-    queryKey: ["/api/crm/ai/context"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/crm", enterpriseId, "ai", "context"],
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -164,23 +166,23 @@ export default function Copilot() {
   });
 
   const { data: people = [] } = useQuery({
-    queryKey: ["/api/crm/people"],
+    queryKey: ["/api/crm", enterpriseId, "people"],
     queryFn: async () => {
-      const response = await fetch("/api/crm/people?limit=100");
+      const response = await fetch(`/api/crm/${enterpriseId}/people?limit=100`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
   const updateContextMutation = useMutation({
     mutationFn: async (data: InsertCopilotContext) => {
-      return apiRequest("POST", "/api/crm/ai/context", data);
+      return apiRequest("POST", `/api/crm/${enterpriseId}/ai/context`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/ai/context"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/ai/suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "ai", "context"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "ai", "suggestions"] });
       toast({
         title: "Success",
         description: "Copilot context updated successfully",
@@ -209,7 +211,7 @@ export default function Copilot() {
 
   const generateLeadScoreMutation = useMutation<LeadScoringResult, Error, { enterpriseId: string; personId?: string }>({
     mutationFn: async (data: { enterpriseId: string; personId?: string }): Promise<LeadScoringResult> => {
-      const response = await apiRequest("POST", "/api/crm/ai/lead-score", data);
+      const response = await apiRequest("POST", `/api/crm/${enterpriseId}/ai/lead-score`, data);
       return response as unknown as LeadScoringResult;
     },
     onSuccess: (result: LeadScoringResult) => {
@@ -279,6 +281,7 @@ export default function Copilot() {
 
   const handleContextSubmit = (data: ContextFormData) => {
     const processedData: InsertCopilotContext = {
+      enterpriseId: enterpriseId || "",
       userId: (user as any)?.id || "",
       focusAreas: data.focusAreasText 
         ? data.focusAreasText.split(',').map(area => area.trim()).filter(Boolean)

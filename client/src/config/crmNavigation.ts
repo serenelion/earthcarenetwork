@@ -20,28 +20,30 @@ export interface NavSection {
   links: NavLink[];
 }
 
-export const crmNavSections: NavSection[] = [
-  {
-    title: "Manage",
-    links: [
-      { href: "/crm", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/crm/enterprises", label: "Enterprises", icon: Building },
-      { href: "/crm/people", label: "People", icon: Users },
-      { href: "/crm/opportunities", label: "Opportunities", icon: TrendingUp },
-      { href: "/crm/tasks", label: "Tasks", icon: CheckSquare },
-    ],
-  },
-  {
-    title: "Insights",
-    links: [
-      { href: "/crm/copilot", label: "Copilot", icon: Sparkles },
-    ],
-  },
-  {
-    title: "Operations",
-    links: [
-      { href: "/crm/bulk-import", label: "Bulk Import", icon: Upload },
-      { href: "/crm/seeding", label: "Enterprise Seeding", icon: Sprout },
-    ],
-  },
-];
+export function getCrmNavSections(enterpriseId: string): NavSection[] {
+  return [
+    {
+      title: "Manage",
+      links: [
+        { href: `/crm/${enterpriseId}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
+        { href: `/crm/${enterpriseId}/enterprises`, label: "Enterprises", icon: Building },
+        { href: `/crm/${enterpriseId}/people`, label: "People", icon: Users },
+        { href: `/crm/${enterpriseId}/opportunities`, label: "Opportunities", icon: TrendingUp },
+        { href: `/crm/${enterpriseId}/tasks`, label: "Tasks", icon: CheckSquare },
+      ],
+    },
+    {
+      title: "Insights",
+      links: [
+        { href: `/crm/${enterpriseId}/copilot`, label: "Copilot", icon: Sparkles },
+      ],
+    },
+    {
+      title: "Operations",
+      links: [
+        { href: `/crm/${enterpriseId}/bulk-import`, label: "Bulk Import", icon: Upload },
+        { href: `/crm/${enterpriseId}/seeding`, label: "Enterprise Seeding", icon: Sprout },
+      ],
+    },
+  ];
+}

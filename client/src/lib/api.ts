@@ -9,6 +9,8 @@ import type {
   UserFavorite
 } from "@shared/schema";
 
+export type TeamMemberRole = 'viewer' | 'editor' | 'admin' | 'owner';
+
 export interface CRMStats {
   enterprises: {
     total: number;

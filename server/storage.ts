@@ -114,43 +114,43 @@ export interface IStorage {
   getFavoritesByCategory(userId: string): Promise<Record<string, number>>;
   
   // People operations
-  getPeople(search?: string, limit?: number, offset?: number): Promise<Person[]>;
-  getPerson(id: string): Promise<Person | undefined>;
-  createPerson(person: InsertPerson): Promise<Person>;
-  updatePerson(id: string, person: Partial<InsertPerson>): Promise<Person>;
-  deletePerson(id: string): Promise<void>;
-  getPeopleStats(): Promise<{ total: number; byStatus: Record<string, number> }>;
+  getPeople(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Person[]>;
+  getPerson(id: string, enterpriseId: string): Promise<Person | undefined>;
+  createPerson(person: InsertPerson, enterpriseId: string): Promise<Person>;
+  updatePerson(id: string, person: Partial<InsertPerson>, enterpriseId: string): Promise<Person>;
+  deletePerson(id: string, enterpriseId: string): Promise<void>;
+  getPeopleStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }>;
   
   // Opportunity operations
-  getOpportunities(search?: string, limit?: number, offset?: number): Promise<Opportunity[]>;
-  getOpportunity(id: string): Promise<Opportunity | undefined>;
-  createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity>;
-  updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>): Promise<Opportunity>;
-  deleteOpportunity(id: string): Promise<void>;
-  getOpportunityStats(): Promise<{ total: number; byStatus: Record<string, number>; totalValue: number }>;
+  getOpportunities(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Opportunity[]>;
+  getOpportunity(id: string, enterpriseId: string): Promise<Opportunity | undefined>;
+  createOpportunity(opportunity: InsertOpportunity, enterpriseId: string): Promise<Opportunity>;
+  updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>, enterpriseId: string): Promise<Opportunity>;
+  deleteOpportunity(id: string, enterpriseId: string): Promise<void>;
+  getOpportunityStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number>; totalValue: number }>;
   
   // Task operations
-  getTasks(search?: string, limit?: number, offset?: number): Promise<Task[]>;
-  getTask(id: string): Promise<Task | undefined>;
-  createTask(task: InsertTask): Promise<Task>;
-  updateTask(id: string, task: Partial<InsertTask>): Promise<Task>;
-  deleteTask(id: string): Promise<void>;
-  getTaskStats(): Promise<{ total: number; byStatus: Record<string, number> }>;
+  getTasks(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Task[]>;
+  getTask(id: string, enterpriseId: string): Promise<Task | undefined>;
+  createTask(task: InsertTask, enterpriseId: string): Promise<Task>;
+  updateTask(id: string, task: Partial<InsertTask>, enterpriseId: string): Promise<Task>;
+  deleteTask(id: string, enterpriseId: string): Promise<void>;
+  getTaskStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }>;
   
   // Copilot context operations
-  getCopilotContext(userId: string): Promise<CopilotContext | undefined>;
-  upsertCopilotContext(context: InsertCopilotContext): Promise<CopilotContext>;
+  getCopilotContext(userId: string, enterpriseId: string): Promise<CopilotContext | undefined>;
+  upsertCopilotContext(context: InsertCopilotContext, enterpriseId: string): Promise<CopilotContext>;
   
   // Business context operations
-  getBusinessContext(userId: string): Promise<BusinessContext | undefined>;
-  upsertBusinessContext(context: InsertBusinessContext): Promise<BusinessContext>;
+  getBusinessContext(userId: string, enterpriseId: string): Promise<BusinessContext | undefined>;
+  upsertBusinessContext(context: InsertBusinessContext, enterpriseId: string): Promise<BusinessContext>;
   
   // Chat conversation operations
-  getConversations(userId: string, limit?: number, offset?: number): Promise<Conversation[]>;
-  getConversation(id: string): Promise<Conversation | undefined>;
-  createConversation(conversation: InsertConversation): Promise<Conversation>;
-  updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<Conversation>;
-  deleteConversation(id: string): Promise<void>;
+  getConversations(userId: string, enterpriseId: string, limit?: number, offset?: number): Promise<Conversation[]>;
+  getConversation(id: string, enterpriseId: string): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation, enterpriseId: string): Promise<Conversation>;
+  updateConversation(id: string, conversation: Partial<InsertConversation>, enterpriseId: string): Promise<Conversation>;
+  deleteConversation(id: string, enterpriseId: string): Promise<void>;
   
   // Chat message operations
   getChatMessages(conversationId: string, limit?: number, offset?: number): Promise<ChatMessage[]>;
@@ -158,10 +158,10 @@ export interface IStorage {
   deleteChatMessage(id: string): Promise<void>;
   
   // Custom fields operations
-  getCustomFields(entityName: string): Promise<CustomField[]>;
-  createCustomField(customField: InsertCustomField): Promise<CustomField>;
-  updateCustomField(id: string, customField: Partial<InsertCustomField>): Promise<CustomField>;
-  deleteCustomField(id: string): Promise<void>;
+  getCustomFields(enterpriseId: string, entityName: string): Promise<CustomField[]>;
+  createCustomField(customField: InsertCustomField, enterpriseId: string): Promise<CustomField>;
+  updateCustomField(id: string, customField: Partial<InsertCustomField>, enterpriseId: string): Promise<CustomField>;
+  deleteCustomField(id: string, enterpriseId: string): Promise<void>;
   
   // Partner application operations
   getPartnerApplications(limit?: number, offset?: number): Promise<PartnerApplication[]>;
@@ -618,53 +618,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   // People operations
-  async getPeople(search?: string, limit = 50, offset = 0): Promise<Person[]> {
+  async getPeople(enterpriseId: string, search?: string, limit = 50, offset = 0): Promise<Person[]> {
+    const conditions = [eq(people.enterpriseId, enterpriseId)];
+    
     if (search) {
-      return await db.select().from(people)
-        .where(
-          or(
-            like(people.firstName, `%${search}%`),
-            like(people.lastName, `%${search}%`),
-            like(people.email, `%${search}%`),
-            like(people.title, `%${search}%`)
-          )
-        )
-        .orderBy(desc(people.createdAt))
-        .limit(limit)
-        .offset(offset);
+      conditions.push(
+        or(
+          like(people.firstName, `%${search}%`),
+          like(people.lastName, `%${search}%`),
+          like(people.email, `%${search}%`),
+          like(people.title, `%${search}%`)
+        )!
+      );
     }
     
     return await db.select().from(people)
+      .where(and(...conditions))
       .orderBy(desc(people.createdAt))
       .limit(limit)
       .offset(offset);
   }
 
-  async getPerson(id: string): Promise<Person | undefined> {
-    const [person] = await db.select().from(people).where(eq(people.id, id));
+  async getPerson(id: string, enterpriseId: string): Promise<Person | undefined> {
+    const [person] = await db.select().from(people)
+      .where(and(
+        eq(people.id, id),
+        eq(people.enterpriseId, enterpriseId)
+      ));
     return person;
   }
 
-  async createPerson(person: InsertPerson): Promise<Person> {
-    const [newPerson] = await db.insert(people).values(person).returning();
+  async createPerson(person: InsertPerson, enterpriseId: string): Promise<Person> {
+    const [newPerson] = await db.insert(people).values({
+      ...person,
+      enterpriseId
+    }).returning();
     return newPerson;
   }
 
-  async updatePerson(id: string, person: Partial<InsertPerson>): Promise<Person> {
+  async updatePerson(id: string, person: Partial<InsertPerson>, enterpriseId: string): Promise<Person> {
     const [updated] = await db
       .update(people)
       .set({ ...person, updatedAt: new Date() })
-      .where(eq(people.id, id))
+      .where(and(
+        eq(people.id, id),
+        eq(people.enterpriseId, enterpriseId)
+      ))
       .returning();
     return updated;
   }
 
-  async deletePerson(id: string): Promise<void> {
-    await db.delete(people).where(eq(people.id, id));
+  async deletePerson(id: string, enterpriseId: string): Promise<void> {
+    await db.delete(people).where(and(
+      eq(people.id, id),
+      eq(people.enterpriseId, enterpriseId)
+    ));
   }
 
-  async getPeopleStats(): Promise<{ total: number; byStatus: Record<string, number> }> {
-    const [totalResult] = await db.select({ count: count() }).from(people);
+  async getPeopleStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }> {
+    const [totalResult] = await db.select({ count: count() }).from(people)
+      .where(eq(people.enterpriseId, enterpriseId));
     
     const statusStats = await db
       .select({
@@ -672,6 +685,7 @@ export class DatabaseStorage implements IStorage {
         count: count(),
       })
       .from(people)
+      .where(eq(people.enterpriseId, enterpriseId))
       .groupBy(people.invitationStatus);
     
     const byStatus: Record<string, number> = {};
@@ -688,55 +702,69 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Opportunity operations
-  async getOpportunities(search?: string, limit = 50, offset = 0): Promise<Opportunity[]> {
+  async getOpportunities(enterpriseId: string, search?: string, limit = 50, offset = 0): Promise<Opportunity[]> {
+    const conditions = [eq(opportunities.enterpriseId, enterpriseId)];
+    
     if (search) {
-      return await db.select().from(opportunities)
-        .where(
-          or(
-            like(opportunities.title, `%${search}%`),
-            like(opportunities.description, `%${search}%`)
-          )
-        )
-        .orderBy(desc(opportunities.createdAt))
-        .limit(limit)
-        .offset(offset);
+      conditions.push(
+        or(
+          like(opportunities.title, `%${search}%`),
+          like(opportunities.description, `%${search}%`)
+        )!
+      );
     }
     
     return await db.select().from(opportunities)
+      .where(and(...conditions))
       .orderBy(desc(opportunities.createdAt))
       .limit(limit)
       .offset(offset);
   }
 
-  async getOpportunity(id: string): Promise<Opportunity | undefined> {
-    const [opportunity] = await db.select().from(opportunities).where(eq(opportunities.id, id));
+  async getOpportunity(id: string, enterpriseId: string): Promise<Opportunity | undefined> {
+    const [opportunity] = await db.select().from(opportunities)
+      .where(and(
+        eq(opportunities.id, id),
+        eq(opportunities.enterpriseId, enterpriseId)
+      ));
     return opportunity;
   }
 
-  async createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity> {
-    const [newOpportunity] = await db.insert(opportunities).values(opportunity).returning();
+  async createOpportunity(opportunity: InsertOpportunity, enterpriseId: string): Promise<Opportunity> {
+    const [newOpportunity] = await db.insert(opportunities).values({
+      ...opportunity,
+      enterpriseId
+    }).returning();
     return newOpportunity;
   }
 
-  async updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>): Promise<Opportunity> {
+  async updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>, enterpriseId: string): Promise<Opportunity> {
     const [updated] = await db
       .update(opportunities)
       .set({ ...opportunity, updatedAt: new Date() })
-      .where(eq(opportunities.id, id))
+      .where(and(
+        eq(opportunities.id, id),
+        eq(opportunities.enterpriseId, enterpriseId)
+      ))
       .returning();
     return updated;
   }
 
-  async deleteOpportunity(id: string): Promise<void> {
-    await db.delete(opportunities).where(eq(opportunities.id, id));
+  async deleteOpportunity(id: string, enterpriseId: string): Promise<void> {
+    await db.delete(opportunities).where(and(
+      eq(opportunities.id, id),
+      eq(opportunities.enterpriseId, enterpriseId)
+    ));
   }
 
-  async getOpportunityStats(): Promise<{ total: number; byStatus: Record<string, number>; totalValue: number }> {
-    const [totalResult] = await db.select({ count: count() }).from(opportunities);
+  async getOpportunityStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number>; totalValue: number }> {
+    const [totalResult] = await db.select({ count: count() }).from(opportunities)
+      .where(eq(opportunities.enterpriseId, enterpriseId));
     
     const [valueResult] = await db.select({ 
       total: sql<number>`coalesce(sum(${opportunities.value}), 0)`
-    }).from(opportunities);
+    }).from(opportunities)
+      .where(eq(opportunities.enterpriseId, enterpriseId));
     
     const statusStats = await db
       .select({
@@ -744,6 +772,7 @@ export class DatabaseStorage implements IStorage {
         count: count(),
       })
       .from(opportunities)
+      .where(eq(opportunities.enterpriseId, enterpriseId))
       .groupBy(opportunities.status);
     
     const byStatus: Record<string, number> = {};
@@ -761,51 +790,64 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Task operations
-  async getTasks(search?: string, limit = 50, offset = 0): Promise<Task[]> {
+  async getTasks(enterpriseId: string, search?: string, limit = 50, offset = 0): Promise<Task[]> {
+    const conditions = [eq(tasks.enterpriseId, enterpriseId)];
+    
     if (search) {
-      return await db.select().from(tasks)
-        .where(
-          or(
-            like(tasks.title, `%${search}%`),
-            like(tasks.description, `%${search}%`)
-          )
-        )
-        .orderBy(desc(tasks.createdAt))
-        .limit(limit)
-        .offset(offset);
+      conditions.push(
+        or(
+          like(tasks.title, `%${search}%`),
+          like(tasks.description, `%${search}%`)
+        )!
+      );
     }
     
     return await db.select().from(tasks)
+      .where(and(...conditions))
       .orderBy(desc(tasks.createdAt))
       .limit(limit)
       .offset(offset);
   }
 
-  async getTask(id: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+  async getTask(id: string, enterpriseId: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks)
+      .where(and(
+        eq(tasks.id, id),
+        eq(tasks.enterpriseId, enterpriseId)
+      ));
     return task;
   }
 
-  async createTask(task: InsertTask): Promise<Task> {
-    const [newTask] = await db.insert(tasks).values(task).returning();
+  async createTask(task: InsertTask, enterpriseId: string): Promise<Task> {
+    const [newTask] = await db.insert(tasks).values({
+      ...task,
+      enterpriseId
+    }).returning();
     return newTask;
   }
 
-  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task> {
+  async updateTask(id: string, task: Partial<InsertTask>, enterpriseId: string): Promise<Task> {
     const [updated] = await db
       .update(tasks)
       .set({ ...task, updatedAt: new Date() })
-      .where(eq(tasks.id, id))
+      .where(and(
+        eq(tasks.id, id),
+        eq(tasks.enterpriseId, enterpriseId)
+      ))
       .returning();
     return updated;
   }
 
-  async deleteTask(id: string): Promise<void> {
-    await db.delete(tasks).where(eq(tasks.id, id));
+  async deleteTask(id: string, enterpriseId: string): Promise<void> {
+    await db.delete(tasks).where(and(
+      eq(tasks.id, id),
+      eq(tasks.enterpriseId, enterpriseId)
+    ));
   }
 
-  async getTaskStats(): Promise<{ total: number; byStatus: Record<string, number> }> {
-    const [totalResult] = await db.select({ count: count() }).from(tasks);
+  async getTaskStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }> {
+    const [totalResult] = await db.select({ count: count() }).from(tasks)
+      .where(eq(tasks.enterpriseId, enterpriseId));
     
     const statusStats = await db
       .select({
@@ -813,6 +855,7 @@ export class DatabaseStorage implements IStorage {
         count: count(),
       })
       .from(tasks)
+      .where(eq(tasks.enterpriseId, enterpriseId))
       .groupBy(tasks.status);
     
     const byStatus: Record<string, number> = {};
@@ -829,17 +872,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Copilot context operations
-  async getCopilotContext(userId: string): Promise<CopilotContext | undefined> {
-    const [context] = await db.select().from(copilotContext).where(eq(copilotContext.userId, userId));
+  async getCopilotContext(userId: string, enterpriseId: string): Promise<CopilotContext | undefined> {
+    const [context] = await db.select().from(copilotContext)
+      .where(and(
+        eq(copilotContext.userId, userId),
+        eq(copilotContext.enterpriseId, enterpriseId)
+      ));
     return context;
   }
 
-  async upsertCopilotContext(context: InsertCopilotContext): Promise<CopilotContext> {
+  async upsertCopilotContext(context: InsertCopilotContext, enterpriseId: string): Promise<CopilotContext> {
     const [result] = await db
       .insert(copilotContext)
-      .values(context)
+      .values({
+        ...context,
+        enterpriseId
+      })
       .onConflictDoUpdate({
-        target: copilotContext.userId,
+        target: [copilotContext.userId, copilotContext.enterpriseId],
         set: {
           ...context,
           updatedAt: new Date(),
@@ -850,17 +900,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Business context operations
-  async getBusinessContext(userId: string): Promise<BusinessContext | undefined> {
-    const [context] = await db.select().from(businessContext).where(eq(businessContext.userId, userId));
+  async getBusinessContext(userId: string, enterpriseId: string): Promise<BusinessContext | undefined> {
+    const [context] = await db.select().from(businessContext)
+      .where(and(
+        eq(businessContext.userId, userId),
+        eq(businessContext.enterpriseId, enterpriseId)
+      ));
     return context;
   }
 
-  async upsertBusinessContext(context: InsertBusinessContext): Promise<BusinessContext> {
+  async upsertBusinessContext(context: InsertBusinessContext, enterpriseId: string): Promise<BusinessContext> {
     const [result] = await db
       .insert(businessContext)
-      .values(context)
+      .values({
+        ...context,
+        enterpriseId
+      })
       .onConflictDoUpdate({
-        target: businessContext.userId,
+        target: [businessContext.userId, businessContext.enterpriseId],
         set: {
           ...context,
           updatedAt: new Date(),
@@ -871,39 +928,59 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Chat conversation operations
-  async getConversations(userId: string, limit = 50, offset = 0): Promise<Conversation[]> {
+  async getConversations(userId: string, enterpriseId: string, limit = 50, offset = 0): Promise<Conversation[]> {
     return await db
       .select()
       .from(conversations)
-      .where(eq(conversations.userId, userId))
+      .where(and(
+        eq(conversations.userId, userId),
+        eq(conversations.enterpriseId, enterpriseId)
+      ))
       .orderBy(desc(conversations.lastMessageAt))
       .limit(limit)
       .offset(offset);
   }
 
-  async getConversation(id: string): Promise<Conversation | undefined> {
-    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+  async getConversation(id: string, enterpriseId: string): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations)
+      .where(and(
+        eq(conversations.id, id),
+        eq(conversations.enterpriseId, enterpriseId)
+      ));
     return conversation;
   }
 
-  async createConversation(conversation: InsertConversation): Promise<Conversation> {
-    const [result] = await db.insert(conversations).values(conversation).returning();
+  async createConversation(conversation: InsertConversation, enterpriseId: string): Promise<Conversation> {
+    const [result] = await db.insert(conversations).values({
+      ...conversation,
+      enterpriseId
+    }).returning();
     return result;
   }
 
-  async updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<Conversation> {
+  async updateConversation(id: string, conversation: Partial<InsertConversation>, enterpriseId: string): Promise<Conversation> {
     const [updated] = await db
       .update(conversations)
       .set({ ...conversation, updatedAt: new Date() })
-      .where(eq(conversations.id, id))
+      .where(and(
+        eq(conversations.id, id),
+        eq(conversations.enterpriseId, enterpriseId)
+      ))
       .returning();
     return updated;
   }
 
-  async deleteConversation(id: string): Promise<void> {
+  async deleteConversation(id: string, enterpriseId: string): Promise<void> {
+    // First verify conversation belongs to enterprise
+    const conversation = await this.getConversation(id, enterpriseId);
+    if (!conversation) return;
+    
     // Delete all messages first, then the conversation
     await db.delete(chatMessages).where(eq(chatMessages.conversationId, id));
-    await db.delete(conversations).where(eq(conversations.id, id));
+    await db.delete(conversations).where(and(
+      eq(conversations.id, id),
+      eq(conversations.enterpriseId, enterpriseId)
+    ));
   }
 
   // Chat message operations
@@ -933,30 +1010,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Custom fields operations
-  async getCustomFields(entityName: string): Promise<CustomField[]> {
+  async getCustomFields(enterpriseId: string, entityName: string): Promise<CustomField[]> {
     return await db
       .select()
       .from(customFields)
-      .where(eq(customFields.entityName, entityName))
+      .where(and(
+        eq(customFields.enterpriseId, enterpriseId),
+        eq(customFields.entityName, entityName)
+      ))
       .orderBy(customFields.createdAt);
   }
 
-  async createCustomField(customField: InsertCustomField): Promise<CustomField> {
-    const [result] = await db.insert(customFields).values(customField).returning();
+  async createCustomField(customField: InsertCustomField, enterpriseId: string): Promise<CustomField> {
+    const [result] = await db.insert(customFields).values({
+      ...customField,
+      enterpriseId
+    }).returning();
     return result;
   }
 
-  async updateCustomField(id: string, customField: Partial<InsertCustomField>): Promise<CustomField> {
+  async updateCustomField(id: string, customField: Partial<InsertCustomField>, enterpriseId: string): Promise<CustomField> {
     const [updated] = await db
       .update(customFields)
       .set({ ...customField, updatedAt: new Date() })
-      .where(eq(customFields.id, id))
+      .where(and(
+        eq(customFields.id, id),
+        eq(customFields.enterpriseId, enterpriseId)
+      ))
       .returning();
     return updated;
   }
 
-  async deleteCustomField(id: string): Promise<void> {
-    await db.delete(customFields).where(eq(customFields.id, id));
+  async deleteCustomField(id: string, enterpriseId: string): Promise<void> {
+    await db.delete(customFields).where(and(
+      eq(customFields.id, id),
+      eq(customFields.enterpriseId, enterpriseId)
+    ));
   }
 
   // Partner application operations

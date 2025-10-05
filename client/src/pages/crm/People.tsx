@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -98,6 +98,7 @@ const buildProStatuses = [
 ];
 
 export default function People() {
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { userSubscription } = useSubscription();
   const isFreeUser = userSubscription?.currentPlanType === 'free';
@@ -128,17 +129,17 @@ export default function People() {
   });
 
   const { data: people = [], isLoading, error: peopleError } = useQuery({
-    queryKey: ["/api/crm/people", searchQuery],
+    queryKey: ["/api/crm", enterpriseId, "people", searchQuery],
     queryFn: async (): Promise<Person[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/people?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/people?${params}`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -169,11 +170,11 @@ export default function People() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertPerson) => {
-      return apiRequest("POST", "/api/crm/people", data);
+      return apiRequest("POST", `/api/crm/${enterpriseId}/people`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/people"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Person created successfully",
@@ -203,10 +204,10 @@ export default function People() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertPerson> }) => {
-      return apiRequest("PUT", `/api/crm/people/${id}`, data);
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/people/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
       toast({
         title: "Success",
         description: "Person updated successfully",
@@ -237,11 +238,11 @@ export default function People() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/people/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/people/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/people"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Person deleted successfully",

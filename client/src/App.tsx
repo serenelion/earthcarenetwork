@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -329,12 +330,16 @@ function Router() {
           
           <Route path="/crm">
             <EnterpriseOrAdminRoute>
-              <CrmShell />
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
             </EnterpriseOrAdminRoute>
           </Route>
           <Route path="/crm/:rest*">
             <EnterpriseOrAdminRoute>
-              <CrmShell />
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
             </EnterpriseOrAdminRoute>
           </Route>
           

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -126,6 +126,7 @@ const categoryLabels = {
 };
 
 export default function Opportunities() {
+  const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { userSubscription } = useSubscription();
   const isFreeUser = userSubscription?.currentPlanType === 'free';
@@ -156,17 +157,17 @@ export default function Opportunities() {
   });
 
   const { data: opportunities = [], isLoading, error: opportunitiesError } = useQuery({
-    queryKey: ["/api/crm/opportunities", searchQuery],
+    queryKey: ["/api/crm", enterpriseId, "opportunities", searchQuery],
     queryFn: async (): Promise<Opportunity[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/opportunities?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/opportunities?${params}`);
       if (!response.ok) throw new Error("Failed to fetch opportunities");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -196,23 +197,23 @@ export default function Opportunities() {
   });
 
   const { data: people = [] } = useQuery({
-    queryKey: ["/api/crm/people"],
+    queryKey: ["/api/crm", enterpriseId, "people"],
     queryFn: async (): Promise<Person[]> => {
-      const response = await fetch("/api/crm/people?limit=200");
+      const response = await fetch(`/api/crm/${enterpriseId}/people?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertOpportunity) => {
-      return apiRequest("POST", "/api/crm/opportunities", data);
+      return apiRequest("POST", `/api/crm/${enterpriseId}/opportunities`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/opportunities"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Opportunity created successfully",
@@ -242,10 +243,10 @@ export default function Opportunities() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertOpportunity> }) => {
-      return apiRequest("PUT", `/api/crm/opportunities/${id}`, data);
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/opportunities/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
       toast({
         title: "Success",
         description: "Opportunity updated successfully",
@@ -276,11 +277,11 @@ export default function Opportunities() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/opportunities/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/opportunities/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/opportunities"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Opportunity deleted successfully",
@@ -311,14 +312,14 @@ export default function Opportunities() {
       const opportunity = opportunities.find(o => o.id === opportunityId);
       if (!opportunity) throw new Error("Opportunity not found");
 
-      return apiRequest("POST", "/api/crm/ai/lead-score", {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/ai/lead-score`, {
         enterpriseId: opportunity.enterpriseId,
         personId: opportunity.primaryContactId,
         opportunityId: opportunityId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
       toast({
         title: "Success",
         description: "AI lead score generated successfully",
