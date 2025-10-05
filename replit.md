@@ -1,138 +1,6 @@
 # Overview
 
-Earth Care Network is a **federated, open-source CRM and directory platform** for regenerative enterprises, modeled after Ghost.org's sustainable funding approach. The system enables:
-- **Free Self-Hosting**: Anyone can clone, customize, and run their own instance
-- **Paid Professional Hosting**: Replit-hosted with full CRM features and AI Sales Autopilot
-- **Federated Discovery**: All instances contribute to a global commons via Murmurations protocol
-- **Enterprise Directory**: Discover organizations working on land projects, capital sources, open source tools, and network organizers
-
-Anyone can self-host "Earth Care Network" and rebrand it (e.g., "Regenerative Agriculture Hub"), while their enterprise profiles automatically join the global directory via Murmurations federation.
-
-# Recent Changes
-
-## October 2025 - Mobile Optimization, Onboarding & User Tier System
-
-### Mobile Responsiveness
-- **CRM Mobile Optimization**: All CRM pages now fully mobile-responsive with lg: breakpoint
-  - Mobile (<lg): Touch-friendly card views with all data stacked vertically
-  - Desktop (>=lg): Traditional table views with full columns
-  - Pattern applied to: Dashboard, Enterprises, People, Opportunities, Tasks pages
-  - Card views use touch-manipulation class, p-4 padding, proper spacing
-  - All action buttons sized for touch interactions
-  - Architect-verified implementation with no data visibility gaps
-
-### User Tier System & Subscriptions
-- **Subscription Plans**: 4-tier pricing structure integrated with Stripe
-  - **Free**: Directory access, 1 enterprise claim, basic features
-  - **CRM Pro ($42/mo)**: Full CRM, unlimited enterprises, AI copilot, advanced features
-  - **Build Pro Bundle ($88.11/mo)**: CRM Pro + team management, integrations, priority support
-  - **Admin**: Full platform access, moderation tools, user management
-- **Upgrade Prompts**: Contextual upgrade prompts throughout the app
-  - Free → CRM Pro prompts when hitting feature limits
-  - CRM Pro → Build Pro prompts highlighting premium features
-  - Integration with Stripe checkout for seamless upgrades
-- **Feature Gates**: Role-based access control throughout CRM
-  - Free users see disabled states with upgrade prompts
-  - CRM Pro users access full CRM features
-  - Build Pro users get advanced team and integration features
-
-### Onboarding System
-- **Tier-Specific Onboarding**: Guided tours for each user type
-  - **Visitor Flow**: Welcome message, platform tour, directory exploration
-  - **Free Member Flow**: Profile setup, first enterprise claim, favorites introduction
-  - **CRM Pro Flow**: CRM setup wizard, AI copilot configuration, first opportunity creation
-  - **Build Pro Flow**: Advanced features tour, team setup, integration guides
-  - **Admin Flow**: Platform power, moderation tools, pledge tracking, user management
-- **Infrastructure**: 
-  - OnboardingProvider context with React Query integration
-  - JSONB onboarding_progress field in users table tracks completion per tier
-  - Backend API routes for progress persistence
-  - Modal steppers for guided tours
-  - Dashboard checklists for ongoing progress tracking
-  - localStorage fallback for visitor flows (unauthenticated)
-- **Note**: Onboarding system has known React hooks issues in development (HMR-related) that need resolution
-
-### Pledge System Simplification
-- **Unified Commitment Statement**: Simplified to single checkbox
-  - Statement: "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
-  - Optional narrative field for explaining commitment
-  - Backwards-compatible with existing boolean fields
-- **UI Updates**: PledgeAffirmationModal uses single commitment checkbox
-- **Admin Tracking**: PledgeDashboard shows pledge status and narratives
-
-### Navigation & UX Improvements
-- **Header Navigation**: Moved Docs link from header to footer
-- **CRM Navigation**: Removed Reports and Pledge Dashboard from main CRM nav (consolidated into admin tools)
-- **Scroll-to-Top**: Automatic scroll-to-top for footer link navigation
-- **USP Messaging**: Updated throughout to emphasize "open source directory + CRM for new earth enterprise sales optimization"
-- **Visitor-to-Member Conversion**: Clear prompts for visitors attempting to claim enterprises
-
-### Pricing Page
-- **Enhanced Pricing**: Comprehensive comparison table with all tier features
-- **Upgrade Visualization**: Clear upgrade path diagrams
-- **Mobile-Responsive**: Fully optimized for all screen sizes
-
-## October 2025 - Earth Care Enterprise Plan & Bulk Seeding
-- **Earth Care Enterprise Plan**: Pledge system for enterprises to affirm universal ethics
-  - earthCarePledges table tracks pledge status (pending/affirmed/revoked)
-  - Three pillars: Earth Care, People Care, Fair Share
-  - Enterprises can sign pledge with narrative explaining their commitment
-  - Public pledge badges displayed on enterprise profiles
-  - Admin pledge dashboard with adoption metrics and analytics
-  - API endpoints: GET/POST/PATCH/DELETE /api/enterprises/:id/pledge
-- **Bulk Enterprise Seeding System**: AI-powered seeding for 1,000+ enterprises
-  - Batch processing orchestrator with configurable batch sizes and rate limiting
-  - Auto-discovery from regenerative sources with URL deduplication
-  - Progress tracking with job status monitoring
-  - Admin seeding console at /crm/seeding with real-time progress
-  - Error handling and retry logic for failed scrapes
-- **Batch Invitation System**: Automated invitation workflow for unclaimed enterprises
-  - Batch invitation jobs process 100s of enterprises
-  - Automatic profile claim token generation
-  - Integration with existing profile claim system
-  - Admin endpoint: POST /api/admin/enterprises/invite-batch
-- **Pledge UI Components**: Complete pledge affirmation workflow
-  - PledgeAffirmationModal for enterprise owners to sign/update pledges
-  - Pledge status badges on public enterprise profiles
-  - Pledge indicators in CRM enterprise management
-  - Collapsible narrative display for pledge commitments
-- **Murmurations Protocol Integration**: Added federated directory system enabling cross-instance discovery
-  - murmurationsProfiles table tracks published enterprise JSON profiles
-  - instanceConfig table for custom branding in self-hosted deployments
-  - Profile generator converts Enterprise → Murmurations JSON Schema
-  - Public API endpoint `/api/murmurations/profiles/:enterpriseId.json` serves profiles
-  - Integration with Murmurations Index for global discovery
-- **Multi-Tenant Ownership Model**: enterpriseOwners table with owner/editor/viewer roles for RLS
-- **Free Tier Profile Limits**: maxClaimedProfiles (1 for free, unlimited for paid)
-- **Open Source Positioning**: Ghost.org-style "Free & Open Source OR Paid Hosting" model
-- **Searchable Comboboxes in Opportunities**: Enhanced UX for enterprise and contact selection
-- **Searchable Comboboxes in Opportunities**: Enhanced UX for enterprise and contact selection
-  - Replaced basic Select dropdowns with searchable Combobox components (Popover + Command pattern)
-  - Real-time search/filter by typing enterprise or contact names
-  - Contact search includes enterprise affiliation for better context
-  - Proper state management ensures popovers close immediately after selection
-  - "No Enterprise" and "No Contact" options display correctly when null is selected
-  - Significantly improved usability when dealing with large lists
-- **CRM UI Refactoring**: Complete overhaul of CRM navigation for single source of truth
-  - Created standalone CrmLayout component (removed PageLayout dependency)
-  - Moved all CRM pages to `client/src/pages/crm/` folder for coherent organization
-  - Removed duplicate navigation elements from individual pages
-  - Each CRM page now renders only domain content (forms, tables, cards)
-  - Navigation centralized in CrmLayout with CrmSidebar, CrmMobileSidebar, CrmBreadcrumbs
-- **Documentation Routing**: Fixed all documentation routes using explicit route definitions
-  - All 28 documentation pages now working correctly
-  - Removed nested routing issues with DocsLayout
-  - Documentation accessible at /docs with full sidebar navigation
-
-## September 2025
-- **Enhanced Navigation**: Added context badges (Directory/CRM indicators) and breadcrumbs for improved wayfinding
-- **CSV Export**: Implemented CSV export for opportunities with linked entities (probability=0 handled correctly)
-- **Enhanced Opportunity Views**: Opportunity detail views now show related enterprises and contacts with tooltips
-- **AI Copilot Function Calling**: AI Copilot can now add enterprises to directory via chat using OpenAI function calling
-- **Profile Claim Invitations**: Added invitation system with 30-day tokens and automatic role upgrade to enterprise_owner upon claiming
-- **Comprehensive API Documentation**: Full API documentation at /docs covering all 18 enterprise endpoints plus authentication, people, opportunities, tasks, and search APIs with code examples
-- **Accessibility Improvements**: Achieved WCAG AA compliant contrast (hero gradient darkened, secondary color adjusted)
-- **Routing Fixes**: Fixed CRM routing with exact /crm + wildcard /crm/:rest* pattern for proper nested route handling
+Earth Care Network is a **federated, open-source CRM and directory platform** for regenerative enterprises. It offers free self-hosting for customizable instances and paid professional hosting with full CRM features and AI Sales Autopilot. The platform enables federated discovery of enterprises globally via the Murmurations protocol and provides an enterprise directory for various regenerative sectors. The business vision is to empower users to self-host and rebrand the platform while contributing to a global directory, mimicking Ghost.org's sustainable funding model.
 
 # User Preferences
 
@@ -141,104 +9,81 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Dual-Surface Architecture (Directory + CRM)
-The application features a complete separation between public directory browsing and authenticated CRM management:
+The application maintains a clear separation between a public-facing directory and an authenticated CRM management system.
 
 ### Public Directory
-- **Routes**: /, /enterprises, /directory/:category, /enterprises/:id, /search
-- **Access**: No authentication required - accessible to all visitors
-- **Purpose**: Public browsing of regenerative enterprises with category filtering
-- **Features**: Full page search at /search, category filters, enterprise details, responsive cards
-- **Components**: `client/src/pages/Enterprises.tsx` (pure public, no admin features), `client/src/pages/Search.tsx` (full page search with URL state persistence)
+- **Access**: No authentication required.
+- **Purpose**: Public browsing of regenerative enterprises, categories, and search.
+- **Features**: Full-page search, category filtering, enterprise details, responsive design.
 
 ### CRM Management
-- **Routes**: /crm, /crm/enterprises, /crm/people, /crm/opportunities, /crm/tasks, /crm/reports, /crm/copilot, /crm/bulk-import
-- **Access**: Requires authentication with enterprise_owner or admin role
-- **Purpose**: Full CRUD management of enterprises, contacts, and opportunities
-- **Features**: Create/edit/delete operations, advanced filtering, data tables, analytics
-- **Layout**: Standalone CrmLayout component with single source of truth navigation
-  - `client/src/components/crm/CrmLayout.tsx` - Main CRM layout (no PageLayout dependency)
-  - `client/src/components/crm/CrmSidebar.tsx` - Desktop navigation
-  - `client/src/components/crm/CrmMobileSidebar.tsx` - Mobile menu drawer
-  - `client/src/components/crm/CrmBreadcrumbs.tsx` - Navigation breadcrumbs
-  - `client/src/config/crmNavigation.ts` - Central navigation configuration
-- **Pages**: All CRM pages in `client/src/pages/crm/` folder render only domain content
-- **Routing**: `client/src/pages/crm/CrmShell.tsx` handles route definitions with CrmLayout wrapper
-- **API**: Separate `/api/crm/*` endpoints with role-based authorization
-
-### API Architecture
-- **Public APIs**: `GET /api/enterprises`, `GET /api/enterprises/:id` (no auth)
-- **CRM APIs**: `POST/PUT/DELETE /api/crm/enterprises` (auth required, admin/enterprise_owner only)
-- **Authorization**: `requireRole` middleware enforces role-based access control
+- **Access**: Requires authentication with `enterprise_owner` or `admin` role.
+- **Purpose**: Full CRUD management of enterprises, contacts, opportunities, and tasks.
+- **Layout**: Uses a standalone `CrmLayout` component for navigation, including sidebar, mobile sidebar, and breadcrumbs, with centralized configuration.
+- **Pages**: CRM pages are organized in `client/src/pages/crm/` and focus solely on domain content.
+- **API**: Separate `/api/crm/*` endpoints with role-based authorization.
 
 ## Frontend Architecture
-The frontend is built with React and TypeScript using Vite as the build tool. The application uses:
-- **UI Framework**: Custom component library based on shadcn/ui with Radix UI primitives
-- **Styling**: Tailwind CSS with custom CSS variables for theming
-- **State Management**: TanStack Query (React Query) for server state management
-- **Routing**: Wouter for lightweight client-side routing with nested route support
-- **Forms**: React Hook Form with Zod validation
-- **Component Structure**: 
-  - `components/shared/` - Reusable components (EnterpriseSummary, PageLayout, etc.)
-  - `components/directory/` - Public directory components
-  - `components/crm/` - CRM-specific admin components
-  - Separate pages for public Directory and CRM management
+- **Framework**: React, TypeScript, Vite.
+- **UI**: Custom component library based on `shadcn/ui` with Radix UI primitives.
+- **Styling**: Tailwind CSS with custom CSS variables.
+- **State Management**: TanStack Query (React Query) for server state.
+- **Routing**: Wouter for client-side routing.
+- **Forms**: React Hook Form with Zod validation.
+- **Component Structure**: Organized into shared, directory-specific, and CRM-specific components.
 
 ## Backend Architecture
-The backend uses Express.js with TypeScript in ESM format:
-- **API Structure**: RESTful API with route handlers organized in `/server/routes.ts`
-- **Authentication**: Replit Auth integration with OpenID Connect
-- **Session Management**: Express sessions with PostgreSQL storage
-- **AI Integration**: OpenAI GPT-5 for lead scoring and intelligent suggestions
-- **Web Scraping**: Cheerio-based scraping service for bulk enterprise data import
+- **Framework**: Express.js with TypeScript (ESM).
+- **API**: RESTful API with route handlers in `/server/routes.ts`.
+- **Authentication**: Replit Auth integration with OpenID Connect, Express sessions with PostgreSQL storage.
+- **AI Integration**: OpenAI GPT-5 for lead scoring and intelligent suggestions.
+- **Web Scraping**: Cheerio-based service for bulk enterprise data import.
 
 ## Data Storage
-- **Database**: PostgreSQL with Neon serverless hosting
-- **ORM**: Drizzle ORM for type-safe database operations
-- **Schema**: Comprehensive schema including users, enterprises, people, opportunities, tasks, copilot context, and profile claim invitations
-- **Categories**: Enum-based categorization for enterprises (land_projects, capital_sources, open_source_tools, network_organizers)
-- **Profile Claims/Invitations**: Token-based claiming system with 30-day expiration and automatic role upgrades
-- **CSV Export**: Full export functionality for opportunities with linked entity data (enterprises, contacts)
-
-## Authentication & Authorization
-- **Provider**: Replit Auth with OpenID Connect
-- **Session Storage**: PostgreSQL-backed sessions using connect-pg-simple
-- **User Management**: Automatic user creation/update on authentication
-- **Route Protection**: Middleware-based authentication checking for protected routes
+- **Database**: PostgreSQL via Neon serverless hosting.
+- **ORM**: Drizzle ORM for type-safe operations.
+- **Schema**: Includes users, enterprises, people, opportunities, tasks, copilot context, and profile claim invitations.
+- **Categories**: Enum-based categorization for enterprises.
+- **Profile Claims/Invitations**: Token-based system with expiration and role upgrades.
 
 ## Core Features
-- **Enterprise Management**: CRUD operations for regenerative organizations with categorization and verification
-- **People Management**: Contact management with status tracking and relationship mapping
-- **Opportunity Tracking**: Deal pipeline management with stages and value tracking
-- **Task Management**: Task assignment and tracking with priority levels
-- **AI Copilot**: Lead scoring, suggestions, and automated insights using OpenAI with function calling capabilities
-- **Bulk Import**: Web scraping capabilities for importing enterprise data from external sources
-- **Full Page Search**: Comprehensive search experience at /search with URL state persistence, category filters, and unified search across enterprises, people, opportunities, tasks, and documentation
-- **CSV Export**: Export opportunities with complete linked entity data (enterprises, contacts, probability handling)
-- **Profile Claim Invitations**: Token-based invitation workflow with automatic role upgrade to enterprise_owner upon claiming
-- **Comprehensive API Documentation**: Full documentation at /docs with 18+ enterprise endpoints, authentication guide, and code examples in multiple languages
+- **Enterprise Management**: CRUD operations, categorization, verification.
+- **People Management**: Contact management, status, relationship mapping.
+- **Opportunity Tracking**: Deal pipeline with stages and value.
+- **Task Management**: Assignment and tracking.
+- **AI Copilot**: Lead scoring, suggestions, automated insights, function calling for adding enterprises.
+- **Bulk Import**: Web scraping for enterprise data.
+- **Full Page Search**: Unified search across entities with URL state persistence.
+- **CSV Export**: Opportunities export with linked entity data.
+- **Profile Claim Invitations**: Token-based invitations with automatic role upgrade.
+- **Murmurations Protocol**: Integration for federated directory system.
+- **Multi-Tenant Ownership**: `enterpriseOwners` table with roles for RLS.
+- **Onboarding System**: Tier-specific guided tours with progress tracking.
+- **Subscription & Tiers**: 4-tier pricing (Free, CRM Pro, Build Pro Bundle, Admin) integrated with Stripe, feature gating, and upgrade prompts.
+- **Mobile Optimization**: CRM pages are fully mobile-responsive with card views for smaller screens.
 
 # External Dependencies
 
 ## Database & Infrastructure
-- **Neon Database**: Serverless PostgreSQL hosting
-- **Replit**: Development environment and authentication provider
+- **Neon Database**: Serverless PostgreSQL.
+- **Replit**: Development environment and authentication provider.
 
 ## AI & ML Services
-- **OpenAI API**: GPT-5 model for lead scoring, enterprise data extraction, and intelligent suggestions
+- **OpenAI API**: GPT-5 model.
 
 ## Frontend Libraries
-- **React Ecosystem**: React 18, React Query, React Hook Form, React Router (Wouter)
-- **UI Components**: Radix UI primitives, Lucide React icons
-- **Styling**: Tailwind CSS, class-variance-authority for component variants
+- **React Ecosystem**: React 18, React Query, React Hook Form, Wouter.
+- **UI Components**: Radix UI primitives, Lucide React icons, shadcn/ui.
+- **Styling**: Tailwind CSS, class-variance-authority.
 
 ## Backend Libraries
-- **Express.js**: Web framework with TypeScript support
-- **Drizzle ORM**: Type-safe database operations
-- **Cheerio**: Server-side HTML parsing for web scraping
-- **Passport**: Authentication middleware for OpenID Connect
+- **Express.js**: Web framework.
+- **Drizzle ORM**: Type-safe database operations.
+- **Cheerio**: Web scraping.
+- **Passport**: Authentication middleware.
 
 ## Development Tools
-- **Vite**: Frontend build tool and development server
-- **TypeScript**: Type safety across the entire stack
-- **ESBuild**: Server-side bundling for production
-- **Drizzle Kit**: Database migration and schema management
+- **Vite**: Frontend build tool.
+- **TypeScript**: Type safety.
+- **ESBuild**: Server-side bundling.
+- **Drizzle Kit**: Database migration and schema management.
