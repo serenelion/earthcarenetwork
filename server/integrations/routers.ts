@@ -364,4 +364,87 @@ router.get('/sync-jobs/:id', async (req: any, res: Response) => {
   }
 });
 
+router.post('/external-entities', async (req: any, res: Response) => {
+  try {
+    const userId = (req.user as any)?.claims?.sub;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { entity, entityType } = req.body;
+
+    if (!entity || !entityType) {
+      return res.status(400).json({ 
+        error: "Invalid request", 
+        message: "Entity data and entityType are required" 
+      });
+    }
+
+    if (!['enterprise', 'person'].includes(entityType)) {
+      return res.status(400).json({ 
+        error: "Invalid entity type", 
+        message: "entityType must be 'enterprise' or 'person'" 
+      });
+    }
+
+    let result;
+
+    if (entityType === 'enterprise') {
+      const enterpriseData = {
+        id: nanoid(),
+        name: entity.name || entity.company || 'Unknown',
+        description: entity.description || `Imported from ${entity.source}`,
+        category: entity.category || 'network_organizers',
+        location: entity.location || entity.address || null,
+        website: entity.website || null,
+        contactEmail: entity.email || null,
+        contactPhone: entity.phone || null,
+        verified: false,
+        claimable: true,
+        tags: [entity.source, 'imported'],
+        externalSource: entity.source,
+        externalId: entity.id,
+        rawExternalData: entity.rawData || entity
+      };
+
+      result = await storage.createEnterprise(enterpriseData);
+      console.log(`[Integration] Imported enterprise from ${entity.source}: ${result.name}`);
+    } else {
+      const nameParts = (entity.name || 'Unknown').split(' ');
+      const firstName = nameParts[0] || 'Unknown';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      const personData = {
+        id: nanoid(),
+        firstName,
+        lastName,
+        email: entity.email || null,
+        phone: entity.phone || null,
+        title: entity.company || null,
+        location: entity.location || entity.address || null,
+        enterpriseId: null,
+        tags: [entity.source, 'imported'],
+        externalSourceRef: entity.rawData || entity
+      };
+
+      result = await storage.createPerson(personData);
+      console.log(`[Integration] Imported person from ${entity.source}: ${firstName} ${lastName}`);
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      message: `${entityType} imported successfully from ${entity.source}`
+    });
+  } catch (error) {
+    console.error("Error importing external entity:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ 
+      error: "Failed to import entity",
+      message: errorMessage 
+    });
+  }
+});
+
 export default router;

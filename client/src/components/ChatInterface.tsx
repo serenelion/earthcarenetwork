@@ -299,6 +299,63 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     ));
   };
 
+  const renderExternalSearchResults = (metadata: any): React.ReactNode => {
+    if (!metadata?.functionCall?.result?.data) return null;
+    
+    const { name: functionName, result } = metadata.functionCall;
+    if (!['searchApollo', 'searchGoogleMaps', 'searchFoursquare'].includes(functionName)) {
+      return null;
+    }
+
+    const results = result.data || [];
+    if (results.length === 0) return null;
+
+    const providerNames: Record<string, string> = {
+      'searchApollo': 'Apollo.io',
+      'searchGoogleMaps': 'Google Maps',
+      'searchFoursquare': 'Foursquare'
+    };
+
+    return (
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="outline" className="text-xs">
+            {providerNames[functionName] || result.source}
+          </Badge>
+          <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {results.slice(0, 5).map((item: any, idx: number) => (
+            <Card key={idx} className="p-3 bg-background/50">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {item.name || item.company || 'Unknown'}
+                  </div>
+                  {(item.location || item.address) && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      📍 {item.location || item.address}
+                    </div>
+                  )}
+                  {item.email && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      ✉️ {item.email}
+                    </div>
+                  )}
+                  {item.website && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      🌐 {item.website}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`flex h-[600px] border rounded-lg overflow-hidden ${className}`}>
       {/* Sidebar */}
@@ -551,6 +608,7 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
                       <div className="text-sm whitespace-pre-wrap">
                         {formatMessage(message.content)}
                       </div>
+                      {message.role === 'assistant' && message.metadata && renderExternalSearchResults(message.metadata as any)}
                       <div className="text-xs opacity-70 mt-1">
                         {message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : ''}
                       </div>

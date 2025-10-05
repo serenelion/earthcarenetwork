@@ -1398,6 +1398,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
             functionResult = claim;
             const claimUrl = `/claim-profile?token=${claimToken}`;
             responseMessage = `✅ Profile claim invitation created successfully!\n\nInvitation Link: ${claimUrl}\n\nSent to: ${args.email}${args.name ? ` (${args.name})` : ''}\nExpires: ${expiresAt.toLocaleDateString()}\n\n📧 Note: Email sending is not yet implemented. Please share this link manually with the recipient.`;
+          } else if (name === 'searchApollo') {
+            // Search Apollo.io for companies/contacts
+            const searchResponse = await fetch(`${req.protocol}://${req.get('host')}/api/integrations/apollo/search`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cookie': req.headers.cookie || ''
+              },
+              body: JSON.stringify({
+                query: args.query,
+                filters: args.filters || { type: 'companies' }
+              })
+            });
+            
+            const searchData = await searchResponse.json();
+            functionResult = searchData;
+            
+            if (searchData.success && searchData.data && searchData.data.length > 0) {
+              const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
+                `${idx + 1}. ${item.name || item.company || 'Unknown'}${item.location ? ` - ${item.location}` : ''}${item.email ? ` (${item.email})` : ''}`
+              ).join('\n');
+              responseMessage = `🔍 Found ${searchData.data.length} result(s) from Apollo.io:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Apollo API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+            } else {
+              responseMessage = `No results found from Apollo.io for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+            }
+          } else if (name === 'searchGoogleMaps') {
+            // Search Google Maps for places
+            const searchResponse = await fetch(`${req.protocol}://${req.get('host')}/api/integrations/google_maps/search`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cookie': req.headers.cookie || ''
+              },
+              body: JSON.stringify({
+                query: args.query,
+                location: args.location
+              })
+            });
+            
+            const searchData = await searchResponse.json();
+            functionResult = searchData;
+            
+            if (searchData.success && searchData.data && searchData.data.length > 0) {
+              const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
+                `${idx + 1}. ${item.name}${item.address ? ` - ${item.address}` : ''}${item.phone ? ` (${item.phone})` : ''}`
+              ).join('\n');
+              responseMessage = `📍 Found ${searchData.data.length} place(s) from Google Maps:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Google Maps API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+            } else {
+              responseMessage = `No places found from Google Maps for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+            }
+          } else if (name === 'searchFoursquare') {
+            // Search Foursquare for venues
+            const searchResponse = await fetch(`${req.protocol}://${req.get('host')}/api/integrations/foursquare/search`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cookie': req.headers.cookie || ''
+              },
+              body: JSON.stringify({
+                query: args.query,
+                location: args.location
+              })
+            });
+            
+            const searchData = await searchResponse.json();
+            functionResult = searchData;
+            
+            if (searchData.success && searchData.data && searchData.data.length > 0) {
+              const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
+                `${idx + 1}. ${item.name}${item.category ? ` (${item.category})` : ''}${item.address ? ` - ${item.address}` : ''}`
+              ).join('\n');
+              responseMessage = `🏢 Found ${searchData.data.length} venue(s) from Foursquare:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Foursquare API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+            } else {
+              responseMessage = `No venues found from Foursquare for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+            }
+          } else if (name === 'importEntityToCRM') {
+            // Import external entity into CRM
+            const importResponse = await fetch(`${req.protocol}://${req.get('host')}/api/integrations/external-entities`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cookie': req.headers.cookie || ''
+              },
+              body: JSON.stringify({
+                entity: args.entity,
+                entityType: args.entityType
+              })
+            });
+            
+            const importData = await importResponse.json();
+            functionResult = importData;
+            
+            if (importData.success) {
+              const entity = importData.data;
+              const entityName = entity.name || 'Unknown';
+              const entityType = args.entityType === 'enterprise' ? 'Enterprise' : 'Person';
+              responseMessage = `✅ Successfully imported ${entityType} "${entityName}" from ${args.entity.source}!\n\nID: ${entity.id}\n${entity.location ? `Location: ${entity.location}\n` : ''}${entity.email ? `Email: ${entity.email}\n` : ''}${entity.website ? `Website: ${entity.website}\n` : ''}\nYou can view it at: /${args.entityType === 'enterprise' ? 'enterprises' : 'crm/people'}/${entity.id}`;
+            } else {
+              responseMessage = `❌ Failed to import entity: ${importData.message || importData.error || 'Unknown error'}`;
+            }
           }
         } catch (error) {
           console.error(`Error executing function ${name}:`, error);

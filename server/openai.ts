@@ -294,6 +294,110 @@ export async function generateCopilotResponse(
             required: ["enterpriseId", "email"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchApollo",
+          description: "Search for companies and contacts using Apollo.io. Use this to find businesses, organizations, and professional contacts by name, industry, or other criteria.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The search query (company name, industry, or keyword)"
+              },
+              filters: {
+                type: "object",
+                description: "Optional filters for the search",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["companies", "contacts"],
+                    description: "Type of search - companies or contacts"
+                  }
+                }
+              }
+            },
+            required: ["query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchGoogleMaps",
+          description: "Search for places, businesses, and locations using Google Maps. Use this to find physical locations, addresses, and local businesses.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The search query (place name, business type, or keyword)"
+              },
+              location: {
+                type: "string",
+                description: "Optional location context (city, state, or coordinates) to narrow the search"
+              }
+            },
+            required: ["query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchFoursquare",
+          description: "Search for venues and places using Foursquare. Use this to discover local businesses, restaurants, venues, and points of interest.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The search query (venue name, category, or keyword)"
+              },
+              location: {
+                type: "string",
+                description: "Location to search near (city, state, or coordinates)"
+              }
+            },
+            required: ["query", "location"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "importEntityToCRM",
+          description: "Import an external entity (from Apollo, Google Maps, or Foursquare) into the CRM as either an enterprise or person. Use this after finding entities via external searches.",
+          parameters: {
+            type: "object",
+            properties: {
+              entity: {
+                type: "object",
+                description: "The entity data from external search results",
+                properties: {
+                  id: { type: "string" },
+                  name: { type: "string" },
+                  email: { type: "string" },
+                  company: { type: "string" },
+                  location: { type: "string" },
+                  address: { type: "string" },
+                  phone: { type: "string" },
+                  website: { type: "string" },
+                  source: { type: "string" },
+                  rawData: { type: "object" }
+                }
+              },
+              entityType: {
+                type: "string",
+                enum: ["enterprise", "person"],
+                description: "Type of entity to import - enterprise or person"
+              }
+            },
+            required: ["entity", "entityType"]
+          }
+        }
       }
     ];
 
@@ -311,9 +415,19 @@ Expertise: Regenerative agriculture, carbon solutions, sustainable business, par
 You can help users:
 - Add new enterprises to the directory using the add_enterprise function
 - Send profile claim invitations using the send_invitation function
+- Search for companies and contacts using Apollo.io (searchApollo function)
+- Search for places and businesses using Google Maps (searchGoogleMaps function)
+- Search for venues and local businesses using Foursquare (searchFoursquare function)
+- Import external entities into CRM using the importEntityToCRM function
 - Provide advice and insights about regenerative enterprises
 
-When users want to add an enterprise or send invitations, use the appropriate function. Otherwise, provide helpful conversation and advice.`
+External Search Capabilities:
+- Use searchApollo when users want to find companies, organizations, or professional contacts
+- Use searchGoogleMaps when users want to find physical locations, addresses, or local businesses
+- Use searchFoursquare when users want to discover venues, restaurants, or points of interest
+- After finding entities via external search, offer to import them using importEntityToCRM
+
+When users want to search for businesses or people, consider using external search APIs to provide comprehensive results. Then offer to import the found entities into their CRM.`
       }
     ];
 
