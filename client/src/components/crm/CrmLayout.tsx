@@ -1,11 +1,30 @@
-import { Building } from "lucide-react";
+import { Building, Coins, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import CrmSidebar from "./CrmSidebar";
 import CrmMobileSidebar from "./CrmMobileSidebar";
 import CrmBreadcrumbs from "./CrmBreadcrumbs";
+import CreditPurchaseModal from "./CreditPurchaseModal";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const [showCreditModal, setShowCreditModal] = useState(false);
+
+  const { data: subscriptionStatus } = useQuery<{
+    user: {
+      currentPlanType: string;
+      creditBalance: number;
+      creditLimit: number;
+      monthlyAllocation: number;
+    };
+  }>({
+    queryKey: ["/api/subscription/status"],
+  });
+
+  const creditBalance = subscriptionStatus?.user?.creditBalance || 0;
+  const isLowBalance = creditBalance < 100;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -26,6 +45,17 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowCreditModal(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors"
+                data-testid="button-credits-mobile"
+              >
+                <Coins className={`h-4 w-4 ${isLowBalance ? 'text-orange-500' : 'text-primary'}`} />
+                <span className={`text-xs font-medium ${isLowBalance ? 'text-orange-500' : ''}`}>
+                  {creditBalance}
+                </span>
+                {isLowBalance && <AlertCircle className="h-3 w-3 text-orange-500" />}
+              </button>
               <div 
                 className="w-7 h-7 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold"
                 data-testid="user-avatar-mobile"
@@ -46,6 +76,39 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Credit Balance Display */}
+              <div 
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-lg border
+                  ${isLowBalance 
+                    ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800' 
+                    : 'bg-muted border-border'
+                  }
+                `}
+                data-testid="credit-balance-display"
+              >
+                <Coins className={`h-4 w-4 ${isLowBalance ? 'text-orange-500' : 'text-primary'}`} />
+                <div>
+                  <p className="text-xs text-muted-foreground">AI Credits</p>
+                  <p className={`text-sm font-bold ${isLowBalance ? 'text-orange-500' : ''}`} data-testid="credit-balance-value">
+                    {creditBalance.toLocaleString()}
+                  </p>
+                </div>
+                {isLowBalance && (
+                  <AlertCircle className="h-4 w-4 text-orange-500" data-testid="low-balance-icon" />
+                )}
+              </div>
+              
+              <Button 
+                onClick={() => setShowCreditModal(true)}
+                size="sm"
+                variant="default"
+                data-testid="button-buy-credits"
+              >
+                <Coins className="h-4 w-4 mr-2" />
+                Buy Credits
+              </Button>
+
               <div className="flex items-center space-x-2">
                 <div 
                   className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold"
@@ -71,6 +134,12 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Credit Purchase Modal */}
+      <CreditPurchaseModal 
+        open={showCreditModal} 
+        onOpenChange={setShowCreditModal}
+      />
     </div>
   );
 }

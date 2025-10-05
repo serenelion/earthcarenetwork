@@ -1944,6 +1944,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== CREDIT PURCHASE ROUTES ======
+
+  // Create Stripe checkout session for credit purchase
+  app.post('/api/stripe/create-credit-checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." });
+      }
+
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { amount } = req.body;
+      
+      // Validate amount (minimum $5, in dollars)
+      if (!amount || amount < 5) {
+        return res.status(400).json({ message: "Amount must be at least $5" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email required" });
+      }
+
+      // Get or create Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          metadata: { userId }
+        });
+        stripeCustomerId = customer.id;
+        await storage.updateUserStripeInfo(userId, stripeCustomerId);
+      }
+
+      // Create pending credit purchase record
+      const creditAmount = amount * 100; // Convert dollars to cents
+      const creditPurchase = await storage.createCreditPurchase({
+        userId,
+        amount: creditAmount,
+        status: 'pending'
+      });
+
+      // Create Stripe checkout session for one-time payment
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'AI Credits',
+              description: `${creditAmount.toLocaleString()} AI credits`,
+            },
+            unit_amount: amount * 100, // Convert to cents for Stripe
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${req.headers.origin}/crm/dashboard?credit_purchase=success`,
+        cancel_url: `${req.headers.origin}/crm/dashboard?credit_purchase=canceled`,
+        metadata: {
+          userId,
+          creditPurchaseId: creditPurchase.id,
+          creditAmount: creditAmount.toString(),
+          type: 'credit_purchase'
+        }
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Error creating credit checkout session:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to create checkout session", error: errorMessage });
+    }
+  });
+
+  // Get user's credit purchase history
+  app.get('/api/credit-purchases', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const purchases = await storage.getCreditPurchases(userId);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Error fetching credit purchases:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch credit purchases", error: errorMessage });
+    }
+  });
+
   // AI Usage tracking
   app.post('/api/ai-usage/log', isAuthenticated, async (req: any, res) => {
     try {
@@ -2043,9 +2140,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
-          const { userId, planId, planType, isYearly } = session.metadata || {};
+          const { userId, planId, planType, isYearly, type, creditPurchaseId, creditAmount } = session.metadata || {};
           
-          if (userId && planId && planType) {
+          // Handle credit purchase
+          if (type === 'credit_purchase' && userId && creditPurchaseId && creditAmount) {
+            try {
+              // Update credit purchase status to completed
+              await storage.updateCreditPurchaseStatus(creditPurchaseId, 'completed');
+              
+              // Add credits to user's account
+              const amount = parseInt(creditAmount);
+              await storage.addCredits(userId, amount);
+              
+              console.log(`Credit purchase completed: ${amount} credits added to user ${userId}`);
+            } catch (error) {
+              console.error('Error processing credit purchase:', error);
+              // Update status to failed
+              await storage.updateCreditPurchaseStatus(creditPurchaseId, 'failed');
+            }
+          }
+          // Handle subscription checkout
+          else if (userId && planId && planType) {
             // Create subscription record
             await storage.createSubscription({
               userId,
