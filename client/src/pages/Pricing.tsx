@@ -45,13 +45,13 @@ export default function Pricing() {
       priceYearly: 0,
       features: [
         'Browse enterprise directory',
-        'Claim a project profile',
+        'Claim 1 enterprise profile',
         'Edit your profile information',
         'Basic search functionality',
         'Community access',
-        '1,000 AI tokens/month'
+        '$0.10 AI credits/month'
       ],
-      tokenQuotaLimit: 1000,
+      tokenQuotaLimit: 10,
       isActive: true,
       displayOrder: 0,
       stripePriceIdMonthly: null,
@@ -72,10 +72,11 @@ export default function Pricing() {
         'Advanced search & filters',
         'Task management',
         'Contact relationship mapping',
-        '50,000 AI tokens/month',
+        '$42 AI credits/month',
+        'Top up credits anytime',
         'Priority support'
       ],
-      tokenQuotaLimit: 50000,
+      tokenQuotaLimit: 4200,
       isActive: true,
       displayOrder: 1,
       stripePriceIdMonthly: 'price_crm_basic_monthly',
@@ -95,10 +96,11 @@ export default function Pricing() {
         'Geographic visualization tools',
         'Team collaboration features',
         'Custom integrations',
-        'Unlimited AI tokens',
+        '$88.11 AI credits/month',
+        'Top up credits anytime',
         'Dedicated account manager'
       ],
-      tokenQuotaLimit: 1000000,
+      tokenQuotaLimit: 8811,
       isActive: true,
       displayOrder: 2,
       stripePriceIdMonthly: 'price_build_pro_monthly',
@@ -223,9 +225,9 @@ export default function Pricing() {
                   
                   <div className="text-sm text-muted-foreground">
                     <div className="flex justify-between">
-                      <span>AI Tokens/month:</span>
+                      <span>AI Credits/month:</span>
                       <span className="font-medium">
-                        {plan.tokenQuotaLimit >= 1000000 ? 'Unlimited' : plan.tokenQuotaLimit.toLocaleString()}
+                        ${(plan.tokenQuotaLimit / 100).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -307,11 +309,11 @@ export default function Pricing() {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-2">How do AI tokens work?</h3>
+              <h3 className="text-xl font-semibold mb-2">How do AI credits work?</h3>
               <p className="text-muted-foreground">
-                AI tokens are used for features like lead scoring, content generation, and copilot assistance. 
-                The free tier includes 1,000 tokens per month, while CRM Basic includes 50,000 tokens - 
-                enough for extensive AI-powered CRM operations.
+                AI credits are used for features like lead scoring, content generation, and copilot assistance. 
+                Credits are dollar-based (100 cents = $1.00) and charged based on actual AI API usage. 
+                The free tier includes $0.10/month, CRM Basic includes $42/month, and you can top up anytime.
               </p>
             </div>
             

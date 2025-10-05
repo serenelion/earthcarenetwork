@@ -45,8 +45,11 @@ import {
   BookOpen,
   Trash2,
   Edit,
+  Coins,
+  AlertCircle,
 } from "lucide-react";
 import { insertBusinessContextSchema, type BusinessContext, type Conversation, type ChatMessage, type User as UserType } from "@shared/schema";
+import { Link } from "wouter";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -186,11 +189,36 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     onError: (error: any) => {
       console.error("Chat mutation error:", error);
       const errorMessage = error?.message || "Failed to send message";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      const isInsufficientCredits = errorMessage.includes("Insufficient") || errorMessage.includes("credits");
+      
+      if (isInsufficientCredits) {
+        toast({
+          title: "Insufficient AI Credits",
+          description: (
+            <div className="flex flex-col gap-2">
+              <p>You don't have enough credits to send this message.</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                asChild
+                className="w-full"
+              >
+                <Link href="/pricing">
+                  <Coins className="w-4 h-4 mr-2" />
+                  Buy Credits
+                </Link>
+              </Button>
+            </div>
+          ),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 

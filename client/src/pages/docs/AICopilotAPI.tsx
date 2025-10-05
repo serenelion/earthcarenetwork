@@ -93,7 +93,7 @@ export default function AICopilotAPI() {
         <Alert className="mb-6">
           <Shield className="h-4 w-4" />
           <AlertDescription>
-            <strong>Authentication & Limits:</strong> AI endpoints require 'enterprise_owner' or 'admin' role. Token usage is tracked and limited based on your subscription plan.
+            <strong>Authentication & Limits:</strong> AI endpoints require 'enterprise_owner' or 'admin' role. Credit usage is tracked and limited based on your subscription plan.
           </AlertDescription>
         </Alert>
       </div>
@@ -145,7 +145,7 @@ export default function AICopilotAPI() {
         <Alert>
           <Zap className="h-4 w-4" />
           <AlertDescription>
-            <strong>Token Usage:</strong> Each AI request consumes tokens from your monthly quota. Monitor usage via the <code>/api/auth/user</code> endpoint which returns <code>tokenUsageThisMonth</code> and <code>tokenQuotaLimit</code>.
+            <strong>Credit Usage:</strong> Each AI request consumes credits from your monthly quota (credits are dollar-based, 100 cents = $1.00). Monitor usage via the <code>/api/auth/user</code> endpoint which returns <code>creditUsageThisMonth</code> and <code>creditQuotaLimit</code> in cents.
           </AlertDescription>
         </Alert>
       </section>
@@ -209,8 +209,8 @@ console.log('Next Steps:', score.nextSteps);`,
             },
             {
               status: 429,
-              description: "Token quota exceeded",
-              example: { message: "Monthly token quota exceeded" },
+              description: "Credit quota exceeded",
+              example: { message: "Insufficient AI credits" },
             },
           ]}
           className="mb-12"
@@ -321,18 +321,20 @@ console.log('Suggested Actions:', chat.suggestedActions);`,
         
         <div className="space-y-4">
           <div className="border rounded-lg p-4">
-            <h4 className="font-semibold mb-2">Monitor Token Usage</h4>
+            <h4 className="font-semibold mb-2">Monitor Credit Usage</h4>
             <CodeBlock language="javascript">
-{`// Check remaining tokens before making AI requests
+{`// Check remaining credits before making AI requests
 const userResponse = await fetch('/api/auth/user', {
   credentials: 'include'
 });
 const user = await userResponse.json();
 
-console.log(\`Used: \${user.tokenUsageThisMonth} / \${user.tokenQuotaLimit}\`);
+const usedDollars = (user.creditUsageThisMonth / 100).toFixed(2);
+const limitDollars = (user.creditQuotaLimit / 100).toFixed(2);
+console.log(\`Used: $\${usedDollars} / $\${limitDollars}\`);
 
-if (user.tokenUsageThisMonth >= user.tokenQuotaLimit * 0.9) {
-  console.warn('Approaching token limit - use AI features sparingly');
+if (user.creditUsageThisMonth >= user.creditQuotaLimit * 0.9) {
+  console.warn('Approaching credit limit - consider topping up');
 }`}
             </CodeBlock>
           </div>
@@ -352,7 +354,7 @@ async function getAISuggestions(retries = 3) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         return getAISuggestions(retries - 1);
       }
-      throw new Error('Token quota exceeded');
+      throw new Error('Insufficient AI credits');
     }
     
     return await response.json();
@@ -367,7 +369,7 @@ async function getAISuggestions(retries = 3) {
           <div className="border rounded-lg p-4">
             <h4 className="font-semibold mb-2">Cache AI Responses</h4>
             <p className="text-sm text-muted-foreground mb-2">
-              Cache AI-generated insights to reduce token usage for frequently accessed data.
+              Cache AI-generated insights to reduce credit usage for frequently accessed data.
             </p>
             <CodeBlock language="javascript">
 {`// Simple caching strategy
@@ -412,24 +414,24 @@ async function getCachedLeadScore(enterpriseId, personId) {
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="text-left py-3 px-4">Plan</th>
-                <th className="text-left py-3 px-4">Monthly Token Limit</th>
+                <th className="text-left py-3 px-4">Monthly Credit Limit</th>
                 <th className="text-left py-3 px-4">Rate Limit</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b">
                 <td className="py-3 px-4">Free</td>
-                <td className="py-3 px-4">10,000 tokens</td>
+                <td className="py-3 px-4">$0.10 AI credits</td>
                 <td className="py-3 px-4">10 requests/hour</td>
               </tr>
               <tr className="border-b">
                 <td className="py-3 px-4">CRM Basic</td>
-                <td className="py-3 px-4">50,000 tokens</td>
+                <td className="py-3 px-4">$42 AI credits</td>
                 <td className="py-3 px-4">50 requests/hour</td>
               </tr>
               <tr>
                 <td className="py-3 px-4">Build Pro Bundle</td>
-                <td className="py-3 px-4">200,000 tokens</td>
+                <td className="py-3 px-4">$88.11 AI credits</td>
                 <td className="py-3 px-4">100 requests/hour</td>
               </tr>
             </tbody>

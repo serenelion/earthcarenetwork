@@ -131,8 +131,8 @@ session = requests.Session()`,
     role: "enterprise_owner",
     membershipStatus: "paid_member",
     currentPlanType: "crm_basic",
-    tokenUsageThisMonth: 2500,
-    tokenQuotaLimit: 50000,
+    creditUsageThisMonth: 2500,
+    creditQuotaLimit: 4200,
     createdAt: "2024-01-15T10:30:00Z",
     updatedAt: "2024-03-10T14:22:00Z"
   };

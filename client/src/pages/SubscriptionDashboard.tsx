@@ -254,16 +254,24 @@ export default function SubscriptionDashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* AI Usage */}
-            <Card data-testid="ai-usage-card">
+            {/* AI Credits */}
+            <Card data-testid="ai-credits-card">
               <CardHeader>
-                <CardTitle>AI Token Usage</CardTitle>
+                <CardTitle>AI Credits</CardTitle>
                 <CardDescription>
-                  Your monthly AI usage and limits
+                  Your monthly credit allocation and usage
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <TokenUsageIndicator />
+                <div className="mt-4">
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link href="/pricing">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Buy More Credits
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

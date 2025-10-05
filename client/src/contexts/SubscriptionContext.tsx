@@ -289,7 +289,7 @@ export function SubscriptionStatusBadge() {
   );
 }
 
-// Token usage indicator component
+// Credit usage indicator component
 export function TokenUsageIndicator() {
   const { userSubscription, getTokenUsagePercentage, getRemainingTokens } = useSubscription();
   
@@ -298,13 +298,15 @@ export function TokenUsageIndicator() {
   const percentage = getTokenUsagePercentage();
   const remaining = getRemainingTokens();
   const isNearLimit = percentage > 80;
+  const totalCredits = userSubscription.tokenQuotaLimit;
+  const used = totalCredits - remaining;
   
   return (
-    <div className="space-y-2" data-testid="token-usage-indicator">
+    <div className="space-y-2" data-testid="credit-usage-indicator">
       <div className="flex justify-between items-center text-sm">
-        <span>AI Tokens</span>
+        <span>AI Credits</span>
         <span className={isNearLimit ? 'text-yellow-600' : 'text-muted-foreground'}>
-          {remaining.toLocaleString()} remaining
+          ${(remaining / 100).toFixed(2)} remaining
         </span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -315,9 +317,13 @@ export function TokenUsageIndicator() {
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>Used: ${(used / 100).toFixed(2)}</span>
+        <span>Total: ${(totalCredits / 100).toFixed(2)}/month</span>
+      </div>
       {isNearLimit && (
         <p className="text-xs text-yellow-600">
-          You're approaching your monthly token limit. Consider upgrading your plan.
+          You're approaching your monthly credit limit. Consider topping up or upgrading your plan.
         </p>
       )}
     </div>

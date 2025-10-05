@@ -58,10 +58,14 @@ import {
   Trash2,
   RefreshCw,
   ExternalLink,
+  Coins,
+  AlertCircle,
 } from "lucide-react";
 import ChatInterface from "@/components/ChatInterface";
+import CreditPurchaseModal from "@/components/crm/CreditPurchaseModal";
 import { insertCopilotContextSchema, type CopilotContext, type InsertCopilotContext } from "@shared/schema";
 import { z } from "zod";
+import { Link } from "wouter";
 interface CopilotSuggestion {
   type: 'lead_scoring' | 'outreach' | 'partnership' | 'task_automation';
   title: string;
@@ -93,6 +97,7 @@ export default function Copilot() {
   const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<CopilotSuggestion | null>(null);
   const [leadScoreTarget, setLeadScoreTarget] = useState<{ enterpriseId: string; personId?: string } | null>(null);
+  const [showCreditModal, setShowCreditModal] = useState(false);
 
   const contextForm = useForm<ContextFormData>({
     resolver: zodResolver(contextFormSchema),
@@ -226,11 +231,36 @@ export default function Copilot() {
         }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: "Failed to generate lead score",
-        variant: "destructive",
-      });
+      
+      const errorMessage = (error as Error).message || "";
+      const isInsufficientCredits = errorMessage.includes("Insufficient") || errorMessage.includes("credits");
+      
+      if (isInsufficientCredits) {
+        toast({
+          title: "Insufficient AI Credits",
+          description: (
+            <div className="flex flex-col gap-2">
+              <p>You don't have enough credits to perform this operation.</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowCreditModal(true)}
+                className="w-full"
+              >
+                <Coins className="w-4 h-4 mr-2" />
+                Buy Credits
+              </Button>
+            </div>
+          ),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate lead score",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -848,6 +878,12 @@ export default function Copilot() {
             </DialogContent>
           </Dialog>
         )}
+
+      {/* Credit Purchase Modal */}
+      <CreditPurchaseModal 
+        open={showCreditModal} 
+        onOpenChange={setShowCreditModal}
+      />
     </>
   );
 }
