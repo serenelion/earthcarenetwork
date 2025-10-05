@@ -108,6 +108,22 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Member Profiles table - Public profiles for community members
+export const memberProfiles = pgTable("member_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  displayName: varchar("display_name"),
+  bio: text("bio"),
+  expertise: text("expertise").array(),
+  website: varchar("website"),
+  linkedinUrl: varchar("linkedin_url"),
+  twitterUrl: varchar("twitter_url"),
+  location: varchar("location"),
+  isPublic: boolean("is_public").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Enterprise categories
 export const enterpriseCategoryEnum = pgEnum('enterprise_category', [
   'land_projects',
@@ -184,7 +200,7 @@ export const people = pgTable("people", {
   email: varchar("email").unique(),
   phone: varchar("phone"),
   title: varchar("title"),
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   linkedinUrl: varchar("linkedin_url"),
   notes: text("notes"),
   invitationStatus: invitationStatusEnum("invitation_status").default('not_invited'),
@@ -215,7 +231,7 @@ export const opportunities = pgTable("opportunities", {
   value: integer("value"), // in cents
   status: opportunityStatusEnum("status").default('lead'),
   probability: integer("probability").default(0), // 0-100
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   primaryContactId: varchar("primary_contact_id").references(() => people.id),
   expectedCloseDate: timestamp("expected_close_date"),
   notes: text("notes"),
@@ -239,7 +255,7 @@ export const tasks = pgTable("tasks", {
   status: taskStatusEnum("status").default('pending'),
   dueDate: timestamp("due_date"),
   assignedToId: varchar("assigned_to_id").references(() => users.id),
-  relatedEnterpriseId: varchar("related_enterprise_id").references(() => enterprises.id),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   relatedPersonId: varchar("related_person_id").references(() => people.id),
   relatedOpportunityId: varchar("related_opportunity_id").references(() => opportunities.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -250,6 +266,7 @@ export const tasks = pgTable("tasks", {
 export const copilotContext = pgTable("copilot_context", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   leadScoringCriteria: jsonb("lead_scoring_criteria"),
   automationRules: jsonb("automation_rules"),
   focusAreas: text("focus_areas").array(),
@@ -260,7 +277,8 @@ export const copilotContext = pgTable("copilot_context", {
 // Business context for AI copilot
 export const businessContext = pgTable("business_context", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   companyName: varchar("company_name"),
   website: varchar("website"),
   description: text("description"),
@@ -276,6 +294,7 @@ export const businessContext = pgTable("business_context", {
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   title: varchar("title"), // Auto-generated or user-set title
   lastMessageAt: timestamp("last_message_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -305,6 +324,7 @@ export const customFieldTypeEnum = pgEnum('custom_field_type', [
 // Custom fields for dynamic schema extension
 export const customFields = pgTable("custom_fields", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   entityName: varchar("entity_name").notNull(), // e.g., 'enterprises', 'people', etc.
   fieldName: varchar("field_name").notNull(), // e.g., 'industry', 'custom_rating'
   fieldType: customFieldTypeEnum("field_type").notNull(),
@@ -417,6 +437,7 @@ export const subscriptions = pgTable("subscriptions", {
 export const aiUsageLogs = pgTable("ai_usage_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id),
   subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
   // Usage details
   operationType: varchar("operation_type").notNull(), // 'chat', 'lead_score', 'content_generation', etc.
@@ -665,6 +686,7 @@ export const externalEntities = pgTable("external_entities", {
 export const externalSyncJobs = pgTable("external_sync_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   provider: externalProviderEnum("provider").notNull(),
   jobType: syncJobTypeEnum("job_type").notNull(),
   status: syncJobStatusEnum("status").default('queued').notNull(),
@@ -682,6 +704,7 @@ export const externalSyncJobs = pgTable("external_sync_jobs", {
 export const importJobs = pgTable("import_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
   entityType: importEntityTypeEnum("entity_type").notNull(),
   status: importStatusEnum("status").default('uploaded').notNull(),
   fileName: varchar("file_name").notNull(),
@@ -1021,3 +1044,12 @@ export type InsertEnterpriseTeamMember = z.infer<typeof insertEnterpriseTeamMemb
 export type EnterpriseTeamMember = typeof enterpriseTeamMembers.$inferSelect;
 export type InsertEnterpriseInvitation = z.infer<typeof insertEnterpriseInvitationSchema>;
 export type EnterpriseInvitation = typeof enterpriseInvitations.$inferSelect;
+
+export const insertMemberProfileSchema = createInsertSchema(memberProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMemberProfile = z.infer<typeof insertMemberProfileSchema>;
+export type MemberProfile = typeof memberProfiles.$inferSelect;
