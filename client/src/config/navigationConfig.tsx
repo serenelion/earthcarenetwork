@@ -9,7 +9,8 @@ import {
   Crown, 
   ArrowRightLeft,
   LayoutDashboard,
-  Book
+  Book,
+  Building2
 } from "lucide-react";
 import { UserRole } from "@/lib/authUtils";
 
@@ -61,6 +62,12 @@ export const memberNavItems: NavLinkItem[] = [
     label: "Dashboard",
     icon: Home,
     testId: "nav-member-dashboard"
+  },
+  {
+    href: "/my-enterprise",
+    label: "My Enterprise",
+    icon: Building2,
+    testId: "nav-my-enterprise"
   },
   {
     href: "/favorites",

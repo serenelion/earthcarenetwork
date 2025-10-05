@@ -771,6 +771,25 @@ export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   updatedAt: true,
 });
 
+export const editorEnterpriseUpdateSchema = insertEnterpriseSchema.pick({
+  description: true,
+  contactEmail: true,
+  tags: true,
+}).partial();
+
+export const adminEnterpriseUpdateSchema = insertEnterpriseSchema.pick({
+  name: true,
+  description: true,
+  contactEmail: true,
+  tags: true,
+  location: true,
+  category: true,
+  website: true,
+  imageUrl: true,
+}).partial();
+
+export const ownerEnterpriseUpdateSchema = adminEnterpriseUpdateSchema;
+
 export const insertPersonSchema = createInsertSchema(people).omit({
   id: true,
   createdAt: true,

@@ -28,6 +28,9 @@ import {
 } from "./invitationBatch";
 import { 
   insertEnterpriseSchema,
+  editorEnterpriseUpdateSchema,
+  adminEnterpriseUpdateSchema,
+  ownerEnterpriseUpdateSchema,
   insertPersonSchema,
   insertOpportunitySchema,
   insertTaskSchema,
@@ -436,6 +439,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error revoking pledge:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to revoke pledge", error: errorMessage });
+    }
+  });
+
+  app.get('/api/my-enterprises', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const memberships = await storage.getUserTeamMemberships(userId);
+      
+      const result = memberships.map((membership) => ({
+        enterprise: membership.enterprise,
+        role: membership.role,
+        joinedAt: membership.acceptedAt || membership.invitedAt
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching user enterprise memberships:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch enterprise memberships", error: errorMessage });
+    }
+  });
+
+  app.patch('/api/enterprises/:id/my', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      if (!enterprise) {
+        return res.status(404).json({ message: "Enterprise not found" });
+      }
+
+      const userRole = await getUserEnterpriseRole(userId, enterpriseId);
+      if (!userRole) {
+        return res.status(403).json({ 
+          message: "Forbidden - not a member of this enterprise" 
+        });
+      }
+
+      if (userRole === 'viewer') {
+        return res.status(403).json({ 
+          message: "Forbidden - viewers cannot update enterprise profiles" 
+        });
+      }
+
+      let updateSchema;
+      if (userRole === 'editor') {
+        updateSchema = editorEnterpriseUpdateSchema;
+      } else if (userRole === 'admin') {
+        updateSchema = adminEnterpriseUpdateSchema;
+      } else if (userRole === 'owner') {
+        updateSchema = ownerEnterpriseUpdateSchema;
+      } else {
+        return res.status(403).json({ 
+          message: "Forbidden - insufficient permissions" 
+        });
+      }
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      const allowedFields: Record<string, any> = {};
+      if (userRole === 'editor') {
+        if (validatedData.description !== undefined) allowedFields.description = validatedData.description;
+        if (validatedData.contactEmail !== undefined) allowedFields.contactEmail = validatedData.contactEmail;
+        if (validatedData.tags !== undefined) allowedFields.tags = validatedData.tags;
+      } else if (userRole === 'admin' || userRole === 'owner') {
+        if (validatedData.description !== undefined) allowedFields.description = validatedData.description;
+        if (validatedData.contactEmail !== undefined) allowedFields.contactEmail = validatedData.contactEmail;
+        if (validatedData.tags !== undefined) allowedFields.tags = validatedData.tags;
+        if (validatedData.name !== undefined) allowedFields.name = validatedData.name;
+        if (validatedData.location !== undefined) allowedFields.location = validatedData.location;
+        if (validatedData.category !== undefined) allowedFields.category = validatedData.category;
+        if (validatedData.website !== undefined) allowedFields.website = validatedData.website;
+        if (validatedData.imageUrl !== undefined) allowedFields.imageUrl = validatedData.imageUrl;
+      }
+      
+      const updatedEnterprise = await storage.updateEnterprise(enterpriseId, allowedFields);
+
+      res.json(updatedEnterprise);
+    } catch (error) {
+      console.error("Error updating enterprise:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to update enterprise", error: errorMessage });
     }
   });
 

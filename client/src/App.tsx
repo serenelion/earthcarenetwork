@@ -38,6 +38,7 @@ import NotFound from "@/pages/not-found";
 import Search from "@/pages/Search";
 import TeamManagement from "@/pages/TeamManagement";
 import AcceptInvitation from "@/pages/AcceptInvitation";
+import MyEnterprise from "@/pages/MyEnterprise";
 // Documentation imports
 import DocsLayout from "@/components/docs/DocsLayout";
 import DocsHome from "@/pages/docs/DocsHome";
@@ -337,6 +338,12 @@ function Router() {
           <Route path="/dashboard">
             <AuthenticatedRoute>
               <Dashboard />
+            </AuthenticatedRoute>
+          </Route>
+          
+          <Route path="/my-enterprise">
+            <AuthenticatedRoute>
+              <MyEnterprise />
             </AuthenticatedRoute>
           </Route>
           

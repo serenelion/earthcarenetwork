@@ -6,6 +6,7 @@ import { insertEnterpriseInvitationSchema, enterpriseTeamMembers } from "@shared
 import { getUserEnterpriseRole, type TeamMemberRole } from "./authorization";
 import { db } from "../db";
 import { and, eq, gt, lt } from "drizzle-orm";
+import { isAuthenticated } from "../replitAuth";
 
 const enterpriseRouter = Router();
 const teamRouter = Router();

@@ -2539,7 +2539,12 @@ export class DatabaseStorage implements IStorage {
       })
       .from(enterpriseTeamMembers)
       .innerJoin(enterprises, eq(enterpriseTeamMembers.enterpriseId, enterprises.id))
-      .where(eq(enterpriseTeamMembers.userId, userId))
+      .where(
+        and(
+          eq(enterpriseTeamMembers.userId, userId),
+          eq(enterpriseTeamMembers.status, 'active')
+        )
+      )
       .orderBy(desc(enterpriseTeamMembers.createdAt))
       .limit(limit)
       .offset(offset);
