@@ -50,7 +50,8 @@ import {
   opportunities,
   enterprises,
   people,
-  enterpriseOwners
+  enterpriseOwners,
+  users
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
@@ -374,6 +375,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error checking claim status:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to check claim status", error: errorMessage });
+    }
+  });
+
+  // Direct claim endpoint (no token required) - authenticated members can claim unclaimed enterprises
+  app.post('/api/enterprises/:id/claim-direct', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { id: enterpriseId } = req.params;
+      
+      // Get enterprise details
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      if (!enterprise) {
+        return res.status(404).json({ message: "Enterprise not found" });
+      }
+      
+      // Check if enterprise is already claimed
+      const hasOwner = await storage.hasEnterpriseOwner(enterpriseId);
+      if (hasOwner) {
+        return res.status(400).json({ message: "This enterprise is already claimed" });
+      }
+
+      // Get user details
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // SECURITY: Only allow claiming if user's email matches enterprise contact email
+      // This ensures only legitimate enterprise representatives can claim
+      if (!enterprise.contactEmail || enterprise.contactEmail.toLowerCase() !== user.email?.toLowerCase()) {
+        return res.status(403).json({ 
+          message: "You can only claim enterprises where your email matches the enterprise contact email. Please contact support for assistance.",
+          requiresVerification: true
+        });
+      }
+
+      // Check claim limits based on plan type
+      const maxClaims = user.maxClaimedProfiles ?? (user.currentPlanType === 'free' ? 1 : 999);
+      const currentClaims = user.claimedProfilesCount ?? 0;
+
+      if (currentClaims >= maxClaims) {
+        // Free users get upgrade message
+        if (user.currentPlanType === 'free') {
+          return res.status(403).json({ 
+            message: "You've reached your free plan limit of 1 enterprise claim. Upgrade to CRM Pro for unlimited claims.",
+            requiresUpgrade: true 
+          });
+        } else {
+          // Paid users who somehow hit limit
+          return res.status(403).json({ 
+            message: `You've reached your plan's limit of ${maxClaims} enterprise claims.`,
+            requiresUpgrade: false
+          });
+        }
+      }
+
+      try {
+        // Add user as owner to enterprise team
+        await storage.createTeamMember({
+          enterpriseId,
+          userId,
+          role: 'owner',
+          status: 'active',
+          invitedAt: new Date(),
+          acceptedAt: new Date()
+        });
+      } catch (memberError) {
+        // Check if error is due to duplicate membership
+        if (memberError instanceof Error && memberError.message.includes('unique')) {
+          return res.status(409).json({ 
+            message: "You are already a member of this enterprise team." 
+          });
+        }
+        throw memberError; // Re-throw if it's a different error
+      }
+
+      // Update user's role to enterprise_owner and increment claimed profiles count
+      await db.update(users)
+        .set({ 
+          role: 'enterprise_owner',
+          claimedProfilesCount: (user.claimedProfilesCount || 0) + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ 
+        success: true,
+        message: "Enterprise claimed successfully",
+        enterprise 
+      });
+    } catch (error) {
+      console.error("Error claiming enterprise:", error);
+      res.status(500).json({ message: "Failed to claim enterprise" });
     }
   });
 

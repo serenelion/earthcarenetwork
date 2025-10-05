@@ -86,6 +86,7 @@ function Router() {
           <Route path="/claim-enterprise" component={ClaimEnterprise} />
           <Route path="/claim-enterprise/:enterpriseId/:contactId" component={ClaimEnterprise} />
           <Route path="/claim-profile" component={ClaimProfile} />
+          <Route path="/claim-profile/:enterpriseId" component={ClaimProfile} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/plans" component={Pricing} />
           

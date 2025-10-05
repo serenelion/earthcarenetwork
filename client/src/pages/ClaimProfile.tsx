@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Building2, Mail, MapPin, Globe, CheckCircle, XCircle, Clock } from "luc
 import { useToast } from "@/hooks/use-toast";
 
 interface ClaimData {
-  claim: {
+  claim?: {
     id: string;
     invitedEmail: string;
     invitedName?: string;
@@ -29,6 +29,7 @@ interface ClaimData {
 
 export default function ClaimProfile() {
   const [, navigate] = useLocation();
+  const params = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const [claimData, setClaimData] = useState<ClaimData | null>(null);
@@ -36,54 +37,114 @@ export default function ClaimProfile() {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const queryParams = new URLSearchParams(window.location.search);
+  const token = queryParams.get("token");
+  const enterpriseId = params.enterpriseId;
+
+  const isDirectClaim = !!enterpriseId;
+  const isTokenClaim = !!token;
+
   useEffect(() => {
     const fetchClaimData = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get("token");
+      if (isTokenClaim) {
+        try {
+          const response = await fetch(`/api/enterprises/claim/${token}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch claim data");
+          }
 
-      if (!token) {
-        setError("Invalid claim link - no token provided");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/enterprises/claim/${token}`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch claim data");
+          const data = await response.json();
+          setClaimData(data);
+        } catch (err) {
+          console.error("Error fetching claim data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load claim data");
+        } finally {
+          setLoading(false);
         }
+      } else if (isDirectClaim) {
+        try {
+          const response = await fetch(`/api/enterprises/${enterpriseId}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch enterprise data");
+          }
 
-        const data = await response.json();
-        setClaimData(data);
-      } catch (err) {
-        console.error("Error fetching claim data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load claim data");
-      } finally {
+          const enterprise = await response.json();
+          
+          const claimStatusResponse = await fetch(`/api/enterprises/${enterpriseId}/claim-status`);
+          const claimStatus = await claimStatusResponse.json();
+          
+          if (!claimStatus.canClaim) {
+            setError("This enterprise has already been claimed");
+            setLoading(false);
+            return;
+          }
+
+          setClaimData({ enterprise });
+        } catch (err) {
+          console.error("Error fetching enterprise data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load enterprise data");
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setError("Invalid claim link - no token or enterprise ID provided");
         setLoading(false);
       }
     };
 
     fetchClaimData();
-  }, []);
+  }, [token, enterpriseId, isTokenClaim, isDirectClaim]);
 
   const handleClaim = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    if (!token || !user) return;
+    if (!user) return;
 
     setClaiming(true);
     try {
-      const response = await fetch(`/api/enterprises/claim/${token}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      let response;
+      
+      if (isTokenClaim) {
+        response = await fetch(`/api/enterprises/claim/${token}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } else if (isDirectClaim) {
+        response = await fetch(`/api/enterprises/${enterpriseId}/claim-direct`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } else {
+        throw new Error("Invalid claim configuration");
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle specific error cases
+        if (errorData.requiresVerification) {
+          toast({
+            title: "Email Verification Required",
+            description: errorData.message || "You can only claim enterprises where your email matches the contact email.",
+            variant: "destructive",
+          });
+          return;
+        } else if (errorData.requiresUpgrade) {
+          toast({
+            title: "Upgrade Required",
+            description: errorData.message,
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            navigate("/pricing");
+          }, 2000);
+          return;
+        }
+        
         throw new Error(errorData.message || "Failed to claim profile");
       }
 
@@ -91,7 +152,7 @@ export default function ClaimProfile() {
       
       toast({
         title: "Success!",
-        description: `You are now the owner of ${result.enterprise.name}`,
+        description: `You are now the owner of ${result.enterprise?.name || claimData?.enterprise.name}`,
       });
 
       setTimeout(() => {
@@ -152,8 +213,8 @@ export default function ClaimProfile() {
   }
 
   const { claim, enterprise } = claimData;
-  const expiresAt = new Date(claim.expiresAt);
-  const isExpired = expiresAt < new Date();
+  const expiresAt = claim ? new Date(claim.expiresAt) : null;
+  const isExpired = expiresAt ? expiresAt < new Date() : false;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
@@ -162,10 +223,12 @@ export default function ClaimProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-6 w-6" />
-              Claim Your Enterprise Profile
+              {isDirectClaim ? "Claim This Enterprise" : "Claim Your Enterprise Profile"}
             </CardTitle>
             <CardDescription>
-              You've been invited to claim ownership of this enterprise profile
+              {isDirectClaim 
+                ? "You can claim ownership of this unclaimed enterprise profile" 
+                : "You've been invited to claim ownership of this enterprise profile"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -214,18 +277,22 @@ export default function ClaimProfile() {
                 )}
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2" data-testid="text-invited-email">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Invited: {claim.invitedEmail}</span>
+              {claim && (
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2" data-testid="text-invited-email">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Invited: {claim.invitedEmail}</span>
+                  </div>
+                  {expiresAt && (
+                    <div className="flex items-center gap-2" data-testid="text-expires">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {isExpired ? "Expired" : `Expires`}: {expiresAt.toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2" data-testid="text-expires">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {isExpired ? "Expired" : `Expires`}: {expiresAt.toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
             {isExpired ? (
@@ -256,7 +323,9 @@ export default function ClaimProfile() {
                 <Alert data-testid="alert-claim-ready">
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Click the button below to claim ownership of this enterprise profile. You will become the enterprise owner.
+                    {isDirectClaim 
+                      ? "Click the button below to claim ownership of this enterprise profile. As the owner, you'll have full control to manage the profile and team."
+                      : "Click the button below to claim ownership of this enterprise profile. You will become the enterprise owner."}
                   </AlertDescription>
                 </Alert>
                 <Button
