@@ -231,7 +231,7 @@ export default function SubscriptionDashboard() {
                   <div className="space-y-4">
                     <div className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold">CRM Basic</h4>
+                        <h4 className="font-semibold">CRM Pro</h4>
                         <div className="text-right">
                           <div className="text-lg font-bold">$42</div>
                           <div className="text-sm text-muted-foreground">/month</div>
@@ -242,7 +242,7 @@ export default function SubscriptionDashboard() {
                       </p>
                       <Button size="sm" asChild>
                         <Link href="/pricing">
-                          Upgrade to CRM Basic
+                          Upgrade to CRM Pro
                         </Link>
                       </Button>
                     </div>

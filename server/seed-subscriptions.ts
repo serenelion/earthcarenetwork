@@ -153,36 +153,36 @@ async function seedSubscriptionPlans() {
       });
     console.log(`✅ Seeded plan: ${freePlan.name}`);
     
-    // CRM Basic plan
-    const crmBasicPriceMonthly = 4200; // $42 in cents
-    const crmBasicPriceYearly = 42000; // $420/year
+    // CRM Pro plan
+    const crmProPriceMonthly = 4200; // $42 in cents
+    const crmProPriceYearly = 42000; // $420/year
     
-    let crmBasicPriceIds: StripePriceIds;
+    let crmProPriceIds: StripePriceIds;
     if (isTestMode && isStripeConfigured) {
-      crmBasicPriceIds = await createStripeTestPrices(
-        'CRM Basic',
-        'Full CRM access + AI Sales Autopilot',
-        crmBasicPriceMonthly,
-        crmBasicPriceYearly
+      crmProPriceIds = await createStripeTestPrices(
+        'CRM Pro',
+        'Self-hosted CRM + AI Sales Autopilot',
+        crmProPriceMonthly,
+        crmProPriceYearly
       );
     } else if (isStripeConfigured) {
-      crmBasicPriceIds = getPriceIdsFromEnv('CRM_BASIC');
-      if (!crmBasicPriceIds.monthly || !crmBasicPriceIds.yearly) {
-        console.log('⚠️  CRM Basic price IDs not found in environment variables');
-        console.log('   Set STRIPE_CRM_BASIC_MONTHLY_PRICE_ID and STRIPE_CRM_BASIC_YEARLY_PRICE_ID');
+      crmProPriceIds = getPriceIdsFromEnv('CRM_PRO');
+      if (!crmProPriceIds.monthly || !crmProPriceIds.yearly) {
+        console.log('⚠️  CRM Pro price IDs not found in environment variables');
+        console.log('   Set STRIPE_CRM_PRO_MONTHLY_PRICE_ID and STRIPE_CRM_PRO_YEARLY_PRICE_ID');
       }
     } else {
-      crmBasicPriceIds = { monthly: null, yearly: null };
+      crmProPriceIds = { monthly: null, yearly: null };
     }
     
-    const crmBasicPlan = {
-      planType: 'crm_basic' as const,
-      name: 'CRM Basic',
-      description: 'Full CRM access + AI Sales Autopilot',
-      priceMonthly: crmBasicPriceMonthly,
-      priceYearly: crmBasicPriceYearly,
-      stripePriceIdMonthly: crmBasicPriceIds.monthly,
-      stripePriceIdYearly: crmBasicPriceIds.yearly,
+    const crmProPlan = {
+      planType: 'crm_pro' as const,
+      name: 'CRM Pro',
+      description: 'Self-hosted CRM + AI Sales Autopilot',
+      priceMonthly: crmProPriceMonthly,
+      priceYearly: crmProPriceYearly,
+      stripePriceIdMonthly: crmProPriceIds.monthly,
+      stripePriceIdYearly: crmProPriceIds.yearly,
       features: [
         'Everything in Free',
         'Full CRM access',
@@ -196,29 +196,29 @@ async function seedSubscriptionPlans() {
         'Top up credits anytime',
         'Priority support'
       ],
-      creditAllocation: crmBasicPriceMonthly,
+      creditAllocation: crmProPriceMonthly,
       isActive: true,
       displayOrder: 1
     };
     
     await db.insert(subscriptionPlans)
-      .values(crmBasicPlan)
+      .values(crmProPlan)
       .onConflictDoUpdate({
         target: subscriptionPlans.planType,
         set: {
-          name: crmBasicPlan.name,
-          description: crmBasicPlan.description,
-          priceMonthly: crmBasicPlan.priceMonthly,
-          priceYearly: crmBasicPlan.priceYearly,
-          stripePriceIdMonthly: crmBasicPlan.stripePriceIdMonthly,
-          stripePriceIdYearly: crmBasicPlan.stripePriceIdYearly,
-          features: crmBasicPlan.features,
-          creditAllocation: crmBasicPlan.creditAllocation,
-          isActive: crmBasicPlan.isActive,
-          displayOrder: crmBasicPlan.displayOrder,
+          name: crmProPlan.name,
+          description: crmProPlan.description,
+          priceMonthly: crmProPlan.priceMonthly,
+          priceYearly: crmProPlan.priceYearly,
+          stripePriceIdMonthly: crmProPlan.stripePriceIdMonthly,
+          stripePriceIdYearly: crmProPlan.stripePriceIdYearly,
+          features: crmProPlan.features,
+          creditAllocation: crmProPlan.creditAllocation,
+          isActive: crmProPlan.isActive,
+          displayOrder: crmProPlan.displayOrder,
         }
       });
-    console.log(`✅ Seeded plan: ${crmBasicPlan.name}`);
+    console.log(`✅ Seeded plan: ${crmProPlan.name}`);
     
     // Build Pro Bundle plan
     const buildProPriceMonthly = 8811; // $88.11 in cents
@@ -251,7 +251,7 @@ async function seedSubscriptionPlans() {
       stripePriceIdMonthly: buildProPriceIds.monthly,
       stripePriceIdYearly: buildProPriceIds.yearly,
       features: [
-        'Everything in CRM Basic',
+        'Everything in CRM Pro',
         'Spatial Network Build Pro access',
         'Advanced project management',
         'Geographic visualization tools',

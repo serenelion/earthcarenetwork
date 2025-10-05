@@ -8,7 +8,7 @@ import { Link } from 'wouter';
 
 interface SubscriptionGuardProps {
   children: ReactNode;
-  requiredPlan?: 'free' | 'crm_basic' | 'build_pro_bundle';
+  requiredPlan?: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle';
   fallback?: ReactNode;
   showUpgrade?: boolean;
   upgradeMessage?: string;
@@ -16,7 +16,7 @@ interface SubscriptionGuardProps {
 
 export default function SubscriptionGuard({ 
   children, 
-  requiredPlan = 'crm_basic',
+  requiredPlan = 'crm_pro',
   fallback,
   showUpgrade = true,
   upgradeMessage
@@ -48,7 +48,7 @@ export default function SubscriptionGuard({
 
   // Default upgrade prompt
   if (showUpgrade) {
-    const planName = requiredPlan === 'crm_basic' ? 'CRM Basic' : 
+    const planName = requiredPlan === 'crm_pro' ? 'CRM Pro' : 
                     requiredPlan === 'build_pro_bundle' ? 'Build Pro Bundle' : 'Premium';
     
     const defaultMessage = `Access to this feature requires a ${planName} subscription.`;
@@ -105,9 +105,9 @@ export default function SubscriptionGuard({
             )}
           </div>
           
-          {requiredPlan === 'crm_basic' && (
+          {requiredPlan === 'crm_pro' && (
             <div className="text-sm text-muted-foreground">
-              <p>CRM Basic includes:</p>
+              <p>CRM Pro includes:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Full CRM access</li>
                 <li>Opportunity management</li>
@@ -126,7 +126,7 @@ export default function SubscriptionGuard({
 }
 
 // Convenience hook for checking subscription access
-export function useRequireSubscription(requiredPlan: 'free' | 'crm_basic' | 'build_pro_bundle' = 'crm_basic') {
+export function useRequireSubscription(requiredPlan: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle' = 'crm_pro') {
   const { hasPlanAccess, hasActiveSubscription } = useSubscription();
   
   return {

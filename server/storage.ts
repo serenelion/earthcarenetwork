@@ -186,7 +186,7 @@ export interface IStorage {
   // Subscription plan operations
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
   getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined>;
-  getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined>;
+  getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined>;
   createSubscriptionPlan(plan: InsertSubscriptionPlan): Promise<SubscriptionPlan>;
   updateSubscriptionPlan(id: string, plan: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan>;
   deleteSubscriptionPlan(id: string): Promise<void>;
@@ -1401,7 +1401,7 @@ export class DatabaseStorage implements IStorage {
     return plan;
   }
 
-  async getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined> {
+  async getSubscriptionPlanByType(planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle'): Promise<SubscriptionPlan | undefined> {
     const [plan] = await db.select().from(subscriptionPlans)
       .where(and(
         eq(subscriptionPlans.planType, planType),

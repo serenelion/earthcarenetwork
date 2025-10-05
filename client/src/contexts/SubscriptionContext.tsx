@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 // Types for subscription data
 export interface SubscriptionPlan {
   id: string;
-  planType: 'free' | 'crm_basic' | 'build_pro_bundle';
+  planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle';
   name: string;
   description: string | null;
   priceMonthly: number;
@@ -21,7 +21,7 @@ export interface SubscriptionPlan {
 }
 
 export interface UserSubscriptionStatus {
-  currentPlanType: 'free' | 'crm_basic' | 'build_pro_bundle';
+  currentPlanType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle';
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | null;
   subscriptionCurrentPeriodEnd: string | null;
   tokenUsageThisMonth: number;
@@ -67,7 +67,7 @@ export interface SubscriptionContextType {
   
   // Helpers
   hasActiveSubscription: () => boolean;
-  hasPlanAccess: (planType: 'free' | 'crm_basic' | 'build_pro_bundle') => boolean;
+  hasPlanAccess: (planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle') => boolean;
   canAccessCRM: () => boolean;
   getRemainingTokens: () => number;
   getTokenUsagePercentage: () => number;
@@ -93,7 +93,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     data: subscriptionPlans = [], 
     isLoading: isLoadingPlans,
     refetch: refetchPlans
-  } = useQuery({
+  } = useQuery<SubscriptionPlan[]>({
     queryKey: ['/api/subscription-plans'],
     enabled: true,
   });
@@ -103,7 +103,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     data: subscriptionData, 
     isLoading: isLoadingSubscription,
     refetch: refetchSubscriptionStatus
-  } = useQuery({
+  } = useQuery<{ user: UserSubscriptionStatus; subscription: Subscription | null }>({
     queryKey: ['/api/subscription/status'],
     enabled: isAuthenticated && !!user,
   });
@@ -169,7 +169,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
            userSubscription?.subscriptionStatus === 'trial';
   };
 
-  const hasPlanAccess = (planType: 'free' | 'crm_basic' | 'build_pro_bundle'): boolean => {
+  const hasPlanAccess = (planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle'): boolean => {
     if (!userSubscription) return planType === 'free';
     
     const userPlanType = userSubscription.currentPlanType;
@@ -177,9 +177,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     // Free access
     if (planType === 'free') return true;
     
-    // CRM Basic access
-    if (planType === 'crm_basic') {
-      return userPlanType === 'crm_basic' || userPlanType === 'build_pro_bundle';
+    // CRM Pro access (support both legacy crm_basic and new crm_pro)
+    if (planType === 'crm_basic' || planType === 'crm_pro') {
+      return userPlanType === 'crm_basic' || userPlanType === 'crm_pro' || userPlanType === 'build_pro_bundle';
     }
     
     // Build Pro Bundle access
@@ -191,7 +191,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   };
 
   const canAccessCRM = (): boolean => {
-    return hasPlanAccess('crm_basic') && hasActiveSubscription();
+    return hasPlanAccess('crm_pro') && hasActiveSubscription();
   };
 
   const getRemainingTokens = (): number => {

@@ -83,7 +83,7 @@ if (user) {
   firstName: string;
   lastName: string;
   role: 'visitor' | 'member' | 'enterprise_owner' | 'admin';
-  currentPlanType: 'free' | 'crm_basic' | 'build_pro_bundle';
+  currentPlanType: 'free' | 'crm_pro' | 'build_pro_bundle';
 }
 
 async function checkAuth(): Promise<User | null> {

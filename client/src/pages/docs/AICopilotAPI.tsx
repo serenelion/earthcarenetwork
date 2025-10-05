@@ -425,7 +425,7 @@ async function getCachedLeadScore(enterpriseId, personId) {
                 <td className="py-3 px-4">10 requests/hour</td>
               </tr>
               <tr className="border-b">
-                <td className="py-3 px-4">CRM Basic</td>
+                <td className="py-3 px-4">CRM Pro</td>
                 <td className="py-3 px-4">$42 AI credits</td>
                 <td className="py-3 px-4">50 requests/hour</td>
               </tr>

@@ -56,7 +56,8 @@ export const subscriptionStatusEnum = pgEnum('subscription_status', [
 // Plan types for subscription tiers
 export const planTypeEnum = pgEnum('plan_type', [
   'free',
-  'crm_basic',
+  'crm_basic', // Legacy - will be migrated to crm_pro
+  'crm_pro',
   'build_pro_bundle'
 ]);
 

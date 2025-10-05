@@ -58,9 +58,9 @@ export default function Pricing() {
       stripePriceIdYearly: null
     },
     {
-      id: 'crm_basic',
-      planType: 'crm_basic' as const,
-      name: 'CRM Basic',
+      id: 'crm_pro',
+      planType: 'crm_pro' as const,
+      name: 'CRM Pro',
       description: 'Full CRM access for regenerative entrepreneurs',
       priceMonthly: 4200, // $42 in cents
       priceYearly: 42000, // $420/year (2 months free)
@@ -79,8 +79,8 @@ export default function Pricing() {
       tokenQuotaLimit: 4200,
       isActive: true,
       displayOrder: 1,
-      stripePriceIdMonthly: 'price_crm_basic_monthly',
-      stripePriceIdYearly: 'price_crm_basic_yearly'
+      stripePriceIdMonthly: 'price_crm_pro_monthly',
+      stripePriceIdYearly: 'price_crm_pro_yearly'
     },
     {
       id: 'build_pro_bundle',
@@ -90,7 +90,7 @@ export default function Pricing() {
       priceMonthly: 8811, // $88.11 in cents
       priceYearly: 88110, // $881.10/year
       features: [
-        'Everything in CRM Basic',
+        'Everything in CRM Pro',
         'Spatial Network Build Pro access',
         'Advanced project management',
         'Geographic visualization tools',
@@ -153,7 +153,7 @@ export default function Pricing() {
             const savings = monthlyPrice > 0 ? ((monthlyPrice - yearlyMonthlyEquivalent) / monthlyPrice) * 100 : 0;
             
             const isCurrentPlan = plan.planType === currentPlanType;
-            const isPopular = plan.planType === 'crm_basic';
+            const isPopular = plan.planType === 'crm_pro';
             const isFree = plan.planType === 'free';
             const isComingSoon = !plan.isActive;
 
@@ -183,7 +183,7 @@ export default function Pricing() {
                 <CardHeader className="text-center">
                   <div className="flex justify-center mb-2">
                     {isFree && <Users className="w-8 h-8 text-green-600" />}
-                    {plan.planType === 'crm_basic' && <BarChart3 className="w-8 h-8 text-blue-600" />}
+                    {plan.planType === 'crm_pro' && <BarChart3 className="w-8 h-8 text-blue-600" />}
                     {plan.planType === 'build_pro_bundle' && <Zap className="w-8 h-8 text-purple-600" />}
                   </div>
                   
@@ -300,9 +300,9 @@ export default function Pricing() {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-2">What's included in the CRM Basic plan?</h3>
+              <h3 className="text-xl font-semibold mb-2">What's included in the CRM Pro plan?</h3>
               <p className="text-muted-foreground">
-                CRM Basic gives you full access to our professionally hosted platform designed specifically 
+                CRM Pro gives you full access to our professionally hosted platform designed specifically 
                 for regenerative enterprises. This includes opportunity management, lead scoring, AI insights, 
                 advanced search, task management, and contact relationship mapping.
               </p>
@@ -313,7 +313,7 @@ export default function Pricing() {
               <p className="text-muted-foreground">
                 AI credits are used for features like lead scoring, content generation, and copilot assistance. 
                 Credits are dollar-based (100 cents = $1.00) and charged based on actual AI API usage. 
-                The free tier includes $0.10/month, CRM Basic includes $42/month, and you can top up anytime.
+                The free tier includes $0.10/month, CRM Pro includes $42/month, and you can top up anytime.
               </p>
             </div>
             
@@ -329,7 +329,7 @@ export default function Pricing() {
             <div>
               <h3 className="text-xl font-semibold mb-2">What's the Build Pro Bundle?</h3>
               <p className="text-muted-foreground">
-                The Build Pro Bundle includes everything in CRM Basic plus access to Spatial Network Build Pro 
+                The Build Pro Bundle includes everything in CRM Pro plus access to Spatial Network Build Pro 
                 for advanced project management and geographic visualization tools. Perfect for teams managing 
                 complex regenerative projects.
               </p>
