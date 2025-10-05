@@ -9,9 +9,25 @@ import {
   integer,
   boolean,
   pgEnum,
+  customType,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
+  dataType() {
+    return 'bytea';
+  },
+  toDriver(value: Buffer): Buffer {
+    return value;
+  },
+  fromDriver(value: unknown): Buffer {
+    if (Buffer.isBuffer(value)) {
+      return value;
+    }
+    return Buffer.from(value as any);
+  },
+});
 
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
@@ -575,6 +591,34 @@ export const syncJobStatusEnum = pgEnum('sync_job_status', [
   'failed'
 ]);
 
+// CSV Import enums
+export const importEntityTypeEnum = pgEnum('import_entity_type', [
+  'enterprise',
+  'person',
+  'opportunity'
+]);
+
+export const importStatusEnum = pgEnum('import_status', [
+  'uploaded',
+  'mapping',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled'
+]);
+
+export const duplicateStrategyEnum = pgEnum('duplicate_strategy', [
+  'skip',
+  'update',
+  'create_new'
+]);
+
+export const importErrorTypeEnum = pgEnum('import_error_type', [
+  'validation',
+  'duplicate',
+  'system'
+]);
+
 // External API Tokens table - Store per-user API credentials/metadata
 export const externalApiTokens = pgTable("external_api_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -630,6 +674,39 @@ export const externalSyncJobs = pgTable("external_sync_jobs", {
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Import Jobs table - Track CSV import operations
+export const importJobs = pgTable("import_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  entityType: importEntityTypeEnum("entity_type").notNull(),
+  status: importStatusEnum("status").default('uploaded').notNull(),
+  fileName: varchar("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileBuffer: bytea("file_buffer"),
+  totalRows: integer("total_rows"),
+  processedRows: integer("processed_rows").default(0).notNull(),
+  successfulRows: integer("successful_rows").default(0).notNull(),
+  failedRows: integer("failed_rows").default(0).notNull(),
+  mappingConfig: jsonb("mapping_config"),
+  duplicateStrategy: duplicateStrategyEnum("duplicate_strategy").default('skip').notNull(),
+  errorSummary: text("error_summary"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Import Job Errors table - Track row-level import errors
+export const importJobErrors = pgTable("import_job_errors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").references(() => importJobs.id).notNull(),
+  rowNumber: integer("row_number").notNull(),
+  rowData: jsonb("row_data").notNull(),
+  errorMessage: text("error_message").notNull(),
+  errorType: importErrorTypeEnum("error_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert schemas
@@ -779,6 +856,17 @@ export const insertExternalSyncJobSchema = createInsertSchema(externalSyncJobs).
   updatedAt: true,
 });
 
+export const insertImportJobSchema = createInsertSchema(importJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertImportJobErrorSchema = createInsertSchema(importJobErrors).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -832,3 +920,7 @@ export type InsertExternalEntity = z.infer<typeof insertExternalEntitySchema>;
 export type ExternalEntity = typeof externalEntities.$inferSelect;
 export type InsertExternalSyncJob = z.infer<typeof insertExternalSyncJobSchema>;
 export type ExternalSyncJob = typeof externalSyncJobs.$inferSelect;
+export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
+export type ImportJob = typeof importJobs.$inferSelect;
+export type InsertImportJobError = z.infer<typeof insertImportJobErrorSchema>;
+export type ImportJobError = typeof importJobErrors.$inferSelect;

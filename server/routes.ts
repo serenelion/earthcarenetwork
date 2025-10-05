@@ -53,6 +53,7 @@ import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { z } from "zod";
 import integrationRouters from "./integrations/routers";
+import importRouters from "./imports/routers";
 
 // Initialize Stripe (will be used when API keys are available)
 let stripe: Stripe | null = null;
@@ -83,6 +84,47 @@ function requireRole(roles: Array<'visitor' | 'member' | 'enterprise_owner' | 'a
       next();
     } catch (error) {
       console.error("Error checking user role:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}
+
+// Subscription-based authorization middleware
+function requireSubscription(planType: 'crm_basic' | 'crm_pro' | 'build_pro_bundle'): RequestHandler {
+  return async (req: any, res, next) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const planHierarchy: Record<string, number> = {
+        'free': 0,
+        'crm_basic': 1,
+        'crm_pro': 2,
+        'build_pro_bundle': 3
+      };
+
+      const userPlanLevel = planHierarchy[user.currentPlanType || 'free'] || 0;
+      const requiredPlanLevel = planHierarchy[planType];
+
+      if (userPlanLevel < requiredPlanLevel) {
+        return res.status(403).json({ 
+          error: "Subscription required", 
+          message: `This feature requires a ${planType} subscription or higher`,
+          requiredPlan: planType,
+          currentPlan: user.currentPlanType || 'free'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error checking subscription:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   };
@@ -2666,6 +2708,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // External API Integration routes
   app.use('/api/integrations', isAuthenticated, integrationRouters);
+
+  // CSV Import routes
+  app.use('/api/imports', isAuthenticated, importRouters);
 
   const httpServer = createServer(app);
   return httpServer;

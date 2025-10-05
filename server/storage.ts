@@ -22,6 +22,8 @@ import {
   externalSearchCache,
   externalEntities,
   externalSyncJobs,
+  importJobs,
+  importJobErrors,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -72,6 +74,10 @@ import {
   type InsertExternalEntity,
   type ExternalSyncJob,
   type InsertExternalSyncJob,
+  type ImportJob,
+  type InsertImportJob,
+  type ImportJobError,
+  type InsertImportJobError,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -314,6 +320,19 @@ export interface IStorage {
   deleteExternalSyncJob(id: string): Promise<void>;
   updateJobProgress(id: string, progress: number, processedRecords: number): Promise<void>;
   updateJobStatus(id: string, status: 'queued' | 'running' | 'completed' | 'failed', errorMessage?: string): Promise<void>;
+
+  // Import Job operations
+  getImportJob(id: string): Promise<ImportJob | undefined>;
+  getUserImportJobs(userId: string, limit?: number, offset?: number): Promise<ImportJob[]>;
+  createImportJob(job: InsertImportJob): Promise<ImportJob>;
+  updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<ImportJob>;
+  updateImportJobProgress(id: string, processedRows: number, successfulRows: number, failedRows: number): Promise<ImportJob>;
+  updateImportJobStatus(id: string, status: 'uploaded' | 'mapping' | 'processing' | 'completed' | 'failed' | 'cancelled', errorSummary?: string): Promise<ImportJob>;
+
+  // Import Error operations
+  createImportError(error: InsertImportJobError): Promise<ImportJobError>;
+  getJobErrors(jobId: string, limit?: number, offset?: number): Promise<ImportJobError[]>;
+  getErrorsByJob(jobId: string): Promise<ImportJobError[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2305,6 +2324,97 @@ export class DatabaseStorage implements IStorage {
       .update(externalSyncJobs)
       .set(updateData)
       .where(eq(externalSyncJobs.id, id));
+  }
+
+  // Import Job operations
+  async getImportJob(id: string): Promise<ImportJob | undefined> {
+    const [job] = await db.select().from(importJobs).where(eq(importJobs.id, id));
+    return job;
+  }
+
+  async getUserImportJobs(userId: string, limit = 50, offset = 0): Promise<ImportJob[]> {
+    return await db
+      .select()
+      .from(importJobs)
+      .where(eq(importJobs.userId, userId))
+      .orderBy(desc(importJobs.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async createImportJob(job: InsertImportJob): Promise<ImportJob> {
+    const [newJob] = await db.insert(importJobs).values(job).returning();
+    return newJob;
+  }
+
+  async updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<ImportJob> {
+    const [updated] = await db
+      .update(importJobs)
+      .set({ ...job, updatedAt: new Date() })
+      .where(eq(importJobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateImportJobProgress(id: string, processedRows: number, successfulRows: number, failedRows: number): Promise<ImportJob> {
+    const [updated] = await db
+      .update(importJobs)
+      .set({ 
+        processedRows, 
+        successfulRows, 
+        failedRows, 
+        updatedAt: new Date() 
+      })
+      .where(eq(importJobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateImportJobStatus(id: string, status: 'uploaded' | 'mapping' | 'processing' | 'completed' | 'failed' | 'cancelled', errorSummary?: string): Promise<ImportJob> {
+    const updateData: any = { status, updatedAt: new Date() };
+    
+    if (status === 'processing') {
+      updateData.startedAt = new Date();
+    }
+    
+    if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+      updateData.completedAt = new Date();
+    }
+    
+    if (errorSummary) {
+      updateData.errorSummary = errorSummary;
+    }
+    
+    const [updated] = await db
+      .update(importJobs)
+      .set(updateData)
+      .where(eq(importJobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Import Error operations
+  async createImportError(error: InsertImportJobError): Promise<ImportJobError> {
+    const [newError] = await db.insert(importJobErrors).values(error).returning();
+    return newError;
+  }
+
+  async getJobErrors(jobId: string, limit = 100, offset = 0): Promise<ImportJobError[]> {
+    return await db
+      .select()
+      .from(importJobErrors)
+      .where(eq(importJobErrors.jobId, jobId))
+      .orderBy(importJobErrors.rowNumber)
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getErrorsByJob(jobId: string): Promise<ImportJobError[]> {
+    return await db
+      .select()
+      .from(importJobErrors)
+      .where(eq(importJobErrors.jobId, jobId))
+      .orderBy(importJobErrors.rowNumber);
   }
 }
 
