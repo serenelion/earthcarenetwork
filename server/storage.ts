@@ -24,6 +24,8 @@ import {
   externalSyncJobs,
   importJobs,
   importJobErrors,
+  enterpriseTeamMembers,
+  enterpriseInvitations,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -78,6 +80,10 @@ import {
   type InsertImportJob,
   type ImportJobError,
   type InsertImportJobError,
+  type EnterpriseTeamMember,
+  type InsertEnterpriseTeamMember,
+  type EnterpriseInvitation,
+  type InsertEnterpriseInvitation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -85,6 +91,7 @@ import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUsersByRole(role: 'visitor' | 'member' | 'enterprise_owner' | 'admin'): Promise<User[]>;
   getUsersByMembershipStatus(status: 'free' | 'trial' | 'paid_member' | 'spatial_network_subscriber' | 'cancelled'): Promise<User[]>;
@@ -333,12 +340,35 @@ export interface IStorage {
   createImportError(error: InsertImportJobError): Promise<ImportJobError>;
   getJobErrors(jobId: string, limit?: number, offset?: number): Promise<ImportJobError[]>;
   getErrorsByJob(jobId: string): Promise<ImportJobError[]>;
+
+  // Team Member operations
+  getTeamMembers(enterpriseId: string, limit?: number, offset?: number): Promise<Array<EnterpriseTeamMember & { user: User }>>;
+  getTeamMember(id: string): Promise<EnterpriseTeamMember | undefined>;
+  getTeamMemberByUserAndEnterprise(userId: string, enterpriseId: string): Promise<EnterpriseTeamMember | undefined>;
+  createTeamMember(teamMember: InsertEnterpriseTeamMember): Promise<EnterpriseTeamMember>;
+  updateTeamMember(id: string, teamMember: Partial<InsertEnterpriseTeamMember>): Promise<EnterpriseTeamMember>;
+  deleteTeamMember(id: string): Promise<void>;
+  getUserTeamMemberships(userId: string, limit?: number, offset?: number): Promise<Array<EnterpriseTeamMember & { enterprise: Enterprise }>>;
+
+  // Invitation operations
+  createInvitation(invitation: InsertEnterpriseInvitation): Promise<EnterpriseInvitation>;
+  getInvitation(id: string): Promise<EnterpriseInvitation | undefined>;
+  getInvitationByToken(token: string): Promise<EnterpriseInvitation | undefined>;
+  getEnterpriseInvitations(enterpriseId: string, limit?: number, offset?: number): Promise<EnterpriseInvitation[]>;
+  getUserInvitations(email: string, limit?: number, offset?: number): Promise<Array<EnterpriseInvitation & { enterprise: Enterprise }>>;
+  updateInvitation(id: string, invitation: Partial<InsertEnterpriseInvitation>): Promise<EnterpriseInvitation>;
+  cancelInvitation(id: string): Promise<EnterpriseInvitation>;
 }
 
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
@@ -2415,6 +2445,203 @@ export class DatabaseStorage implements IStorage {
       .from(importJobErrors)
       .where(eq(importJobErrors.jobId, jobId))
       .orderBy(importJobErrors.rowNumber);
+  }
+
+  // Team Member operations
+  async getTeamMembers(enterpriseId: string, limit = 50, offset = 0): Promise<Array<EnterpriseTeamMember & { user: User }>> {
+    const results = await db
+      .select({
+        id: enterpriseTeamMembers.id,
+        enterpriseId: enterpriseTeamMembers.enterpriseId,
+        userId: enterpriseTeamMembers.userId,
+        role: enterpriseTeamMembers.role,
+        invitedBy: enterpriseTeamMembers.invitedBy,
+        invitedAt: enterpriseTeamMembers.invitedAt,
+        acceptedAt: enterpriseTeamMembers.acceptedAt,
+        status: enterpriseTeamMembers.status,
+        createdAt: enterpriseTeamMembers.createdAt,
+        updatedAt: enterpriseTeamMembers.updatedAt,
+        user: users,
+      })
+      .from(enterpriseTeamMembers)
+      .innerJoin(users, eq(enterpriseTeamMembers.userId, users.id))
+      .where(eq(enterpriseTeamMembers.enterpriseId, enterpriseId))
+      .orderBy(desc(enterpriseTeamMembers.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      id: result.id,
+      enterpriseId: result.enterpriseId,
+      userId: result.userId,
+      role: result.role,
+      invitedBy: result.invitedBy,
+      invitedAt: result.invitedAt,
+      acceptedAt: result.acceptedAt,
+      status: result.status,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt,
+      user: result.user,
+    }));
+  }
+
+  async getTeamMember(id: string): Promise<EnterpriseTeamMember | undefined> {
+    const [member] = await db.select().from(enterpriseTeamMembers).where(eq(enterpriseTeamMembers.id, id));
+    return member;
+  }
+
+  async getTeamMemberByUserAndEnterprise(userId: string, enterpriseId: string): Promise<EnterpriseTeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(enterpriseTeamMembers)
+      .where(
+        and(
+          eq(enterpriseTeamMembers.userId, userId),
+          eq(enterpriseTeamMembers.enterpriseId, enterpriseId)
+        )
+      )
+      .limit(1);
+    return member;
+  }
+
+  async createTeamMember(teamMember: InsertEnterpriseTeamMember): Promise<EnterpriseTeamMember> {
+    const [newMember] = await db.insert(enterpriseTeamMembers).values(teamMember).returning();
+    return newMember;
+  }
+
+  async updateTeamMember(id: string, teamMember: Partial<InsertEnterpriseTeamMember>): Promise<EnterpriseTeamMember> {
+    const [updated] = await db
+      .update(enterpriseTeamMembers)
+      .set({ ...teamMember, updatedAt: new Date() })
+      .where(eq(enterpriseTeamMembers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTeamMember(id: string): Promise<void> {
+    await db.delete(enterpriseTeamMembers).where(eq(enterpriseTeamMembers.id, id));
+  }
+
+  async getUserTeamMemberships(userId: string, limit = 50, offset = 0): Promise<Array<EnterpriseTeamMember & { enterprise: Enterprise }>> {
+    const results = await db
+      .select({
+        id: enterpriseTeamMembers.id,
+        enterpriseId: enterpriseTeamMembers.enterpriseId,
+        userId: enterpriseTeamMembers.userId,
+        role: enterpriseTeamMembers.role,
+        invitedBy: enterpriseTeamMembers.invitedBy,
+        invitedAt: enterpriseTeamMembers.invitedAt,
+        acceptedAt: enterpriseTeamMembers.acceptedAt,
+        status: enterpriseTeamMembers.status,
+        createdAt: enterpriseTeamMembers.createdAt,
+        updatedAt: enterpriseTeamMembers.updatedAt,
+        enterprise: enterprises,
+      })
+      .from(enterpriseTeamMembers)
+      .innerJoin(enterprises, eq(enterpriseTeamMembers.enterpriseId, enterprises.id))
+      .where(eq(enterpriseTeamMembers.userId, userId))
+      .orderBy(desc(enterpriseTeamMembers.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      id: result.id,
+      enterpriseId: result.enterpriseId,
+      userId: result.userId,
+      role: result.role,
+      invitedBy: result.invitedBy,
+      invitedAt: result.invitedAt,
+      acceptedAt: result.acceptedAt,
+      status: result.status,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt,
+      enterprise: result.enterprise,
+    }));
+  }
+
+  // Invitation operations
+  async createInvitation(invitation: InsertEnterpriseInvitation): Promise<EnterpriseInvitation> {
+    const [newInvitation] = await db.insert(enterpriseInvitations).values(invitation).returning();
+    return newInvitation;
+  }
+
+  async getInvitation(id: string): Promise<EnterpriseInvitation | undefined> {
+    const [invitation] = await db.select().from(enterpriseInvitations).where(eq(enterpriseInvitations.id, id));
+    return invitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<EnterpriseInvitation | undefined> {
+    const [invitation] = await db.select().from(enterpriseInvitations).where(eq(enterpriseInvitations.token, token));
+    return invitation;
+  }
+
+  async getEnterpriseInvitations(enterpriseId: string, limit = 50, offset = 0): Promise<EnterpriseInvitation[]> {
+    return await db
+      .select()
+      .from(enterpriseInvitations)
+      .where(eq(enterpriseInvitations.enterpriseId, enterpriseId))
+      .orderBy(desc(enterpriseInvitations.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getUserInvitations(email: string, limit = 50, offset = 0): Promise<Array<EnterpriseInvitation & { enterprise: Enterprise }>> {
+    const results = await db
+      .select({
+        id: enterpriseInvitations.id,
+        enterpriseId: enterpriseInvitations.enterpriseId,
+        email: enterpriseInvitations.email,
+        role: enterpriseInvitations.role,
+        inviterId: enterpriseInvitations.inviterId,
+        token: enterpriseInvitations.token,
+        expiresAt: enterpriseInvitations.expiresAt,
+        acceptedBy: enterpriseInvitations.acceptedBy,
+        acceptedAt: enterpriseInvitations.acceptedAt,
+        status: enterpriseInvitations.status,
+        createdAt: enterpriseInvitations.createdAt,
+        updatedAt: enterpriseInvitations.updatedAt,
+        enterprise: enterprises,
+      })
+      .from(enterpriseInvitations)
+      .innerJoin(enterprises, eq(enterpriseInvitations.enterpriseId, enterprises.id))
+      .where(eq(enterpriseInvitations.email, email))
+      .orderBy(desc(enterpriseInvitations.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map(result => ({
+      id: result.id,
+      enterpriseId: result.enterpriseId,
+      email: result.email,
+      role: result.role,
+      inviterId: result.inviterId,
+      token: result.token,
+      expiresAt: result.expiresAt,
+      acceptedBy: result.acceptedBy,
+      acceptedAt: result.acceptedAt,
+      status: result.status,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt,
+      enterprise: result.enterprise,
+    }));
+  }
+
+  async updateInvitation(id: string, invitation: Partial<InsertEnterpriseInvitation>): Promise<EnterpriseInvitation> {
+    const [updated] = await db
+      .update(enterpriseInvitations)
+      .set({ ...invitation, updatedAt: new Date() })
+      .where(eq(enterpriseInvitations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cancelInvitation(id: string): Promise<EnterpriseInvitation> {
+    const [updated] = await db
+      .update(enterpriseInvitations)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(enterpriseInvitations.id, id))
+      .returning();
+    return updated;
   }
 }
 

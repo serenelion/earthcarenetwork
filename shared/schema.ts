@@ -709,6 +709,61 @@ export const importJobErrors = pgTable("import_job_errors", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Team functionality enums
+export const teamMemberRoleEnum = pgEnum('team_member_role', [
+  'viewer',
+  'editor',
+  'admin',
+  'owner'
+]);
+
+export const teamMemberStatusEnum = pgEnum('team_member_status', [
+  'active',
+  'inactive',
+  'pending'
+]);
+
+export const enterpriseInvitationStatusEnum = pgEnum('enterprise_invitation_status', [
+  'pending',
+  'accepted',
+  'expired',
+  'cancelled'
+]);
+
+// Enterprise Team Members table - Multi-user access to enterprises
+export const enterpriseTeamMembers = pgTable("enterprise_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  role: teamMemberRoleEnum("role").notNull(),
+  invitedBy: varchar("invited_by").references(() => users.id),
+  invitedAt: timestamp("invited_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  status: teamMemberStatusEnum("status").default('pending').notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("enterprise_team_members_unique_idx").on(table.enterpriseId, table.userId)
+]);
+
+// Enterprise Invitations table - Pending invitations to join enterprise teams
+export const enterpriseInvitations = pgTable("enterprise_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id).notNull(),
+  email: varchar("email").notNull(),
+  role: teamMemberRoleEnum("role").notNull(),
+  inviterId: varchar("inviter_id").references(() => users.id).notNull(),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedBy: varchar("accepted_by").references(() => users.id),
+  acceptedAt: timestamp("accepted_at"),
+  status: enterpriseInvitationStatusEnum("status").default('pending').notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("enterprise_invitations_unique_pending_idx").on(table.enterpriseId, table.email).where(sql`status = 'pending'`)
+]);
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -867,6 +922,18 @@ export const insertImportJobErrorSchema = createInsertSchema(importJobErrors).om
   createdAt: true,
 });
 
+export const insertEnterpriseTeamMemberSchema = createInsertSchema(enterpriseTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEnterpriseInvitationSchema = createInsertSchema(enterpriseInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -924,3 +991,7 @@ export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 export type ImportJob = typeof importJobs.$inferSelect;
 export type InsertImportJobError = z.infer<typeof insertImportJobErrorSchema>;
 export type ImportJobError = typeof importJobErrors.$inferSelect;
+export type InsertEnterpriseTeamMember = z.infer<typeof insertEnterpriseTeamMemberSchema>;
+export type EnterpriseTeamMember = typeof enterpriseTeamMembers.$inferSelect;
+export type InsertEnterpriseInvitation = z.infer<typeof insertEnterpriseInvitationSchema>;
+export type EnterpriseInvitation = typeof enterpriseInvitations.$inferSelect;

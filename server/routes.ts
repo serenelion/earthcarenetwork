@@ -54,6 +54,9 @@ import Stripe from "stripe";
 import { z } from "zod";
 import integrationRouters from "./integrations/routers";
 import importRouters from "./imports/routers";
+import { enterpriseTeamRouter, teamInvitationRouter } from "./teams/routers";
+import { getUserEnterpriseRole, type TeamMemberRole } from "./teams/authorization";
+import "./types";
 
 // Initialize Stripe (will be used when API keys are available)
 let stripe: Stripe | null = null;
@@ -125,6 +128,56 @@ function requireSubscription(planType: 'crm_basic' | 'crm_pro' | 'build_pro_bund
       next();
     } catch (error) {
       console.error("Error checking subscription:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}
+
+function requireEnterpriseRole(minRole: TeamMemberRole): RequestHandler {
+  return async (req: any, res, next) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.enterpriseId || req.params.id;
+      if (!enterpriseId) {
+        return res.status(400).json({ error: "Enterprise ID is required" });
+      }
+
+      const roleHierarchy: Record<TeamMemberRole, number> = {
+        'viewer': 1,
+        'editor': 2,
+        'admin': 3,
+        'owner': 4
+      };
+
+      const userRole = await getUserEnterpriseRole(userId, enterpriseId);
+      
+      if (!userRole) {
+        return res.status(403).json({ 
+          error: "Forbidden - not a member of this enterprise" 
+        });
+      }
+
+      const userRoleLevel = roleHierarchy[userRole];
+      const requiredRoleLevel = roleHierarchy[minRole];
+
+      if (userRoleLevel < requiredRoleLevel) {
+        return res.status(403).json({ 
+          error: "Forbidden - insufficient permissions",
+          message: `This action requires ${minRole} role or higher`,
+          requiredRole: minRole,
+          currentRole: userRole
+        });
+      }
+
+      req.enterpriseRole = userRole;
+
+      next();
+    } catch (error) {
+      console.error("Error checking enterprise role:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   };
@@ -2711,6 +2764,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CSV Import routes
   app.use('/api/imports', isAuthenticated, importRouters);
+
+  // Team invitation routes
+  app.use('/api/enterprises', isAuthenticated, enterpriseTeamRouter);
+  app.use('/api/team', isAuthenticated, teamInvitationRouter);
 
   const httpServer = createServer(app);
   return httpServer;
