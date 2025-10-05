@@ -67,10 +67,10 @@ export default function Landing() {
       <section className="hero-gradient earth-pattern text-white py-24">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 text-[#000000]">
-            Discover Regenerative Enterprise
+            Earth Care Network
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-gray-800 font-medium">
-            Connect with ecological champions from the land to the cloud.
+            An open source directory + CRM for new earth enterprise sales optimization
           </p>
           
           {/* Search Bar */}
