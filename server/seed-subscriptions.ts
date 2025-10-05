@@ -6,7 +6,6 @@ import { db } from './db';
 
 const subscriptionPlanData = [
   {
-    id: nanoid(),
     planType: 'free' as const,
     name: 'Free',
     description: 'Perfect for exploring the Earth Care Network',
@@ -27,7 +26,6 @@ const subscriptionPlanData = [
     displayOrder: 0
   },
   {
-    id: nanoid(),
     planType: 'crm_basic' as const,
     name: 'CRM Basic',
     description: 'Full CRM access + AI Sales Autopilot',
@@ -53,7 +51,6 @@ const subscriptionPlanData = [
     displayOrder: 1
   },
   {
-    id: nanoid(),
     planType: 'build_pro_bundle' as const,
     name: 'Build Pro Bundle',
     description: 'CRM + Spatial Network Build Pro',
@@ -83,7 +80,23 @@ async function seedSubscriptionPlans() {
     console.log('Seeding subscription plans...');
     
     for (const plan of subscriptionPlanData) {
-      await db.insert(subscriptionPlans).values(plan).onConflictDoNothing();
+      await db.insert(subscriptionPlans)
+        .values(plan)
+        .onConflictDoUpdate({
+          target: subscriptionPlans.planType,
+          set: {
+            name: plan.name,
+            description: plan.description,
+            priceMonthly: plan.priceMonthly,
+            priceYearly: plan.priceYearly,
+            stripePriceIdMonthly: plan.stripePriceIdMonthly,
+            stripePriceIdYearly: plan.stripePriceIdYearly,
+            features: plan.features,
+            creditAllocation: plan.creditAllocation,
+            isActive: plan.isActive,
+            displayOrder: plan.displayOrder,
+          }
+        });
       console.log(`✅ Seeded plan: ${plan.name}`);
     }
     

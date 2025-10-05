@@ -350,7 +350,7 @@ export const opportunityTransfers = pgTable("opportunity_transfers", {
 // Subscription plans table - defines available subscription tiers
 export const subscriptionPlans = pgTable("subscription_plans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  planType: planTypeEnum("plan_type").notNull(),
+  planType: planTypeEnum("plan_type").notNull().unique(),
   name: varchar("name").notNull(), // "CRM Basic", "Build Pro Bundle", etc.
   description: text("description"),
   priceMonthly: integer("price_monthly").notNull(), // in cents
