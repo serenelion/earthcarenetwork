@@ -430,10 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/enterprises/:id/pledge', async (req, res) => {
     try {
       const pledge = await storage.getPledgeByEnterpriseId(req.params.id);
-      if (!pledge) {
-        return res.status(404).json({ message: "No pledge found" });
-      }
-      res.json({ pledge });
+      res.json({ pledge: pledge || null });
     } catch (error) {
       console.error("Error fetching pledge:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
