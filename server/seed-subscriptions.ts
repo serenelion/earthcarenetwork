@@ -19,9 +19,10 @@ const subscriptionPlanData = [
       'Access member benefits', 
       'Basic search functionality',
       'Community access',
-      '1,000 AI tokens/month'
+      'Claim 1 enterprise profile',
+      '$0.10 AI credits/month'
     ],
-    tokenQuotaLimit: 1000,
+    creditAllocation: 10, // $0.10 in cents
     isActive: true,
     displayOrder: 0
   },
@@ -29,7 +30,7 @@ const subscriptionPlanData = [
     id: nanoid(),
     planType: 'crm_basic' as const,
     name: 'CRM Basic',
-    description: 'Full CRM access for regenerative entrepreneurs',
+    description: 'Full CRM access + AI Sales Autopilot',
     priceMonthly: 4200, // $42 in cents
     priceYearly: 42000, // $420/year (2 months free)
     stripePriceIdMonthly: 'price_crm_basic_monthly', // TODO: Replace with real Stripe price IDs
@@ -37,15 +38,17 @@ const subscriptionPlanData = [
     features: [
       'Everything in Free',
       'Full CRM access',
+      'Unlimited enterprise profiles',
       'Opportunity management',
       'Lead scoring & AI insights',
       'Advanced search & filters',
       'Task management',
       'Contact relationship mapping',
-      '50,000 AI tokens/month',
+      '$42 AI credits/month',
+      'Top up credits anytime',
       'Priority support'
     ],
-    tokenQuotaLimit: 50000,
+    creditAllocation: 4200, // $42 in cents
     isActive: true,
     displayOrder: 1
   },
@@ -53,9 +56,9 @@ const subscriptionPlanData = [
     id: nanoid(),
     planType: 'build_pro_bundle' as const,
     name: 'Build Pro Bundle',
-    description: 'Coming soon - CRM + Spatial Network Build Pro',
-    priceMonthly: 9900, // $99 in cents
-    priceYearly: 99000, // $990/year
+    description: 'CRM + Spatial Network Build Pro',
+    priceMonthly: 8811, // $88.11 in cents
+    priceYearly: 88110, // $881.10/year (2 months free)
     stripePriceIdMonthly: 'price_build_pro_monthly',
     stripePriceIdYearly: 'price_build_pro_yearly',
     features: [
@@ -65,11 +68,12 @@ const subscriptionPlanData = [
       'Geographic visualization tools',
       'Team collaboration features',
       'Custom integrations',
-      'Unlimited AI tokens',
+      '$88.11 AI credits/month',
+      'Top up credits anytime',
       'Dedicated account manager'
     ],
-    tokenQuotaLimit: 1000000,
-    isActive: false, // Coming soon
+    creditAllocation: 8811, // $88.11 in cents
+    isActive: true,
     displayOrder: 2
   }
 ];
