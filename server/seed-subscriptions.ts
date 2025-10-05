@@ -245,7 +245,7 @@ async function seedSubscriptionPlans() {
     const buildProPlan = {
       planType: 'build_pro_bundle' as const,
       name: 'Build Pro Bundle',
-      description: 'CRM + Spatial Network Build Pro',
+      description: 'CRM + Spatial Network Build Pro (Legacy - replaced by Dreaming Session)',
       priceMonthly: buildProPriceMonthly,
       priceYearly: buildProPriceYearly,
       stripePriceIdMonthly: buildProPriceIds.monthly,
@@ -262,7 +262,7 @@ async function seedSubscriptionPlans() {
         'Dedicated account manager'
       ],
       creditAllocation: buildProPriceMonthly,
-      isActive: true,
+      isActive: false, // Deprecated in favor of Dreaming Session
       displayOrder: 2
     };
     

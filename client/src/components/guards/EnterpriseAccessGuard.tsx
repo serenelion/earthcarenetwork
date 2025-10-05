@@ -87,10 +87,10 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="heading-welcome">
-                Welcome to Your CRM Hub
+                Setup Your Enterprise
               </h1>
               <p className="text-lg text-muted-foreground mb-6">
-                Create a workspace to start managing your regenerative enterprise
+                Create your public profile and private CRM workspace to grow your regenerative business
               </p>
             </div>
 
@@ -98,24 +98,20 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
             <div className="bg-card border border-border rounded-lg p-6 mb-8">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                What you can do with your workspace:
+                Benefits:
               </h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Organize all your contacts in one place</span>
+                  <span className="text-muted-foreground">Get discovered in the global directory</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Track sales opportunities and pipeline</span>
+                  <span className="text-muted-foreground">Manage contacts and opportunities privately</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Get AI-powered insights and automation</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Collaborate with your team</span>
+                  <span className="text-muted-foreground">Features scale with your membership tier</span>
                 </li>
               </ul>
             </div>
@@ -129,7 +125,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-create-first-workspace"
               >
                 <Building2 className="mr-2 h-5 w-5" />
-                Create Your First Workspace
+                Setup Your Enterprise
               </Button>
               
               <Button

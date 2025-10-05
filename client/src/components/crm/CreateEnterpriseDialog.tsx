@@ -6,6 +6,7 @@ import { z } from "zod";
 import { insertEnterpriseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { queryClient } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -36,11 +37,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Building2, 
-  Target, 
-  Lightbulb, 
-  BarChart3, 
-  Users, 
-  Globe, 
+  MapPin,
+  Lock,
   Sparkles,
   Crown,
   Loader2
@@ -116,9 +114,12 @@ export default function CreateEnterpriseDialog({
 
       const enterprise = await response.json();
 
+      // Invalidate the user enterprises query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ['/api/crm/user/enterprises'] });
+
       toast({
-        title: "Workspace created!",
-        description: "Welcome to your CRM. Let's get started!",
+        title: "Enterprise setup complete!",
+        description: "Your public profile and CRM workspace are ready.",
       });
 
       onOpenChange(false);
@@ -127,12 +128,13 @@ export default function CreateEnterpriseDialog({
       if (onSuccess) {
         onSuccess(enterprise.id);
       } else {
-        setLocation(`/crm/${enterprise.id}/dashboard`);
+        // Navigate to the CRM people page which is more reliable than dashboard
+        setLocation(`/crm/${enterprise.id}/people`);
       }
     } catch (error) {
       console.error("Error creating enterprise:", error);
       toast({
-        title: "Failed to create workspace",
+        title: "Failed to setup enterprise",
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
@@ -150,14 +152,36 @@ export default function CreateEnterpriseDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Create Your Enterprise Workspace
+            Setup Your Enterprise
           </DialogTitle>
           <DialogDescription className="text-base">
-            Set up your CRM to manage contacts, track opportunities, and grow your regenerative business
+            Create your public profile and CRM workspace. Features vary by membership tier.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Two Sides of Your Enterprise */}
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Two Sides of Your Enterprise:
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-semibold">Public Profile:</span> Visible on the directory, discoverable globally
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-semibold">CRM Workspace:</span> Private tools for managing your business
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Value Proposition Section */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -166,24 +190,20 @@ export default function CreateEnterpriseDialog({
             </h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
-                <Target className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>Track unlimited contacts and opportunities</span>
+                <span className="text-base">📍</span>
+                <span>Public profile on the regenerative enterprise directory</span>
               </li>
               <li className="flex items-start gap-2">
-                <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>AI-powered lead scoring and insights</span>
+                <span className="text-base">📊</span>
+                <span>CRM workspace to manage contacts and opportunities</span>
               </li>
               <li className="flex items-start gap-2">
-                <BarChart3 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>Pipeline management and analytics</span>
+                <span className="text-base">🤝</span>
+                <span>Team collaboration with customizable access</span>
               </li>
               <li className="flex items-start gap-2">
-                <Users className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>Team collaboration with role-based access</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Globe className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span>Join the global regenerative enterprise directory</span>
+                <span className="text-base">✨</span>
+                <span>Features based on your membership tier</span>
               </li>
             </ul>
           </div>
@@ -198,7 +218,6 @@ export default function CreateEnterpriseDialog({
                   {currentPlanType === "free" && "Free"}
                   {currentPlanType === "crm_basic" && "CRM Basic"}
                   {currentPlanType === "crm_pro" && "CRM Pro"}
-                  {currentPlanType === "build_pro_bundle" && "Build Pro"}
                 </Badge>
               </div>
               {isFreeUser && (
@@ -217,10 +236,35 @@ export default function CreateEnterpriseDialog({
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               {isFreeUser 
-                ? "Upgrade to CRM Pro to unlock advanced features like AI-powered insights and unlimited team members."
+                ? "Free: Basic features. CRM Pro: Full CRM access ($42/month or $420/year)"
                 : `Your ${currentPlanType.replace("_", " ")} plan includes full CRM access with all features.`
               }
             </p>
+
+            {/* Dreaming Session Invitation */}
+            <div className="mt-4 bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">Upgrade Your Earth Care Profile</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Apply for a Dreaming Session with Terralux Agency to transform your enterprise 
+                    with our spatial network storytelling technology. Get a story on the map, 
+                    digital twin tools, and AI-powered sales landing pages.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => window.open("/apply-dreaming", "_blank")}
+                    data-testid="apply-dreaming-button"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Apply for Dreaming Session
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Enterprise Creation Form */}
@@ -378,12 +422,12 @@ export default function CreateEnterpriseDialog({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
+                      Setting up...
                     </>
                   ) : (
                     <>
                       <Building2 className="mr-2 h-4 w-4" />
-                      Create Workspace
+                      Setup Enterprise
                     </>
                   )}
                 </Button>
