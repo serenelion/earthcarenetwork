@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Menu } from "lucide-react";
 import CrmSidebar from "./CrmSidebar";
@@ -22,7 +22,7 @@ export default function CrmMobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
         <div className="py-4">
-          <h2 className="px-6 text-lg font-semibold">CRM Navigation</h2>
+          <SheetTitle className="px-6 text-lg font-semibold">CRM Navigation</SheetTitle>
         </div>
         <Separator />
         <CrmSidebar />
