@@ -143,56 +143,6 @@ function requireSubscription(planType: 'crm_basic' | 'crm_pro' | 'build_pro_bund
   };
 }
 
-function requireEnterpriseRole(minRole: TeamMemberRole): RequestHandler {
-  return async (req: any, res, next) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const enterpriseId = req.params.enterpriseId || req.params.id;
-      if (!enterpriseId) {
-        return res.status(400).json({ error: "Enterprise ID is required" });
-      }
-
-      const roleHierarchy: Record<TeamMemberRole, number> = {
-        'viewer': 1,
-        'editor': 2,
-        'admin': 3,
-        'owner': 4
-      };
-
-      const userRole = await getUserEnterpriseRole(userId, enterpriseId);
-      
-      if (!userRole) {
-        return res.status(403).json({ 
-          error: "Forbidden - not a member of this enterprise" 
-        });
-      }
-
-      const userRoleLevel = roleHierarchy[userRole];
-      const requiredRoleLevel = roleHierarchy[minRole];
-
-      if (userRoleLevel < requiredRoleLevel) {
-        return res.status(403).json({ 
-          error: "Forbidden - insufficient permissions",
-          message: `This action requires ${minRole} role or higher`,
-          requiredRole: minRole,
-          currentRole: userRole
-        });
-      }
-
-      req.enterpriseRole = userRole;
-
-      next();
-    } catch (error) {
-      console.error("Error checking enterprise role:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  };
-}
-
 // Middleware to check if user is platform admin
 const requireAdmin: RequestHandler = async (req: any, res, next) => {
   try {
@@ -799,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId } = req.params;
       const [enterpriseStats, peopleStats, opportunityStats, taskStats] = await Promise.all([
-        storage.getEnterpriseStats(enterpriseId),
+        storage.getEnterpriseStats(),
         storage.getPeopleStats(enterpriseId),
         storage.getOpportunityStats(enterpriseId),
         storage.getTaskStats(enterpriseId),
@@ -1298,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { personId } = req.body;
       
       const enterprise = await storage.getEnterprise(enterpriseId);
-      const person = personId ? await storage.getPerson(personId) : null;
+      const person = personId ? await storage.getPerson(personId, enterpriseId) : null;
       
       if (!enterprise) {
         return res.status(404).json({ message: "Enterprise not found" });
@@ -1338,7 +1288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [recentEnterprises, recentOpportunities, stats] = await Promise.all([
         storage.getEnterprises(undefined, undefined, 10, 0),
         storage.getOpportunities(enterpriseId, undefined, 10, 0),
-        storage.getEnterpriseStats(enterpriseId),
+        storage.getEnterpriseStats(),
       ]);
 
       const userId = (req.user as any)?.claims?.sub;
@@ -1517,7 +1467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If conversationId provided, get existing conversation and messages
       if (conversationId) {
-        conversation = await storage.getConversation(conversationId);
+        conversation = await storage.getConversation(conversationId, enterpriseId);
         if (!conversation) {
           return res.status(404).json({ message: "Conversation not found" });
         }
@@ -1526,6 +1476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create new conversation
         conversation = await storage.createConversation({
           userId,
+          enterpriseId,
           title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
         }, enterpriseId);
       }
@@ -2331,7 +2282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify the person is associated with this enterprise
-      const person = await storage.getPerson(personId);
+      const person = await storage.getPerson(personId, enterpriseId);
       if (!person || person.enterpriseId !== enterpriseId) {
         return res.status(400).json({ message: "Invalid person or enterprise association" });
       }

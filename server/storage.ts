@@ -115,7 +115,7 @@ export interface IStorage {
   
   // People operations
   getPeople(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Person[]>;
-  getPerson(id: string, enterpriseId: string): Promise<Person | undefined>;
+  getPerson(id: string, enterpriseId?: string): Promise<Person | undefined>;
   createPerson(person: InsertPerson, enterpriseId: string): Promise<Person>;
   updatePerson(id: string, person: Partial<InsertPerson>, enterpriseId: string): Promise<Person>;
   deletePerson(id: string, enterpriseId: string): Promise<void>;
@@ -123,7 +123,7 @@ export interface IStorage {
   
   // Opportunity operations
   getOpportunities(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Opportunity[]>;
-  getOpportunity(id: string, enterpriseId: string): Promise<Opportunity | undefined>;
+  getOpportunity(id: string, enterpriseId?: string): Promise<Opportunity | undefined>;
   createOpportunity(opportunity: InsertOpportunity, enterpriseId: string): Promise<Opportunity>;
   updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>, enterpriseId: string): Promise<Opportunity>;
   deleteOpportunity(id: string, enterpriseId: string): Promise<void>;
@@ -147,7 +147,7 @@ export interface IStorage {
   
   // Chat conversation operations
   getConversations(userId: string, enterpriseId: string, limit?: number, offset?: number): Promise<Conversation[]>;
-  getConversation(id: string, enterpriseId: string): Promise<Conversation | undefined>;
+  getConversation(id: string, enterpriseId?: string): Promise<Conversation | undefined>;
   createConversation(conversation: InsertConversation, enterpriseId: string): Promise<Conversation>;
   updateConversation(id: string, conversation: Partial<InsertConversation>, enterpriseId: string): Promise<Conversation>;
   deleteConversation(id: string, enterpriseId: string): Promise<void>;
@@ -639,12 +639,13 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getPerson(id: string, enterpriseId: string): Promise<Person | undefined> {
+  async getPerson(id: string, enterpriseId?: string): Promise<Person | undefined> {
+    const conditions = [eq(people.id, id)];
+    if (enterpriseId) {
+      conditions.push(eq(people.enterpriseId, enterpriseId));
+    }
     const [person] = await db.select().from(people)
-      .where(and(
-        eq(people.id, id),
-        eq(people.enterpriseId, enterpriseId)
-      ));
+      .where(and(...conditions));
     return person;
   }
 
@@ -721,12 +722,13 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getOpportunity(id: string, enterpriseId: string): Promise<Opportunity | undefined> {
+  async getOpportunity(id: string, enterpriseId?: string): Promise<Opportunity | undefined> {
+    const conditions = [eq(opportunities.id, id)];
+    if (enterpriseId) {
+      conditions.push(eq(opportunities.enterpriseId, enterpriseId));
+    }
     const [opportunity] = await db.select().from(opportunities)
-      .where(and(
-        eq(opportunities.id, id),
-        eq(opportunities.enterpriseId, enterpriseId)
-      ));
+      .where(and(...conditions));
     return opportunity;
   }
 
@@ -941,12 +943,13 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getConversation(id: string, enterpriseId: string): Promise<Conversation | undefined> {
+  async getConversation(id: string, enterpriseId?: string): Promise<Conversation | undefined> {
+    const conditions = [eq(conversations.id, id)];
+    if (enterpriseId) {
+      conditions.push(eq(conversations.enterpriseId, enterpriseId));
+    }
     const [conversation] = await db.select().from(conversations)
-      .where(and(
-        eq(conversations.id, id),
-        eq(conversations.enterpriseId, enterpriseId)
-      ));
+      .where(and(...conditions));
     return conversation;
   }
 
