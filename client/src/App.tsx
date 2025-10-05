@@ -329,18 +329,18 @@ function Router() {
           </Route>
           
           <Route path="/crm">
-            <EnterpriseOrAdminRoute>
+            <AuthenticatedRoute>
               <WorkspaceProvider>
                 <CrmShell />
               </WorkspaceProvider>
-            </EnterpriseOrAdminRoute>
+            </AuthenticatedRoute>
           </Route>
           <Route path="/crm/:rest*">
-            <EnterpriseOrAdminRoute>
+            <AuthenticatedRoute>
               <WorkspaceProvider>
                 <CrmShell />
               </WorkspaceProvider>
-            </EnterpriseOrAdminRoute>
+            </AuthenticatedRoute>
           </Route>
           
           {/* Member and higher routes */}
