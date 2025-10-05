@@ -14,6 +14,7 @@ import {
   subscriptionPlans,
   subscriptions,
   aiUsageLogs,
+  creditPurchases,
   userFavorites,
   profileClaims,
   userRoleEnum,
@@ -50,6 +51,8 @@ import {
   type InsertSubscription,
   type AiUsageLog,
   type InsertAiUsageLog,
+  type CreditPurchase,
+  type InsertCreditPurchase,
   type UserFavorite,
   type InsertUserFavorite,
   type ProfileClaim,
@@ -201,10 +204,19 @@ export interface IStorage {
 
   // AI usage tracking operations
   logAiUsage(usage: InsertAiUsageLog): Promise<AiUsageLog>;
-  getUserAiUsage(userId: string, startDate?: Date, endDate?: Date): Promise<AiUsageLog[]>;
-  getUserTokenUsageThisMonth(userId: string): Promise<number>;
-  resetUserTokenUsage(userId: string): Promise<User>;
-  checkUserTokenQuota(userId: string, tokensToUse: number): Promise<{ allowed: boolean; remainingTokens: number }>;
+  getAiUsageLogs(userId: string): Promise<AiUsageLog[]>;
+
+  // Credit balance operations
+  getUserCredits(userId: string): Promise<{ balance: number; limit: number; monthlyAllocation: number }>;
+  hasEnoughCredits(userId: string, requiredAmount: number): Promise<boolean>;
+  deductCredits(userId: string, amount: number): Promise<void>;
+  addCredits(userId: string, amount: number): Promise<void>;
+  resetMonthlyCredits(userId: string): Promise<void>;
+
+  // Credit purchase operations
+  createCreditPurchase(data: InsertCreditPurchase): Promise<CreditPurchase>;
+  updateCreditPurchaseStatus(id: string, status: 'completed' | 'failed'): Promise<void>;
+  getCreditPurchases(userId: string): Promise<CreditPurchase[]>;
 
   // Subscription analytics and admin operations
   getSubscriptionStats(): Promise<{ 
@@ -855,7 +867,6 @@ export class DatabaseStorage implements IStorage {
 
   // Enterprise claiming and invitation operations
   async getEnterprisesWithClaimInfo(search?: string, claimStatus?: 'unclaimed' | 'claimed' | 'verified', limit = 50, offset = 0): Promise<Array<Enterprise & { contacts: Person[] }>> {
-    let enterpriseQuery = db.select().from(enterprises);
     const conditions = [];
     
     if (search) {
@@ -868,14 +879,18 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
-    if (conditions.length > 0) {
-      enterpriseQuery = enterpriseQuery.where(and(...conditions));
-    }
+    const baseQuery = db.select().from(enterprises);
     
-    const enterpriseResults = await enterpriseQuery
-      .orderBy(desc(enterprises.createdAt))
-      .limit(limit)
-      .offset(offset);
+    const enterpriseResults = conditions.length > 0
+      ? await baseQuery
+          .where(and(...conditions))
+          .orderBy(desc(enterprises.createdAt))
+          .limit(limit)
+          .offset(offset)
+      : await baseQuery
+          .orderBy(desc(enterprises.createdAt))
+          .limit(limit)
+          .offset(offset);
 
     // Get all people for these enterprises
     const enterpriseIds = enterpriseResults.map(e => e.id);
@@ -1026,11 +1041,6 @@ export class DatabaseStorage implements IStorage {
   // Opportunity transfer operations
   async getOpportunityTransfers(search?: string, status?: 'pending' | 'accepted' | 'declined' | 'completed', limit = 50, offset = 0): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User; transferredToUser: User }>> {
     // First get the basic transfers with opportunities
-    let baseQuery = db
-      .select()
-      .from(opportunityTransfers)
-      .innerJoin(opportunities, eq(opportunityTransfers.opportunityId, opportunities.id));
-
     const conditions = [];
     
     if (search) {
@@ -1046,14 +1056,21 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(opportunityTransfers.status, status));
     }
 
-    if (conditions.length > 0) {
-      baseQuery = baseQuery.where(and(...conditions));
-    }
+    const baseQuery = db
+      .select()
+      .from(opportunityTransfers)
+      .innerJoin(opportunities, eq(opportunityTransfers.opportunityId, opportunities.id));
 
-    const transfersWithOpportunities = await baseQuery
-      .orderBy(desc(opportunityTransfers.createdAt))
-      .limit(limit)
-      .offset(offset);
+    const transfersWithOpportunities = conditions.length > 0
+      ? await baseQuery
+          .where(and(...conditions))
+          .orderBy(desc(opportunityTransfers.createdAt))
+          .limit(limit)
+          .offset(offset)
+      : await baseQuery
+          .orderBy(desc(opportunityTransfers.createdAt))
+          .limit(limit)
+          .offset(offset);
 
     // Now enrich with user data
     const result = [];
@@ -1111,12 +1128,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTransfersByUserId(userId: string, limit = 50, offset = 0): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User }>> {
-    return await db
-      .select({
-        ...opportunityTransfers,
-        opportunity: opportunities,
-        transferredByUser: users,
-      })
+    const results = await db
+      .select()
       .from(opportunityTransfers)
       .innerJoin(opportunities, eq(opportunityTransfers.opportunityId, opportunities.id))
       .innerJoin(users, eq(opportunityTransfers.transferredBy, users.id))
@@ -1124,6 +1137,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(opportunityTransfers.createdAt))
       .limit(limit)
       .offset(offset);
+
+    return results.map(row => ({
+      ...row.opportunity_transfers,
+      opportunity: row.opportunities,
+      transferredByUser: row.users,
+    }));
   }
 
   async getTransferStats(): Promise<{ total: number; byStatus: Record<string, number>; pendingTransfers: number }> {
@@ -1481,76 +1500,149 @@ export class DatabaseStorage implements IStorage {
     const [created] = await db.insert(aiUsageLogs)
       .values(usage)
       .returning();
-
-    // Update user's monthly token usage
-    await db.update(users)
-      .set({
-        tokenUsageThisMonth: sql`${users.tokenUsageThisMonth} + ${usage.tokensUsed}`,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, usage.userId));
-
     return created;
   }
 
-  async getUserAiUsage(userId: string, startDate?: Date, endDate?: Date): Promise<AiUsageLog[]> {
-    let query = db.select().from(aiUsageLogs)
+  async getAiUsageLogs(userId: string): Promise<AiUsageLog[]> {
+    return await db.select()
+      .from(aiUsageLogs)
       .where(eq(aiUsageLogs.userId, userId))
       .orderBy(desc(aiUsageLogs.createdAt));
-
-    if (startDate && endDate) {
-      query = query.where(
-        and(
-          eq(aiUsageLogs.userId, userId),
-          sql`${aiUsageLogs.createdAt} >= ${startDate}`,
-          sql`${aiUsageLogs.createdAt} <= ${endDate}`
-        )
-      );
-    }
-
-    return await query;
   }
 
-  async getUserTokenUsageThisMonth(userId: string): Promise<number> {
-    const [user] = await db.select({ 
-      tokenUsageThisMonth: users.tokenUsageThisMonth 
-    })
-    .from(users)
-    .where(eq(users.id, userId));
-    
-    return user?.tokenUsageThisMonth || 0;
-  }
-
-  async resetUserTokenUsage(userId: string): Promise<User> {
-    const [updated] = await db.update(users)
-      .set({
-        tokenUsageThisMonth: 0,
-        lastTokenUsageReset: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return updated;
-  }
-
-  async checkUserTokenQuota(userId: string, tokensToUse: number): Promise<{ allowed: boolean; remainingTokens: number }> {
+  // Credit balance operations
+  async getUserCredits(userId: string): Promise<{ balance: number; limit: number; monthlyAllocation: number }> {
     const [user] = await db.select({
-      tokenUsageThisMonth: users.tokenUsageThisMonth,
-      tokenQuotaLimit: users.tokenQuotaLimit
+      creditBalance: users.creditBalance,
+      creditLimit: users.creditLimit,
+      monthlyAllocation: users.monthlyAllocation
     })
     .from(users)
     .where(eq(users.id, userId));
 
     if (!user) {
-      return { allowed: false, remainingTokens: 0 };
+      throw new Error("User not found");
     }
 
-    const currentUsage = user.tokenUsageThisMonth || 0;
-    const quotaLimit = user.tokenQuotaLimit || 10000;
-    const remainingTokens = Math.max(0, quotaLimit - currentUsage);
-    const allowed = currentUsage + tokensToUse <= quotaLimit;
+    return {
+      balance: user.creditBalance || 0,
+      limit: user.creditLimit || 10,
+      monthlyAllocation: user.monthlyAllocation || 10
+    };
+  }
 
-    return { allowed, remainingTokens };
+  async hasEnoughCredits(userId: string, requiredAmount: number): Promise<boolean> {
+    const [user] = await db.select({
+      creditBalance: users.creditBalance,
+      overageAllowed: users.overageAllowed
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+
+    if (!user) {
+      return false;
+    }
+
+    const balance = user.creditBalance || 0;
+    if (balance >= requiredAmount) {
+      return true;
+    }
+
+    return user.overageAllowed || false;
+  }
+
+  async deductCredits(userId: string, amount: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [user] = await tx.select({
+        creditBalance: users.creditBalance,
+        overageAllowed: users.overageAllowed
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const currentBalance = user.creditBalance || 0;
+      const newBalance = currentBalance - amount;
+
+      if (newBalance < 0 && !user.overageAllowed) {
+        throw new Error("Insufficient credits");
+      }
+
+      await tx.update(users)
+        .set({
+          creditBalance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    });
+  }
+
+  async addCredits(userId: string, amount: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.update(users)
+        .set({
+          creditBalance: sql`${users.creditBalance} + ${amount}`,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    });
+  }
+
+  async resetMonthlyCredits(userId: string): Promise<void> {
+    const [user] = await db.select({
+      monthlyAllocation: users.monthlyAllocation
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const nextResetDate = new Date();
+    nextResetDate.setMonth(nextResetDate.getMonth() + 1);
+
+    await db.update(users)
+      .set({
+        creditBalance: user.monthlyAllocation || 10,
+        creditResetDate: nextResetDate,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Credit purchase operations
+  async createCreditPurchase(data: InsertCreditPurchase): Promise<CreditPurchase> {
+    const [created] = await db.insert(creditPurchases)
+      .values(data)
+      .returning();
+    return created;
+  }
+
+  async updateCreditPurchaseStatus(id: string, status: 'completed' | 'failed'): Promise<void> {
+    const updateData: any = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (status === 'completed') {
+      updateData.purchasedAt = new Date();
+    }
+
+    await db.update(creditPurchases)
+      .set(updateData)
+      .where(eq(creditPurchases.id, id));
+  }
+
+  async getCreditPurchases(userId: string): Promise<CreditPurchase[]> {
+    return await db.select()
+      .from(creditPurchases)
+      .where(eq(creditPurchases.userId, userId))
+      .orderBy(desc(creditPurchases.createdAt));
   }
 
   // Subscription analytics and admin operations

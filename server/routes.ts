@@ -1795,15 +1795,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUser(userId);
       const subscription = await storage.getUserSubscription(userId);
-      const tokenUsage = await storage.getUserTokenUsageThisMonth(userId);
+      const credits = await storage.getUserCredits(userId);
 
       res.json({
         user: {
           currentPlanType: user?.currentPlanType || 'free',
           subscriptionStatus: user?.subscriptionStatus,
           subscriptionCurrentPeriodEnd: user?.subscriptionCurrentPeriodEnd,
-          tokenUsageThisMonth: tokenUsage,
-          creditAllocation: user?.monthlyAllocation || 10
+          creditBalance: credits.balance,
+          creditLimit: credits.limit,
+          monthlyAllocation: credits.monthlyAllocation
         },
         subscription: subscription || null
       });
@@ -1953,12 +1954,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { operationType, tokensPrompt, entityType, entityId, metadata } = req.body;
       
-      // Check quota before logging
-      const quotaCheck = await storage.checkUserTokenQuota(userId, tokensPrompt);
-      if (!quotaCheck.allowed) {
+      // Check credits before logging
+      const hasCredits = await storage.hasEnoughCredits(userId, tokensPrompt);
+      if (!hasCredits) {
+        const credits = await storage.getUserCredits(userId);
         return res.status(429).json({ 
-          message: "Token quota exceeded", 
-          remainingTokens: quotaCheck.remainingTokens 
+          message: "Insufficient credits", 
+          creditBalance: credits.balance 
         });
       }
 
@@ -1973,9 +1975,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: metadata || null
       });
 
+      const credits = await storage.getUserCredits(userId);
       res.json({ 
         usage, 
-        remainingTokens: quotaCheck.remainingTokens - tokensPrompt 
+        creditBalance: credits.balance 
       });
     } catch (error) {
       console.error("Error logging AI usage:", error);
@@ -1994,11 +1997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { startDate, endDate, limit = 100, offset = 0 } = req.query;
       
-      const usage = await storage.getUserAiUsage(
-        userId,
-        startDate ? new Date(startDate as string) : undefined,
-        endDate ? new Date(endDate as string) : undefined
-      );
+      const usage = await storage.getAiUsageLogs(userId);
 
       // Apply pagination manually since storage method doesn't support it
       const paginatedUsage = usage.slice(
