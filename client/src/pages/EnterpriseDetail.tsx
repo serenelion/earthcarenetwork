@@ -15,7 +15,8 @@ import {
   Edit, 
   ArrowLeft,
   Globe,
-  Sprout
+  Sprout,
+  Shield
 } from "lucide-react";
 import FavoriteButton from "@/components/FavoriteButton";
 import type { Enterprise, EarthCarePledge } from "@shared/schema";
@@ -58,6 +59,18 @@ export default function EnterpriseDetail() {
     },
     enabled: !!id,
   });
+
+  // Fetch user's team membership to check role
+  const { data: teamData } = useQuery<{ members: Array<{ userId: string; role: string }> }>({
+    queryKey: ["/api/enterprises", id, "team"],
+    enabled: !!id && isAuthenticated,
+    retry: false,
+  });
+
+  // Find current user's role in the team
+  const currentUserMember = teamData?.members.find(m => m.userId === user?.id);
+  const userRole = currentUserMember?.role;
+  const canManageTeam = userRole === "admin" || userRole === "owner";
 
   if (isLoading) {
     return (
@@ -200,6 +213,18 @@ export default function EnterpriseDetail() {
                     enterpriseId={enterprise.id} 
                     data-testid="button-favorite"
                   />
+                )}
+                {canManageTeam && (
+                  <Button 
+                    variant="outline" 
+                    asChild
+                    data-testid="button-team"
+                  >
+                    <Link href={`/enterprises/${enterprise.id}/team`}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Team
+                    </Link>
+                  </Button>
                 )}
                 {isAdmin && (
                   <Button 

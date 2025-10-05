@@ -36,6 +36,8 @@ import Pricing from "@/pages/Pricing";
 import SubscriptionDashboard from "@/pages/SubscriptionDashboard";
 import NotFound from "@/pages/not-found";
 import Search from "@/pages/Search";
+import TeamManagement from "@/pages/TeamManagement";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 // Documentation imports
 import DocsLayout from "@/components/docs/DocsLayout";
 import DocsHome from "@/pages/docs/DocsHome";
@@ -339,12 +341,20 @@ function Router() {
           </Route>
           
           {/* Directory routes - accessible to all */}
+          <Route path="/enterprises/:id/team">
+            <AuthenticatedRoute>
+              <TeamManagement />
+            </AuthenticatedRoute>
+          </Route>
           <Route path="/enterprises/:id" component={EnterpriseDetail} />
           <Route path="/enterprises" component={Enterprises} />
           <Route path="/directory/land-projects" component={Enterprises} />
           <Route path="/directory/capital-sources" component={Enterprises} />
           <Route path="/directory/open-source-tools" component={Enterprises} />
           <Route path="/directory/network-organizers" component={Enterprises} />
+          
+          {/* Team invitation routes */}
+          <Route path="/team/invitations/accept/:token" component={AcceptInvitation} />
           
           <Route path="/people">
             <AuthenticatedRoute>
