@@ -102,6 +102,8 @@ export const users = pgTable("users", {
   // Free tier limits for claimed profiles
   maxClaimedProfiles: integer("max_claimed_profiles").default(1), // free users can claim 1, paid unlimited
   claimedProfilesCount: integer("claimed_profiles_count").default(0), // track current count
+  // Onboarding progress tracking (JSONB map keyed by role/plan)
+  onboardingProgress: jsonb("onboarding_progress").$type<Record<string, {completed: boolean, steps: Record<string, boolean>, completedAt?: string}>>().default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,14 +11,20 @@ import { Building, Users, Handshake, CheckSquare, TrendingUp, Plus, Download, Ex
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { fetchCRMStats, fetchEnterprises, fetchAISuggestions, type CRMStats, type AISuggestion } from "@/lib/api";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { crmProFlow } from "@/lib/onboardingFlows";
 import type { Enterprise } from "@shared/schema";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { userSubscription } = useSubscription();
+  const { isFlowComplete } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  
   const isFreeUser = userSubscription?.currentPlanType === 'free';
-  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro';
+  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro' || userSubscription?.currentPlanType === 'build_pro_bundle';
 
   const { data: stats, isLoading: statsLoading } = useQuery<CRMStats>({
     queryKey: ["/api/crm/stats"],
@@ -66,6 +73,12 @@ export default function Dashboard() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
+
+  useEffect(() => {
+    if (isCrmProUser && !isFlowComplete('crm_pro')) {
+      setShowOnboarding(true);
+    }
+  }, [isCrmProUser, isFlowComplete]);
 
   if (isLoading) {
     return (
@@ -137,6 +150,18 @@ export default function Dashboard() {
               "Export data to CSV and integrations",
               "Team collaboration features",
             ]}
+          />
+        </div>
+      )}
+
+      {/* CRM Pro Onboarding Checklist */}
+      {isCrmProUser && !isFlowComplete('crm_pro') && (
+        <div className="mb-6 md:mb-8">
+          <OnboardingChecklist
+            flowKey="crm_pro"
+            steps={crmProFlow.steps}
+            title="CRM Pro Setup"
+            description="Complete these steps to unlock the full power of your CRM"
           />
         </div>
       )}
@@ -389,6 +414,17 @@ export default function Dashboard() {
             ]}
           />
         </div>
+      )}
+
+      {/* CRM Pro Onboarding Modal */}
+      {isCrmProUser && (
+        <OnboardingModal
+          flowKey="crm_pro"
+          steps={crmProFlow.steps}
+          isOpen={showOnboarding}
+          onComplete={() => setShowOnboarding(false)}
+          onDismiss={() => setShowOnboarding(false)}
+        />
       )}
     </>
   );

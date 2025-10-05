@@ -10,6 +10,68 @@ Anyone can self-host "Earth Care Network" and rebrand it (e.g., "Regenerative Ag
 
 # Recent Changes
 
+## October 2025 - Mobile Optimization, Onboarding & User Tier System
+
+### Mobile Responsiveness
+- **CRM Mobile Optimization**: All CRM pages now fully mobile-responsive with lg: breakpoint
+  - Mobile (<lg): Touch-friendly card views with all data stacked vertically
+  - Desktop (>=lg): Traditional table views with full columns
+  - Pattern applied to: Dashboard, Enterprises, People, Opportunities, Tasks pages
+  - Card views use touch-manipulation class, p-4 padding, proper spacing
+  - All action buttons sized for touch interactions
+  - Architect-verified implementation with no data visibility gaps
+
+### User Tier System & Subscriptions
+- **Subscription Plans**: 4-tier pricing structure integrated with Stripe
+  - **Free**: Directory access, 1 enterprise claim, basic features
+  - **CRM Pro ($42/mo)**: Full CRM, unlimited enterprises, AI copilot, advanced features
+  - **Build Pro Bundle ($88.11/mo)**: CRM Pro + team management, integrations, priority support
+  - **Admin**: Full platform access, moderation tools, user management
+- **Upgrade Prompts**: Contextual upgrade prompts throughout the app
+  - Free → CRM Pro prompts when hitting feature limits
+  - CRM Pro → Build Pro prompts highlighting premium features
+  - Integration with Stripe checkout for seamless upgrades
+- **Feature Gates**: Role-based access control throughout CRM
+  - Free users see disabled states with upgrade prompts
+  - CRM Pro users access full CRM features
+  - Build Pro users get advanced team and integration features
+
+### Onboarding System
+- **Tier-Specific Onboarding**: Guided tours for each user type
+  - **Visitor Flow**: Welcome message, platform tour, directory exploration
+  - **Free Member Flow**: Profile setup, first enterprise claim, favorites introduction
+  - **CRM Pro Flow**: CRM setup wizard, AI copilot configuration, first opportunity creation
+  - **Build Pro Flow**: Advanced features tour, team setup, integration guides
+  - **Admin Flow**: Platform power, moderation tools, pledge tracking, user management
+- **Infrastructure**: 
+  - OnboardingProvider context with React Query integration
+  - JSONB onboarding_progress field in users table tracks completion per tier
+  - Backend API routes for progress persistence
+  - Modal steppers for guided tours
+  - Dashboard checklists for ongoing progress tracking
+  - localStorage fallback for visitor flows (unauthenticated)
+- **Note**: Onboarding system has known React hooks issues in development (HMR-related) that need resolution
+
+### Pledge System Simplification
+- **Unified Commitment Statement**: Simplified to single checkbox
+  - Statement: "I commit 100% to valuing earth care, people care, and fair share for the good of the next 7 generations."
+  - Optional narrative field for explaining commitment
+  - Backwards-compatible with existing boolean fields
+- **UI Updates**: PledgeAffirmationModal uses single commitment checkbox
+- **Admin Tracking**: PledgeDashboard shows pledge status and narratives
+
+### Navigation & UX Improvements
+- **Header Navigation**: Moved Docs link from header to footer
+- **CRM Navigation**: Removed Reports and Pledge Dashboard from main CRM nav (consolidated into admin tools)
+- **Scroll-to-Top**: Automatic scroll-to-top for footer link navigation
+- **USP Messaging**: Updated throughout to emphasize "open source directory + CRM for new earth enterprise sales optimization"
+- **Visitor-to-Member Conversion**: Clear prompts for visitors attempting to claim enterprises
+
+### Pricing Page
+- **Enhanced Pricing**: Comprehensive comparison table with all tier features
+- **Upgrade Visualization**: Clear upgrade path diagrams
+- **Mobile-Responsive**: Fully optimized for all screen sizes
+
 ## October 2025 - Earth Care Enterprise Plan & Bulk Seeding
 - **Earth Care Enterprise Plan**: Pledge system for enterprises to affirm universal ethics
   - earthCarePledges table tracks pledge status (pending/affirmed/revoked)

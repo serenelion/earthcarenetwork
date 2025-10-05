@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import ProtectedRoute, { AdminOnlyRoute, EnterpriseOrAdminRoute, MemberOrHigherRoute, AuthenticatedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -493,14 +494,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SubscriptionProvider>
-        <FavoritesProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </FavoritesProvider>
-      </SubscriptionProvider>
+      <OnboardingProvider>
+        <SubscriptionProvider>
+          <FavoritesProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </FavoritesProvider>
+        </SubscriptionProvider>
+      </OnboardingProvider>
     </QueryClientProvider>
   );
 }

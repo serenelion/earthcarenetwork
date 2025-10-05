@@ -2680,6 +2680,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== ONBOARDING PROGRESS ROUTES ======
+
+  // Get onboarding progress for a specific flow
+  app.get('/api/onboarding/progress/:flowKey', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { flowKey } = req.params;
+      
+      // Validate flow key
+      const validFlowKeys = ['free_member', 'crm_pro', 'build_pro', 'admin'];
+      if (!validFlowKeys.includes(flowKey)) {
+        return res.status(400).json({ message: "Invalid flow key" });
+      }
+
+      const progress = await storage.getOnboardingProgress(userId, flowKey);
+      res.json({ flowKey, progress });
+    } catch (error) {
+      console.error("Error fetching onboarding progress:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch onboarding progress", error: errorMessage });
+    }
+  });
+
+  // Update onboarding progress for a specific flow
+  app.put('/api/onboarding/progress/:flowKey', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { flowKey } = req.params;
+      
+      // Validate flow key
+      const validFlowKeys = ['free_member', 'crm_pro', 'build_pro', 'admin'];
+      if (!validFlowKeys.includes(flowKey)) {
+        return res.status(400).json({ message: "Invalid flow key" });
+      }
+
+      // Validate request body
+      const progressSchema = z.object({
+        completed: z.boolean(),
+        steps: z.record(z.boolean()),
+        completedAt: z.string().optional()
+      });
+
+      const validatedProgress = progressSchema.parse(req.body);
+
+      await storage.updateOnboardingProgress(userId, flowKey, validatedProgress);
+      
+      const updatedProgress = await storage.getOnboardingProgress(userId, flowKey);
+      res.json({ 
+        message: "Onboarding progress updated successfully", 
+        flowKey, 
+        progress: updatedProgress 
+      });
+    } catch (error) {
+      console.error("Error updating onboarding progress:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", error: error.errors });
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to update onboarding progress", error: errorMessage });
+    }
+  });
+
+  // Mark a specific step as complete
+  app.post('/api/onboarding/progress/:flowKey/step/:stepId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { flowKey, stepId } = req.params;
+      
+      // Validate flow key
+      const validFlowKeys = ['free_member', 'crm_pro', 'build_pro', 'admin'];
+      if (!validFlowKeys.includes(flowKey)) {
+        return res.status(400).json({ message: "Invalid flow key" });
+      }
+
+      if (!stepId || typeof stepId !== 'string' || stepId.trim().length === 0) {
+        return res.status(400).json({ message: "Invalid step ID" });
+      }
+
+      await storage.markOnboardingStepComplete(userId, flowKey, stepId);
+      
+      const updatedProgress = await storage.getOnboardingProgress(userId, flowKey);
+      res.json({ 
+        message: "Step marked as complete", 
+        flowKey, 
+        stepId,
+        progress: updatedProgress 
+      });
+    } catch (error) {
+      console.error("Error marking step complete:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to mark step complete", error: errorMessage });
+    }
+  });
+
+  // Mark entire flow as complete
+  app.post('/api/onboarding/progress/:flowKey/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { flowKey } = req.params;
+      
+      // Validate flow key
+      const validFlowKeys = ['free_member', 'crm_pro', 'build_pro', 'admin'];
+      if (!validFlowKeys.includes(flowKey)) {
+        return res.status(400).json({ message: "Invalid flow key" });
+      }
+
+      await storage.markOnboardingComplete(userId, flowKey);
+      
+      const updatedProgress = await storage.getOnboardingProgress(userId, flowKey);
+      res.json({ 
+        message: "Onboarding flow marked as complete", 
+        flowKey,
+        progress: updatedProgress 
+      });
+    } catch (error) {
+      console.error("Error marking flow complete:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to mark flow complete", error: errorMessage });
+    }
+  });
+
   // ====== CREDIT PURCHASE ROUTES ======
 
   // Create Stripe checkout session for credit purchase

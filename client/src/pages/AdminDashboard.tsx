@@ -1,11 +1,26 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Users, Building2, FileText, Settings, BarChart3, AlertTriangle, Database } from "lucide-react";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { adminFlow } from "@/lib/onboardingFlows";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { isFlowComplete } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (isAdmin && !isFlowComplete('admin')) {
+      setShowOnboarding(true);
+    }
+  }, [isAdmin, isFlowComplete]);
 
   return (
     <div className="container mx-auto px-4 py-8" data-testid="admin-dashboard">
@@ -68,6 +83,18 @@ export default function AdminDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Admin Onboarding Checklist */}
+      {isAdmin && !isFlowComplete('admin') && (
+        <div className="mb-8">
+          <OnboardingChecklist
+            flowKey="admin"
+            steps={adminFlow.steps}
+            title="Admin Dashboard Guide"
+            description="Master platform administration and moderation tools"
+          />
+        </div>
+      )}
 
       {/* Admin Tools */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -244,6 +271,17 @@ export default function AdminDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Admin Onboarding Modal */}
+      {isAdmin && (
+        <OnboardingModal
+          flowKey="admin"
+          steps={adminFlow.steps}
+          isOpen={showOnboarding}
+          onComplete={() => setShowOnboarding(false)}
+          onDismiss={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

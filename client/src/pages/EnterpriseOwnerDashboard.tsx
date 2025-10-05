@@ -1,11 +1,28 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, TrendingUp, Users, Target, BarChart3, Settings } from "lucide-react";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { buildProFlow } from "@/lib/onboardingFlows";
 
 export default function EnterpriseOwnerDashboard() {
   const { user } = useAuth();
+  const { userSubscription } = useSubscription();
+  const { isFlowComplete } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const hasBuildProBundle = userSubscription?.currentPlanType === 'build_pro_bundle';
+
+  useEffect(() => {
+    if (hasBuildProBundle && !isFlowComplete('build_pro')) {
+      setShowOnboarding(true);
+    }
+  }, [hasBuildProBundle, isFlowComplete]);
 
   return (
     <div className="container mx-auto px-4 py-8" data-testid="enterprise-owner-dashboard">
@@ -22,6 +39,18 @@ export default function EnterpriseOwnerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Build Pro Onboarding Checklist */}
+        {hasBuildProBundle && !isFlowComplete('build_pro') && (
+          <div className="md:col-span-2 lg:col-span-3">
+            <OnboardingChecklist
+              flowKey="build_pro"
+              steps={buildProFlow.steps}
+              title="Build Pro Setup"
+              description="Complete these steps to unlock advanced enterprise features"
+            />
+          </div>
+        )}
+
         {/* My Enterprise */}
         <Card data-testid="card-my-enterprise">
           <CardHeader>
@@ -166,6 +195,17 @@ export default function EnterpriseOwnerDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Build Pro Onboarding Modal */}
+      {hasBuildProBundle && (
+        <OnboardingModal
+          flowKey="build_pro"
+          steps={buildProFlow.steps}
+          isOpen={showOnboarding}
+          onComplete={() => setShowOnboarding(false)}
+          onDismiss={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

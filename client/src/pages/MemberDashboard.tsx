@@ -1,11 +1,16 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites, useRecentFavorites, useFavoriteStats } from "@/contexts/FavoritesContext";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, User, Gift, BookOpen, Star, Users, ArrowRight, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { freeMemberFlow } from "@/lib/onboardingFlows";
 
 // Favorites Card Component for Dashboard
 function FavoritesCard() {
@@ -112,6 +117,14 @@ function FavoritesCard() {
 
 export default function MemberDashboard() {
   const { user } = useAuth();
+  const { isFlowComplete } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!isFlowComplete('free_member')) {
+      setShowOnboarding(true);
+    }
+  }, [isFlowComplete]);
 
   return (
     <div className="container mx-auto px-4 py-8" data-testid="member-dashboard">
@@ -128,6 +141,18 @@ export default function MemberDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Onboarding Checklist */}
+        {!isFlowComplete('free_member') && (
+          <div className="md:col-span-2 lg:col-span-3">
+            <OnboardingChecklist
+              flowKey="free_member"
+              steps={freeMemberFlow.steps}
+              title="Getting Started"
+              description="Complete these steps to unlock all member features"
+            />
+          </div>
+        )}
+
         {/* Profile Management */}
         <Card data-testid="card-profile-management">
           <CardHeader>
@@ -238,6 +263,15 @@ export default function MemberDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Free Member Onboarding Modal */}
+      <OnboardingModal
+        flowKey="free_member"
+        steps={freeMemberFlow.steps}
+        isOpen={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+        onDismiss={() => setShowOnboarding(false)}
+      />
     </div>
   );
 }

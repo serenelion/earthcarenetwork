@@ -350,6 +350,12 @@ export interface IStorage {
   getUserInvitations(email: string, limit?: number, offset?: number): Promise<Array<EnterpriseInvitation & { enterprise: Enterprise }>>;
   updateInvitation(id: string, invitation: Partial<InsertEnterpriseInvitation>): Promise<EnterpriseInvitation>;
   cancelInvitation(id: string): Promise<EnterpriseInvitation>;
+
+  // Onboarding progress operations
+  getOnboardingProgress(userId: string, flowKey: string): Promise<{ completed: boolean; steps: Record<string, boolean>; completedAt?: string }>;
+  updateOnboardingProgress(userId: string, flowKey: string, progress: { completed: boolean; steps: Record<string, boolean>; completedAt?: string }): Promise<void>;
+  markOnboardingStepComplete(userId: string, flowKey: string, stepId: string): Promise<void>;
+  markOnboardingComplete(userId: string, flowKey: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2588,6 +2594,101 @@ export class DatabaseStorage implements IStorage {
       .where(eq(enterpriseInvitations.id, id))
       .returning();
     return updated;
+  }
+
+  // Onboarding progress operations
+  async getOnboardingProgress(userId: string, flowKey: string): Promise<{ completed: boolean; steps: Record<string, boolean>; completedAt?: string }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const progress = user.onboardingProgress as Record<string, { completed: boolean; steps: Record<string, boolean>; completedAt?: string }> || {};
+    
+    // Return existing progress or default empty state
+    return progress[flowKey] || {
+      completed: false,
+      steps: {},
+      completedAt: undefined
+    };
+  }
+
+  async updateOnboardingProgress(userId: string, flowKey: string, progress: { completed: boolean; steps: Record<string, boolean>; completedAt?: string }): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const newProgressData = {
+      [flowKey]: progress
+    };
+
+    await db
+      .update(users)
+      .set({ 
+        onboardingProgress: sql`COALESCE(onboarding_progress, '{}'::jsonb) || ${JSON.stringify(newProgressData)}::jsonb`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async markOnboardingStepComplete(userId: string, flowKey: string, stepId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentProgress = user.onboardingProgress as Record<string, { completed: boolean; steps: Record<string, boolean>; completedAt?: string }> || {};
+    
+    const flowProgress = currentProgress[flowKey] || {
+      completed: false,
+      steps: {},
+      completedAt: undefined
+    };
+
+    flowProgress.steps[stepId] = true;
+
+    const newProgressData = {
+      [flowKey]: flowProgress
+    };
+
+    await db
+      .update(users)
+      .set({ 
+        onboardingProgress: sql`COALESCE(onboarding_progress, '{}'::jsonb) || ${JSON.stringify(newProgressData)}::jsonb`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async markOnboardingComplete(userId: string, flowKey: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentProgress = user.onboardingProgress as Record<string, { completed: boolean; steps: Record<string, boolean>; completedAt?: string }> || {};
+    
+    const flowProgress = currentProgress[flowKey] || {
+      completed: false,
+      steps: {},
+      completedAt: undefined
+    };
+
+    flowProgress.completed = true;
+    flowProgress.completedAt = new Date().toISOString();
+
+    const newProgressData = {
+      [flowKey]: flowProgress
+    };
+
+    await db
+      .update(users)
+      .set({ 
+        onboardingProgress: sql`COALESCE(onboarding_progress, '{}'::jsonb) || ${JSON.stringify(newProgressData)}::jsonb`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
   }
 }
 

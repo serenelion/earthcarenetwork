@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,31 @@ import { Globe, Sprout, Coins, Wrench, Network, Search, User, ExternalLink } fro
 import SearchBar from "@/components/SearchBar";
 import EnterpriseCard from "@/components/directory/EnterpriseCard";
 import CategorySection from "@/components/directory/CategorySection";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { visitorFlow } from "@/lib/onboardingFlows";
 import type { Enterprise } from "@shared/schema";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('visitor_onboarding_shown');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('visitor_onboarding_shown', 'true');
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingDismiss = () => {
+    localStorage.setItem('visitor_onboarding_shown', 'true');
+    setShowOnboarding(false);
+  };
 
   const { data: enterprises = [], isLoading } = useQuery<Enterprise[]>({
     queryKey: ["/api/enterprises", selectedCategory, searchQuery],
@@ -285,6 +305,15 @@ export default function Landing() {
           </p>
         </div>
       </section>
+
+      {/* Visitor Onboarding Modal */}
+      <OnboardingModal
+        flowKey="visitor"
+        steps={visitorFlow.steps}
+        isOpen={showOnboarding}
+        onComplete={handleOnboardingComplete}
+        onDismiss={handleOnboardingDismiss}
+      />
     </div>
   );
 }
