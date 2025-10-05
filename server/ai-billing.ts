@@ -34,6 +34,11 @@ export async function checkUserCredits(userId: string, estimatedCost: number = 0
       throw new Error("User not found");
     }
 
+    // Admins have unlimited credits
+    if (user.role === 'admin') {
+      return true;
+    }
+
     const currentBalance = user.creditBalance || 0;
     const overageAllowed = user.overageAllowed || false;
 
@@ -71,6 +76,29 @@ export async function deductCreditsAndLog(
 
       if (!user) {
         throw new Error("User not found");
+      }
+
+      // Admins don't get charged but we still log their usage
+      if (user.role === 'admin') {
+        const userSubscription = await tx.query.subscriptions.findFirst({
+          where: eq(subscriptions.userId, userId),
+        });
+
+        await tx.insert(aiUsageLogs).values({
+          userId,
+          subscriptionId: userSubscription?.id || null,
+          operationType,
+          modelUsed: model,
+          tokensPrompt,
+          tokensCompletion,
+          providerCost: cost,
+          cost,
+          entityType: entityType || null,
+          entityId: entityId || null,
+          metadata: metadata || null,
+        });
+
+        return;
       }
 
       const currentBalance = user.creditBalance || 0;
