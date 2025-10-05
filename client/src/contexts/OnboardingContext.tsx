@@ -20,6 +20,8 @@ export interface OnboardingContextType {
   
   getProgress: (flowKey: string) => OnboardingProgress | null;
   isLoading: (flowKey: string) => boolean;
+  isAuthLoading: boolean;
+  isVisitor: boolean;
   
   startFlow: (flowKey: string) => Promise<void>;
   completeStep: (flowKey: string, stepId: string) => Promise<void>;
@@ -38,15 +40,16 @@ interface OnboardingProviderProps {
 }
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
   const [currentFlow, setCurrentFlow] = useState<string | null>(null);
   const [dismissedFlows, setDismissedFlows] = useState<Set<string>>(new Set());
 
+  const isVisitor = !isAuthenticated;
   const flowQueryKey = (flowKey: string) => ['/api/onboarding/progress', flowKey];
 
   const getProgress = (flowKey: string): OnboardingProgress | null => {
-    if (isVisitorFlow(flowKey) || !isAuthenticated) {
+    if (isVisitor || isVisitorFlow(flowKey)) {
       return getLocalStorageProgress(flowKey);
     }
     
@@ -59,7 +62,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   };
 
   const isLoading = (flowKey: string): boolean => {
-    if (isVisitorFlow(flowKey) || !isAuthenticated) {
+    if (isVisitor || isVisitorFlow(flowKey)) {
       return false;
     }
     
@@ -69,7 +72,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
   const startFlowMutation = useMutation({
     mutationFn: async (flowKey: string) => {
-      if (isVisitorFlow(flowKey) || !isAuthenticated) {
+      if (isVisitor || isVisitorFlow(flowKey)) {
         const progress: OnboardingProgress = {
           completed: false,
           steps: {},
@@ -97,7 +100,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       }
     },
     onSuccess: (data, flowKey) => {
-      if (!isVisitorFlow(flowKey) && isAuthenticated) {
+      if (!isVisitor && !isVisitorFlow(flowKey)) {
         queryClient.setQueryData(flowQueryKey(flowKey), data);
       }
       setCurrentFlow(flowKey);
@@ -115,7 +118,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         },
       };
 
-      if (isVisitorFlow(flowKey) || !isAuthenticated) {
+      if (isVisitor || isVisitorFlow(flowKey)) {
         setLocalStorageProgress(flowKey, updatedProgress);
         return { flowKey, progress: updatedProgress };
       }
@@ -132,7 +135,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       }
     },
     onSuccess: (data, { flowKey }) => {
-      if (!isVisitorFlow(flowKey) && isAuthenticated) {
+      if (!isVisitor && !isVisitorFlow(flowKey)) {
         queryClient.setQueryData(flowQueryKey(flowKey), data);
         queryClient.invalidateQueries({ queryKey: flowQueryKey(flowKey) });
       }
@@ -148,7 +151,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         completedAt: new Date().toISOString(),
       };
 
-      if (isVisitorFlow(flowKey) || !isAuthenticated) {
+      if (isVisitor || isVisitorFlow(flowKey)) {
         setLocalStorageProgress(flowKey, updatedProgress);
         return { flowKey, progress: updatedProgress };
       }
@@ -165,7 +168,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       }
     },
     onSuccess: (data, flowKey) => {
-      if (!isVisitorFlow(flowKey) && isAuthenticated) {
+      if (!isVisitor && !isVisitorFlow(flowKey)) {
         queryClient.setQueryData(flowQueryKey(flowKey), data);
         queryClient.invalidateQueries({ queryKey: flowQueryKey(flowKey) });
       }
@@ -223,6 +226,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setCurrentFlow,
     getProgress,
     isLoading,
+    isAuthLoading,
+    isVisitor,
     startFlow,
     completeStep,
     completeFlow,

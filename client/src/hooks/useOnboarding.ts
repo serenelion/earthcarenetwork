@@ -6,21 +6,22 @@ import { isVisitorFlow } from '@/lib/onboardingStorage';
 
 export function useOnboarding() {
   const context = useOnboardingContext();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   return {
     ...context,
     user,
-    isAuthenticated,
+    isAuthenticated: !context.isVisitor,
   };
 }
 
 export function useOnboardingProgress(flowKey: string) {
-  const { isAuthenticated } = useAuth();
+  const { isLoading: isAuthLoading } = useAuth();
+  const { isVisitor } = useOnboardingContext();
   
   return useQuery<{ flowKey: string; progress: OnboardingProgress }>({
     queryKey: ['/api/onboarding/progress', flowKey],
-    enabled: isAuthenticated && !!flowKey && !isVisitorFlow(flowKey),
+    enabled: !isAuthLoading && !isVisitor && !!flowKey && !isVisitorFlow(flowKey),
     retry: (failureCount, error) => {
       if (failureCount >= 2) return false;
       
@@ -36,18 +37,17 @@ export function useOnboardingProgress(flowKey: string) {
 
 export function useFlowProgress(flowKey: string) {
   const { data, isLoading, error } = useOnboardingProgress(flowKey);
-  const { isStepComplete, isFlowComplete, getCurrentStepIndex, getProgress } = useOnboardingContext();
-  const { isAuthenticated } = useAuth();
+  const { isStepComplete, isFlowComplete, getCurrentStepIndex, getProgress, isVisitor } = useOnboardingContext();
 
   let progress = data?.progress || null;
   
-  if (!isAuthenticated || isVisitorFlow(flowKey) || error) {
+  if (isVisitor || isVisitorFlow(flowKey) || error) {
     progress = getProgress(flowKey);
   }
 
   return {
     progress,
-    isLoading: !isVisitorFlow(flowKey) && isAuthenticated ? isLoading : false,
+    isLoading: !isVisitorFlow(flowKey) && !isVisitor ? isLoading : false,
     isComplete: isFlowComplete(flowKey),
     isStepComplete: (stepId: string) => isStepComplete(flowKey, stepId),
     getCurrentStep: (stepIds: string[]) => getCurrentStepIndex(flowKey, stepIds),

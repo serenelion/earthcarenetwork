@@ -71,14 +71,14 @@ async function upsertUser(
       // Don't include role/membershipStatus to preserve existing values
     });
   } else {
-    // New user - use role from claims if provided, otherwise default to 'visitor'
+    // New user - use role from claims if provided, otherwise default to 'member'
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
-      role: claims["role"] || 'visitor',
+      role: claims["role"] || 'member',
       membershipStatus: 'free',
     });
   }
