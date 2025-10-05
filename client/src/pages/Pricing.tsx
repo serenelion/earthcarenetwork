@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Check, Crown, Zap, Users, BarChart3, Shield, ArrowRight } from "lucide-react";
+import { Check, Crown, Zap, Users, BarChart3, Shield, ArrowRight, X, ChevronRight, Target, Briefcase, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -34,13 +36,13 @@ export default function Pricing() {
     }
   };
 
-  // Default plans if not loaded from backend yet
   const defaultPlans = [
     {
       id: 'free',
       planType: 'free' as const,
       name: 'Free',
       description: 'Claim your project and manage your profile',
+      whoIsThisFor: 'Perfect for discovering regenerative enterprises',
       priceMonthly: 0,
       priceYearly: 0,
       features: [
@@ -62,8 +64,9 @@ export default function Pricing() {
       planType: 'crm_pro' as const,
       name: 'CRM Pro',
       description: 'Full CRM access for regenerative entrepreneurs',
-      priceMonthly: 4200, // $42 in cents
-      priceYearly: 42000, // $420/year (2 months free)
+      whoIsThisFor: 'Ideal for entrepreneurs managing sales & relationships',
+      priceMonthly: 4200,
+      priceYearly: 42000,
       features: [
         'Everything in Free',
         'Full CRM access',
@@ -87,8 +90,9 @@ export default function Pricing() {
       planType: 'build_pro_bundle' as const,
       name: 'Build Pro Bundle',
       description: 'CRM + Spatial Network Build Pro',
-      priceMonthly: 8811, // $88.11 in cents
-      priceYearly: 88110, // $881.10/year
+      whoIsThisFor: 'Built for teams managing complex spatial projects',
+      priceMonthly: 8811,
+      priceYearly: 88110,
       features: [
         'Everything in CRM Pro',
         'Spatial Network Build Pro access',
@@ -110,6 +114,104 @@ export default function Pricing() {
 
   const plans = subscriptionPlans.length > 0 ? subscriptionPlans : defaultPlans;
   const currentPlanType = userSubscription?.currentPlanType || 'free';
+
+  const comparisonData = [
+    {
+      category: "Directory Access",
+      free: "Browse only",
+      crmPro: "Full access",
+      buildPro: "Full access"
+    },
+    {
+      category: "Enterprise Profiles",
+      free: "Claim 1 profile",
+      crmPro: "Unlimited profiles",
+      buildPro: "Unlimited profiles"
+    },
+    {
+      category: "CRM - Opportunities",
+      free: false,
+      crmPro: true,
+      buildPro: true
+    },
+    {
+      category: "CRM - Tasks",
+      free: false,
+      crmPro: true,
+      buildPro: true
+    },
+    {
+      category: "CRM - People",
+      free: false,
+      crmPro: true,
+      buildPro: true
+    },
+    {
+      category: "Lead Scoring",
+      free: false,
+      crmPro: true,
+      buildPro: true
+    },
+    {
+      category: "AI Credits/month",
+      free: "$0.10",
+      crmPro: "$42",
+      buildPro: "$88.11"
+    },
+    {
+      category: "AI Copilot",
+      free: "Limited",
+      crmPro: "Full access",
+      buildPro: "Full access"
+    },
+    {
+      category: "Analytics & Reporting",
+      free: "Basic",
+      crmPro: "Advanced",
+      buildPro: "Advanced"
+    },
+    {
+      category: "Spatial Network Tools",
+      free: false,
+      crmPro: false,
+      buildPro: true
+    },
+    {
+      category: "Geographic Visualization",
+      free: false,
+      crmPro: false,
+      buildPro: true
+    },
+    {
+      category: "Team Collaboration",
+      free: false,
+      crmPro: false,
+      buildPro: true
+    },
+    {
+      category: "Custom Integrations",
+      free: false,
+      crmPro: false,
+      buildPro: true
+    },
+    {
+      category: "Support Level",
+      free: "Community",
+      crmPro: "Priority",
+      buildPro: "Dedicated"
+    }
+  ];
+
+  const renderFeatureCell = (value: boolean | string) => {
+    if (typeof value === 'boolean') {
+      return value ? (
+        <Check className="w-5 h-5 text-green-500 mx-auto" data-testid="feature-check" />
+      ) : (
+        <X className="w-5 h-5 text-muted-foreground mx-auto" data-testid="feature-cross" />
+      );
+    }
+    return <span className="text-sm">{value}</span>;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -136,7 +238,7 @@ export default function Pricing() {
               data-testid="billing-toggle"
             />
             <span className={isYearly ? 'font-medium' : 'text-muted-foreground'}>
-              Yearly <Badge className="ml-2 bg-green-100 text-green-800">Save 17%</Badge>
+              Yearly <Badge className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Save 17%</Badge>
             </span>
           </div>
         </div>
@@ -144,7 +246,7 @@ export default function Pricing() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {plans.map((plan) => {
             const price = isYearly && plan.priceYearly ? plan.priceYearly : plan.priceMonthly;
             const yearlyPrice = plan.priceYearly || 0;
@@ -157,10 +259,16 @@ export default function Pricing() {
             const isFree = plan.planType === 'free';
             const isComingSoon = !plan.isActive;
 
+            const whoIsThisFor = plan.planType === 'free' 
+              ? 'Perfect for discovering regenerative enterprises'
+              : plan.planType === 'crm_pro'
+              ? 'Ideal for entrepreneurs managing sales & relationships'
+              : 'Built for teams managing complex spatial projects';
+
             return (
               <Card 
                 key={plan.id} 
-                className={`relative ${isPopular ? 'border-primary shadow-lg scale-105' : ''} ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''}`}
+                className={`relative flex flex-col ${isPopular ? 'border-primary shadow-lg md:scale-105' : ''} ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''}`}
                 data-testid={`plan-card-${plan.planType}`}
               >
                 {isPopular && (
@@ -180,15 +288,26 @@ export default function Pricing() {
                   </div>
                 )}
 
-                <CardHeader className="text-center">
+                <CardHeader className="text-center pb-4">
                   <div className="flex justify-center mb-2">
-                    {isFree && <Users className="w-8 h-8 text-green-600" />}
-                    {plan.planType === 'crm_pro' && <BarChart3 className="w-8 h-8 text-blue-600" />}
-                    {plan.planType === 'build_pro_bundle' && <Zap className="w-8 h-8 text-purple-600" />}
+                    {isFree && <Users className="w-8 h-8 text-green-600 dark:text-green-400" />}
+                    {plan.planType === 'crm_pro' && <BarChart3 className="w-8 h-8 text-blue-600 dark:text-blue-400" />}
+                    {plan.planType === 'build_pro_bundle' && <Zap className="w-8 h-8 text-purple-600 dark:text-purple-400" />}
                   </div>
                   
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardDescription className="mb-3">{plan.description}</CardDescription>
+                  
+                  {/* Who is this for? */}
+                  <div className="mt-2">
+                    <Badge 
+                      variant="secondary" 
+                      className="text-xs font-normal py-1 px-3"
+                      data-testid={`who-for-${plan.planType}`}
+                    >
+                      {whoIsThisFor}
+                    </Badge>
+                  </div>
                   
                   <div className="mt-4">
                     {isFree ? (
@@ -202,7 +321,7 @@ export default function Pricing() {
                           </span>
                         </div>
                         {isYearly && savings > 0 && (
-                          <div className="text-sm text-green-600">
+                          <div className="text-sm text-green-600 dark:text-green-400">
                             Save {savings.toFixed(0)}% annually
                           </div>
                         )}
@@ -211,7 +330,7 @@ export default function Pricing() {
                   </div>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="flex-grow">
                   <ul className="space-y-3">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start">
@@ -233,7 +352,7 @@ export default function Pricing() {
                   </div>
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className="pt-4">
                   {isFree ? (
                     <Button 
                       variant="outline" 
@@ -281,6 +400,223 @@ export default function Pricing() {
               </Card>
             );
           })}
+        </div>
+      </div>
+
+      {/* Upgrade Path Visualization */}
+      <div className="py-16 bg-muted/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-4">Your Growth Path</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Start free and upgrade as your needs grow. Each tier unlocks more powerful tools for your regenerative journey.
+          </p>
+          
+          {/* Desktop view */}
+          <div className="hidden md:flex items-center justify-center gap-4" data-testid="upgrade-path-desktop">
+            <Card className="flex-1 max-w-xs">
+              <CardContent className="pt-6">
+                <div className="flex justify-center mb-3">
+                  <Target className="w-10 h-10 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-2">Free</h3>
+                <p className="text-sm text-center text-muted-foreground mb-3">
+                  Browse & Claim
+                </p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-xs text-center">
+                    Discover regenerative enterprises and claim your profile
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <ChevronRight className="w-8 h-8 text-primary flex-shrink-0" />
+            
+            <Card className="flex-1 max-w-xs border-primary">
+              <CardContent className="pt-6">
+                <div className="flex justify-center mb-3">
+                  <Briefcase className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-2">CRM Pro</h3>
+                <p className="text-sm text-center text-muted-foreground mb-3">
+                  Full CRM Power
+                </p>
+                <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+                  <p className="text-xs text-center">
+                    Manage opportunities, tasks, and relationships with AI insights
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <ChevronRight className="w-8 h-8 text-primary flex-shrink-0" />
+            
+            <Card className="flex-1 max-w-xs">
+              <CardContent className="pt-6">
+                <div className="flex justify-center mb-3">
+                  <Building2 className="w-10 h-10 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-2">Build Pro</h3>
+                <p className="text-sm text-center text-muted-foreground mb-3">
+                  Advanced Tools
+                </p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-xs text-center">
+                    Spatial network tools for complex project management
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Mobile view */}
+          <div className="md:hidden space-y-4" data-testid="upgrade-path-mobile">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Target className="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">Free - Browse & Claim</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Discover regenerative enterprises and claim your profile
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-center">
+              <div className="w-0.5 h-8 bg-primary" />
+            </div>
+            
+            <Card className="border-primary">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">CRM Pro - Full CRM Power</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage opportunities, tasks, and relationships with AI insights
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-center">
+              <div className="w-0.5 h-8 bg-primary" />
+            </div>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Building2 className="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">Build Pro - Advanced Tools</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Spatial network tools for complex project management
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Comparison Table */}
+      <div className="py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-4">Detailed Feature Comparison</h2>
+          <p className="text-center text-muted-foreground mb-12">
+            Compare all features across plans to find the perfect fit for your needs
+          </p>
+          
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto" data-testid="comparison-table-desktop">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-1/4">Feature</TableHead>
+                  <TableHead className="text-center w-1/4">Free</TableHead>
+                  <TableHead className="text-center w-1/4 bg-primary/5">CRM Pro</TableHead>
+                  <TableHead className="text-center w-1/4">Build Pro</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {comparisonData.map((row, index) => (
+                  <TableRow key={index} data-testid={`comparison-row-${index}`}>
+                    <TableCell className="font-medium">{row.category}</TableCell>
+                    <TableCell className="text-center">{renderFeatureCell(row.free)}</TableCell>
+                    <TableCell className="text-center bg-primary/5">{renderFeatureCell(row.crmPro)}</TableCell>
+                    <TableCell className="text-center">{renderFeatureCell(row.buildPro)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Accordion View */}
+          <div className="md:hidden" data-testid="comparison-table-mobile">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="free" data-testid="accordion-free">
+                <AccordionTrigger className="text-lg font-semibold">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-green-600" />
+                    Free Plan
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pt-2">
+                    {comparisonData.map((row, index) => (
+                      <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <span className="text-sm font-medium">{row.category}</span>
+                        <div>{renderFeatureCell(row.free)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="crm_pro" data-testid="accordion-crm-pro">
+                <AccordionTrigger className="text-lg font-semibold">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    CRM Pro
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pt-2">
+                    {comparisonData.map((row, index) => (
+                      <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <span className="text-sm font-medium">{row.category}</span>
+                        <div>{renderFeatureCell(row.crmPro)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="build_pro" data-testid="accordion-build-pro">
+                <AccordionTrigger className="text-lg font-semibold">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-purple-600" />
+                    Build Pro Bundle
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pt-2">
+                    {comparisonData.map((row, index) => (
+                      <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <span className="text-sm font-medium">{row.category}</span>
+                        <div>{renderFeatureCell(row.buildPro)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </div>
       </div>
 
@@ -349,7 +685,7 @@ export default function Pricing() {
       {/* Security & Trust Section */}
       <div className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Shield className="w-16 h-16 mx-auto text-green-600 mb-6" />
+          <Shield className="w-16 h-16 mx-auto text-green-600 dark:text-green-400 mb-6" />
           <h2 className="text-3xl font-bold mb-4">Secure & Trusted</h2>
           <p className="text-xl text-muted-foreground mb-8">
             Your data and payments are protected with industry-standard security measures.

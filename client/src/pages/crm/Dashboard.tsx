@@ -2,17 +2,22 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building, Users, Handshake, CheckSquare, TrendingUp, Plus, Download, ExternalLink, Lightbulb, BarChart3, Settings } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { fetchCRMStats, fetchEnterprises, fetchAISuggestions, type CRMStats, type AISuggestion } from "@/lib/api";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import type { Enterprise } from "@shared/schema";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { userSubscription } = useSubscription();
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
+  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro';
 
   const { data: stats, isLoading: statsLoading } = useQuery<CRMStats>({
     queryKey: ["/api/crm/stats"],
@@ -118,6 +123,23 @@ export default function Dashboard() {
         <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 font-lato">Dashboard</h1>
         <p className="text-sm md:text-base text-muted-foreground">Manage your regenerative enterprise network</p>
       </div>
+
+      {/* Upgrade Prompt for Free Users */}
+      {isFreeUser && (
+        <div className="mb-6 md:mb-8">
+          <UpgradePrompt
+            feature="full CRM capabilities"
+            title="Supercharge Your Network Management"
+            benefits={[
+              "Create unlimited opportunities, tasks, and contacts",
+              "AI-powered lead scoring and intelligent insights",
+              "Advanced analytics and reporting",
+              "Export data to CSV and integrations",
+              "Team collaboration features",
+            ]}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         {statsCards.map((stat) => {
@@ -350,6 +372,24 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Build Pro Upgrade Prompt for CRM Pro Users */}
+      {isCrmProUser && (
+        <div className="mt-8 md:mt-10">
+          <UpgradePrompt
+            variant="build_pro"
+            feature="advanced spatial tools and premium capabilities"
+            title="Unlock Build Pro Power Features"
+            benefits={[
+              "Spatial Network Build Pro access with geographic visualization",
+              "Advanced project management and collaboration tools",
+              "Custom integrations and API access",
+              "Advanced analytics and reporting dashboards",
+              "Priority access to new features",
+            ]}
+          />
+        </div>
+      )}
     </>
   );
 }

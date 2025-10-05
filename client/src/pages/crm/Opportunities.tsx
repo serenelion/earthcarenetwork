@@ -92,6 +92,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertOpportunitySchema, type Opportunity, type InsertOpportunity, type Enterprise, type Person } from "@shared/schema";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
@@ -861,17 +862,21 @@ export default function Opportunities() {
           </div>
         </div>
 
-        {/* Upgrade Alert for Free Users */}
+        {/* Upgrade Prompt for Free Users */}
         {isFreeUser && (
-          <Alert className="mb-6" data-testid="alert-upgrade-prompt">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
-              <Link href="/pricing" className="font-medium underline">
-                View plans
-              </Link>
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6">
+            <UpgradePrompt
+              feature="opportunity management"
+              title="Unlock Unlimited Opportunities"
+              benefits={[
+                "Create and track unlimited opportunities",
+                "AI-powered lead scoring and insights",
+                "Export opportunities to CSV",
+                "Advanced filtering and analytics",
+                "Priority email support",
+              ]}
+            />
+          </div>
         )}
 
         {/* Search and Filter */}

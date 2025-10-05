@@ -70,6 +70,7 @@ import {
   Users,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertTaskSchema, type Task, type InsertTask, type Enterprise, type Person, type Opportunity } from "@shared/schema";
 const taskPriorities = [
   { value: "low", label: "Low", color: "bg-gray-100 text-gray-800" },
@@ -640,17 +641,21 @@ export default function Tasks() {
           </Dialog>
         </div>
 
-        {/* Upgrade Alert for Free Users */}
+        {/* Upgrade Prompt for Free Users */}
         {isFreeUser && (
-          <Alert className="mb-6" data-testid="alert-upgrade-prompt">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
-              <Link href="/pricing" className="font-medium underline">
-                View plans
-              </Link>
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6">
+            <UpgradePrompt
+              feature="task management"
+              title="Unlock Advanced Task Management"
+              benefits={[
+                "Create and assign unlimited tasks",
+                "Advanced task prioritization",
+                "Team collaboration features",
+                "Task automation and reminders",
+                "Detailed progress tracking",
+              ]}
+            />
+          </div>
         )}
 
         {/* Search and Filter */}

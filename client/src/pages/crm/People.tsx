@@ -66,6 +66,7 @@ import {
   Shield,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertPersonSchema, type Person, type InsertPerson, type Enterprise } from "@shared/schema";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
@@ -366,17 +367,21 @@ export default function People() {
         <p className="text-sm text-muted-foreground">Manage contacts and track user journeys</p>
       </div>
 
-      {/* Upgrade Alert for Free Users */}
+      {/* Upgrade Prompt for Free Users */}
       {isFreeUser && (
-        <Alert className="mb-6" data-testid="alert-upgrade-prompt">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
-            <Link href="/pricing" className="font-medium underline">
-              View plans
-            </Link>
-          </AlertDescription>
-        </Alert>
+        <div className="mb-6">
+          <UpgradePrompt
+            feature="contact management"
+            title="Unlock Complete Contact Management"
+            benefits={[
+              "Create and manage unlimited contacts",
+              "Track invitation and claim status",
+              "Build Pro subscription management",
+              "Advanced contact segmentation",
+              "Contact import/export tools",
+            ]}
+          />
+        </div>
       )}
       
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

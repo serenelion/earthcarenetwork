@@ -86,6 +86,7 @@ import {
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PledgeAffirmationModal from "@/components/PledgeAffirmationModal";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise, type EarthCarePledge } from "@shared/schema";
 
 const categories = [
@@ -126,6 +127,7 @@ export default function CRMEnterprises() {
   const { user } = useAuth();
   const { userSubscription } = useSubscription();
   const isFreeUser = userSubscription?.currentPlanType === 'free';
+  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro';
   const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -357,17 +359,21 @@ export default function CRMEnterprises() {
         </Button>
       </div>
 
-      {/* Upgrade Alert for Free Users */}
+      {/* Upgrade Prompt for Free Users */}
       {isFreeUser && (
-        <Alert data-testid="alert-upgrade-prompt">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            You're on the free plan. Upgrade to CRM Pro to create and edit CRM data.{" "}
-            <Link href="/pricing" className="font-medium underline">
-              View plans
-            </Link>
-          </AlertDescription>
-        </Alert>
+        <div className="mb-6">
+          <UpgradePrompt
+            feature="enterprise management"
+            title="Unlock Full Enterprise Management"
+            benefits={[
+              "Create and manage unlimited enterprises",
+              "Advanced enterprise categorization",
+              "EarthCare Pledge tracking",
+              "Bulk enterprise operations",
+              "Enterprise verification tools",
+            ]}
+          />
+        </div>
       )}
 
       {/* Search and Filters */}
@@ -892,6 +898,23 @@ export default function CRMEnterprises() {
             setSelectedEnterpriseForPledge(null);
           }}
         />
+      )}
+
+      {/* Build Pro Upgrade Prompt for CRM Pro Power Users */}
+      {isCrmProUser && filteredEnterprises.length >= 10 && (
+        <div className="mt-6">
+          <UpgradePrompt
+            variant="build_pro"
+            feature="advanced enterprise management and spatial tools"
+            title="Managing Multiple Enterprises? Upgrade to Build Pro"
+            benefits={[
+              "Spatial Network Build Pro for geographic visualization",
+              "Advanced collaboration tools for large networks",
+              "Custom enterprise integrations and API access",
+              "Bulk operations and advanced automation",
+            ]}
+          />
+        </div>
       )}
     </div>
   );

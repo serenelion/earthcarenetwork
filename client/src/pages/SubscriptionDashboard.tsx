@@ -218,7 +218,7 @@ export default function SubscriptionDashboard() {
               </CardContent>
             </Card>
 
-            {/* Available Upgrades */}
+            {/* Available Upgrades for Free Users */}
             {userSubscription?.currentPlanType === 'free' && (
               <Card data-testid="upgrade-options-card">
                 <CardHeader>
@@ -243,6 +243,72 @@ export default function SubscriptionDashboard() {
                       <Button size="sm" asChild>
                         <Link href="/pricing">
                           Upgrade to CRM Pro
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Build Pro Upgrade for CRM Pro Users */}
+            {userSubscription?.currentPlanType === 'crm_pro' && (
+              <Card data-testid="build-pro-upgrade-card" className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-background">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-purple-600 dark:text-purple-400">⚡</span>
+                    Upgrade to Build Pro Bundle
+                  </CardTitle>
+                  <CardDescription>
+                    Unlock advanced features for power users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-lg">Build Pro Bundle</h4>
+                          <p className="text-sm text-muted-foreground">Everything in CRM Pro, plus premium features</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">+$46.11</div>
+                          <div className="text-lg font-bold">$88.11</div>
+                          <div className="text-xs text-muted-foreground">/month</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">Spatial Network Build Pro access</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">Double AI credits ($88.11/month)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">Advanced project management & collaboration</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">Dedicated account manager</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">Custom integrations & API access</span>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                        asChild
+                        data-testid="button-upgrade-to-build-pro"
+                      >
+                        <Link href="/pricing">
+                          Upgrade to Build Pro Bundle
                         </Link>
                       </Button>
                     </div>
