@@ -29,7 +29,7 @@ interface ClaimData {
 
 export default function ClaimProfile() {
   const [, navigate] = useLocation();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [claimData, setClaimData] = useState<ClaimData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,17 +237,18 @@ export default function ClaimProfile() {
               </Alert>
             ) : !user ? (
               <div className="space-y-4">
-                <Alert data-testid="alert-signin">
-                  <AlertDescription>
-                    You must be signed in to claim this profile. Please sign in or create an account to continue.
+                <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800" data-testid="alert-signin">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900 dark:text-blue-100">
+                    <strong>Join as a free member to claim this profile!</strong> Claiming gives you full control of your enterprise profile plus exclusive member benefits including networking opportunities and business growth tools.
                   </AlertDescription>
                 </Alert>
                 <Button
                   className="w-full"
-                  onClick={login}
+                  onClick={() => window.location.href = "/api/login"}
                   data-testid="button-signin"
                 >
-                  Sign In to Claim
+                  Join Free to Claim
                 </Button>
               </div>
             ) : (

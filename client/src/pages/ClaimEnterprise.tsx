@@ -51,7 +51,7 @@ export default function ClaimEnterprise() {
               Claim Your Enterprise Profile
             </h1>
             <p className="text-xl text-muted-foreground mb-8" data-testid="text-claim-description">
-              Join the Earth Care Network and take control of your business profile with exclusive benefits.
+              Become a free member of Earth Care Network and take control of your business profile with exclusive benefits.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -87,10 +87,10 @@ export default function ClaimEnterprise() {
             </div>
             
             <div className="bg-white dark:bg-card rounded-lg p-8 border shadow-sm">
-              <h2 className="text-2xl font-semibold mb-4">Ready to Get Started?</h2>
+              <h2 className="text-2xl font-semibold mb-4">Ready to Become a Member?</h2>
               <p className="text-muted-foreground mb-6">
-                If you've received an invitation to claim your enterprise, please use the link provided in your email.
-                Otherwise, contact our support team to get started.
+                If you've received an invitation to claim your enterprise, use the link in your email to join as a free member and claim your profile.
+                No invitation? Contact our support team to get started.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" data-testid="button-contact-support">
@@ -371,13 +371,36 @@ export default function ClaimEnterprise() {
 
           {/* Claim Status & Actions */}
           {!isAuthenticated ? (
-            <Alert className="mb-8">
-              <Mail className="h-4 w-4" />
-              <AlertTitle>Authentication Required</AlertTitle>
-              <AlertDescription>
-                Please log in or create an account to claim your enterprise profile.
-              </AlertDescription>
-            </Alert>
+            <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950">
+              <CardHeader>
+                <CardTitle className="flex items-center text-blue-900 dark:text-blue-100">
+                  <Gift className="h-5 w-5 mr-2 text-blue-600" />
+                  Join Free to Claim Your Enterprise
+                </CardTitle>
+                <CardDescription className="text-blue-800 dark:text-blue-200">
+                  Create your free member account to claim your enterprise profile and unlock exclusive benefits.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-white dark:bg-card rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium">✓ Free forever membership</p>
+                  <p className="text-sm font-medium">✓ Full enterprise profile control</p>
+                  <p className="text-sm font-medium">✓ 11% Build Pro discount</p>
+                  <p className="text-sm font-medium">✓ Priority support access</p>
+                  <p className="text-sm font-medium">✓ Network collaboration tools</p>
+                </div>
+                <Button 
+                  size="lg" 
+                  className="w-full md:w-auto"
+                  onClick={() => window.location.href = "/api/login"}
+                  data-testid="button-join-free"
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Create Free Account to Claim
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
           ) : !isEligible ? (
             <Alert className="mb-8">
               <CheckCircle className="h-4 w-4" />
