@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { 
   Building2, 
   CheckCircle, 
@@ -39,6 +41,9 @@ export default function ClaimEnterprise() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { userSubscription } = useSubscription();
+  
+  const isFreeUser = userSubscription?.currentPlanType === 'free';
 
   // If no params, show generic claim page
   if (!params) {
@@ -368,6 +373,24 @@ export default function ClaimEnterprise() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Upgrade Prompt for Free Members */}
+          {isAuthenticated && isFreeUser && isEligible && (
+            <div className="mb-8">
+              <UpgradePrompt
+                feature="unlimited enterprise claims"
+                benefits={[
+                  "Claim unlimited enterprises and manage multiple profiles",
+                  "Full CRM access to track opportunities and relationships",
+                  "Advanced lead scoring and AI-powered insights",
+                  "Team collaboration and invitation management",
+                  "Priority customer support and onboarding assistance"
+                ]}
+                title="Unlock Unlimited Enterprise Claims"
+                variant="crm_pro"
+              />
+            </div>
+          )}
 
           {/* Claim Status & Actions */}
           {!isAuthenticated ? (

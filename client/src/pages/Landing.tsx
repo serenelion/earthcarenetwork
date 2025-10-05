@@ -9,13 +9,19 @@ import SearchBar from "@/components/SearchBar";
 import EnterpriseCard from "@/components/directory/EnterpriseCard";
 import CategorySection from "@/components/directory/CategorySection";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
-import { visitorFlow } from "@/lib/onboardingFlows";
+import { visitorFlow, freeMemberFlow } from "@/lib/onboardingFlows";
+import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import type { Enterprise } from "@shared/schema";
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showFreeMemberOnboarding, setShowFreeMemberOnboarding] = useState(false);
+  
+  const { user, isAuthenticated } = useAuth();
+  const { isFlowComplete } = useOnboarding();
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('visitor_onboarding_shown');
@@ -23,6 +29,12 @@ export default function Landing() {
       setShowOnboarding(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user && user.role === 'member' && !isFlowComplete('free_member')) {
+      setShowFreeMemberOnboarding(true);
+    }
+  }, [isAuthenticated, user, isFlowComplete]);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('visitor_onboarding_shown', 'true');
@@ -313,6 +325,15 @@ export default function Landing() {
         isOpen={showOnboarding}
         onComplete={handleOnboardingComplete}
         onDismiss={handleOnboardingDismiss}
+      />
+
+      {/* Free Member Onboarding Modal */}
+      <OnboardingModal
+        flowKey="free_member"
+        steps={freeMemberFlow.steps}
+        isOpen={showFreeMemberOnboarding}
+        onComplete={() => setShowFreeMemberOnboarding(false)}
+        onDismiss={() => setShowFreeMemberOnboarding(false)}
       />
     </div>
   );
