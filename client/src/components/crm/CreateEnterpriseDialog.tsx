@@ -5,7 +5,6 @@ import { useLocation } from "wouter";
 import { z } from "zod";
 import { insertEnterpriseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/contexts/SubscriptionContext";
 import { queryClient } from "@/lib/queryClient";
 import {
   Dialog,
@@ -33,14 +32,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Building2, 
-  MapPin,
+  Globe,
   Lock,
-  Sparkles,
-  Crown,
   Loader2
 } from "lucide-react";
 
@@ -51,6 +47,7 @@ const createEnterpriseFormSchema = insertEnterpriseSchema.extend({
   contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   location: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
+  signPledge: z.boolean().optional().default(false),
 });
 
 type CreateEnterpriseFormData = z.infer<typeof createEnterpriseFormSchema>;
@@ -81,7 +78,6 @@ export default function CreateEnterpriseDialog({
   onSuccess 
 }: CreateEnterpriseDialogProps) {
   const { user } = useAuth();
-  const { userSubscription } = useSubscription();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,16 +91,19 @@ export default function CreateEnterpriseDialog({
       contactEmail: user?.email || "",
       location: "",
       website: "",
+      signPledge: false,
     },
   });
 
   const onSubmit = async (data: CreateEnterpriseFormData) => {
     setIsSubmitting(true);
     try {
+      const { signPledge, ...enterpriseData } = data;
+      
       const response = await fetch("/api/crm/enterprises", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(enterpriseData),
       });
 
       if (!response.ok) {
@@ -114,12 +113,39 @@ export default function CreateEnterpriseDialog({
 
       const enterprise = await response.json();
 
+      let pledgeSignedSuccessfully = false;
+
+      // If user wants to sign the pledge, create the pledge record
+      if (signPledge) {
+        try {
+          const pledgeResponse = await fetch(`/api/enterprises/${enterprise.id}/pledge`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              narrative: "" // Optional narrative, can be empty for now
+            }),
+          });
+
+          if (pledgeResponse.ok) {
+            pledgeSignedSuccessfully = true;
+          } else {
+            console.error("Pledge signing failed:", await pledgeResponse.text());
+          }
+        } catch (pledgeError) {
+          console.error("Error signing pledge:", pledgeError);
+        }
+      }
+
       // Invalidate the user enterprises query to refresh the list
       await queryClient.invalidateQueries({ queryKey: ['/api/crm/user/enterprises'] });
 
       toast({
-        title: "Enterprise setup complete!",
-        description: "Your public profile and CRM workspace are ready.",
+        title: pledgeSignedSuccessfully ? "Welcome to Earth Care Network!" : "Enterprise created!",
+        description: pledgeSignedSuccessfully
+          ? "Your enterprise profile is live and you've signed the Earth Care Pledge."
+          : signPledge
+            ? "Your enterprise is live, but there was an issue signing the pledge. You can sign it later from your enterprise profile."
+            : "Your profile and workspace are ready. You can sign the Earth Care Pledge anytime.",
       });
 
       onOpenChange(false);
@@ -143,125 +169,50 @@ export default function CreateEnterpriseDialog({
     }
   };
 
-  const currentPlanType = userSubscription?.currentPlanType || "free";
-  const isFreeUser = currentPlanType === "free";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="create-enterprise-dialog">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Setup Your Enterprise
+            Setup Your Enterprise Profile
           </DialogTitle>
           <DialogDescription className="text-base">
-            Create your public profile and CRM workspace. Features vary by membership tier.
+            Earth Care Network is the AI whitepages for regenerative enterprises. Create your complimentary profile and workspace to get discovered globally and manage your business relationships.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Two Sides of Your Enterprise */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          {/* What is an Enterprise */}
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
             <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Two Sides of Your Enterprise:
+              <Building2 className="h-4 w-4 text-primary" />
+              What's an Enterprise?
             </h3>
+            <p className="text-sm text-muted-foreground">
+              An enterprise is any organization aligned with regenerative values - from family farms 
+              to investment funds, from open-source projects to network organizers. Each enterprise 
+              gets a <span className="font-semibold">complimentary workspace</span> with both a public 
+              profile and private CRM tools.
+            </p>
+          </div>
+
+          {/* Your Complimentary Workspace */}
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-sm">Your Complimentary Workspace Includes:</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <Globe className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Public Profile:</span> Visible on the directory, discoverable globally
+                  <span className="font-semibold">Public Profile:</span> Get discovered in the global directory. 
+                  Show up when regenerative businesses search for partners like you.
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">CRM Workspace:</span> Private tools for managing your business
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Value Proposition Section */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              What you'll get:
-            </h3>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="text-base">📍</span>
-                <span>Public profile on the regenerative enterprise directory</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-base">📊</span>
-                <span>CRM workspace to manage contacts and opportunities</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-base">🤝</span>
-                <span>Team collaboration with customizable access</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-base">✨</span>
-                <span>Features based on your membership tier</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Subscription Tier Info */}
-          <div className="bg-card border rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Crown className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Your Plan:</span>
-                <Badge variant={isFreeUser ? "secondary" : "default"} data-testid="user-plan-badge">
-                  {currentPlanType === "free" && "Free"}
-                  {currentPlanType === "crm_basic" && "CRM Basic"}
-                  {currentPlanType === "crm_pro" && "CRM Pro"}
-                </Badge>
-              </div>
-              {isFreeUser && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={() => {
-                    onOpenChange(false);
-                    setLocation("/pricing");
-                  }}
-                  data-testid="link-upgrade-plan"
-                >
-                  Upgrade to CRM Pro
-                </Button>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              {isFreeUser 
-                ? "Free: Basic features. CRM Pro: Full CRM access ($42/month or $420/year)"
-                : `Your ${currentPlanType.replace("_", " ")} plan includes full CRM access with all features.`
-              }
-            </p>
-
-            {/* Dreaming Session Invitation */}
-            <div className="mt-4 bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Upgrade Your Earth Care Profile</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Apply for a Dreaming Session with Terralux Agency to transform your enterprise 
-                    with our spatial network storytelling technology. Get a story on the map, 
-                    digital twin tools, and AI-powered sales landing pages.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={() => window.open("/apply-dreaming", "_blank")}
-                    data-testid="apply-dreaming-button"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Apply for Dreaming Session
-                  </Button>
+                  <span className="font-semibold">Private CRM:</span> Manage contacts, track opportunities, 
+                  and grow relationships. Features expand with your membership tier.
                 </div>
               </div>
             </div>
@@ -399,6 +350,37 @@ export default function CreateEnterpriseDialog({
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Earth Care Pledge Invitation */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <FormField
+                  control={form.control}
+                  name="signPledge"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="mt-1"
+                          data-testid="checkbox-sign-pledge"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="font-semibold text-sm">
+                          Sign the Earth Care Pledge (Optional)
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Showcase yourself as a pioneer of ethical enterprise. The Earth Care Pledge is a 
+                          commitment to regenerative practices that helps others recognize your values. 
+                          By signing, you'll be featured in our directory of pledge signatories.
+                        </FormDescription>
+                      </div>
                     </FormItem>
                   )}
                 />
