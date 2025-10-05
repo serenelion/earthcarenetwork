@@ -33,9 +33,8 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
     // Check if user has no enterprises
     if (userEnterprises.length === 0) {
       toast({
-        title: "No workspace access",
-        description: "You don't have access to any workspaces. Please claim an enterprise or request access.",
-        variant: "destructive",
+        title: "Set up your workspace",
+        description: "Create your enterprise profile to access your workspace and CRM tools.",
       });
       setLocation("/crm");
       return;
@@ -52,8 +51,8 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
     const hasAccess = userEnterprises.some(e => e.id === enterpriseId);
     if (!hasAccess) {
       toast({
-        title: "Access denied",
-        description: "You don't have access to this workspace.",
+        title: "Workspace not found",
+        description: "You don't have access to this workspace. Switching to your available workspaces.",
         variant: "destructive",
       });
       setLocation("/crm");
@@ -87,10 +86,10 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="heading-welcome">
-                Get Started with Your Workspace
+                Welcome to Your CRM Workspace
               </h1>
               <p className="text-lg text-muted-foreground mb-6">
-                Create your enterprise profile with a public directory listing and private CRM workspace
+                Get started by setting up your enterprise profile and workspace
               </p>
             </div>
 
@@ -98,20 +97,20 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
             <div className="bg-card border border-border rounded-lg p-6 mb-8">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Benefits:
+                What you'll get:
               </h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Public profile in the global directory for visibility</span>
+                  <span className="text-muted-foreground"><strong>Global visibility:</strong> A public profile in the regenerative enterprise directory</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Private CRM to manage contacts and opportunities</span>
+                  <span className="text-muted-foreground"><strong>Relationship management:</strong> Private CRM tools to track contacts, opportunities, and partnerships</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Collaborate with your team and track progress</span>
+                  <span className="text-muted-foreground"><strong>Team collaboration:</strong> Invite team members and manage your workspace together</span>
                 </li>
               </ul>
             </div>
@@ -125,7 +124,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-create-first-workspace"
               >
                 <Building2 className="mr-2 h-5 w-5" />
-                Create New Enterprise Profile
+                Set Up My Workspace
               </Button>
               
               <Button
@@ -136,25 +135,25 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-claim-enterprise"
               >
                 <Globe className="mr-2 h-5 w-5" />
-                Find & Claim Existing Profile
+                Claim Existing Enterprise
               </Button>
             </div>
 
             {/* Help Text */}
             <div className="mt-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                <strong>New here?</strong> Create a brand new enterprise profile to get started with your workspace.
+                <strong>Brand new?</strong> Click "Set Up My Workspace" to create your enterprise profile and CRM.
               </p>
               <p className="text-sm text-muted-foreground">
-                <strong>Already in the directory?</strong>{" "}
+                <strong>Already listed in the directory?</strong>{" "}
                 <button
                   onClick={() => setLocation("/enterprises")}
                   className="text-primary hover:underline font-medium"
                   data-testid="link-browse-directory"
                 >
-                  Search for and claim your existing profile
+                  Claim your existing profile
                 </button>{" "}
-                to access your workspace.
+                to unlock your workspace.
               </p>
             </div>
           </div>

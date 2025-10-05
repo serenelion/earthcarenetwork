@@ -130,7 +130,7 @@ export default function Landing() {
               data-testid="button-add-enterprise"
               onClick={handleAddEnterpriseClick}
             >
-              {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
+              {isAuthenticated ? "Activate Your Enterprise" : "Add Your Enterprise"}
             </Button>
             <Button 
               variant="outline" 
@@ -215,7 +215,7 @@ export default function Landing() {
                 onClick={handleAddEnterpriseClick}
                 data-testid="button-add-first-enterprise"
               >
-                {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
+                {isAuthenticated ? "Activate Your Enterprise" : "Add Your Enterprise"}
               </Button>
             </div>
           ) : (
@@ -295,7 +295,7 @@ export default function Landing() {
               data-testid="button-add-enterprise-cta"
               onClick={handleAddEnterpriseClick}
             >
-              {isAuthenticated ? "Create Your Workspace" : "Add Your Enterprise"}
+              {isAuthenticated ? "Activate Your Enterprise" : "Add Your Enterprise"}
             </Button>
             <Button 
               variant="outline"

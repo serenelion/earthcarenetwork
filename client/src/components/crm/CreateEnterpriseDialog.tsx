@@ -140,12 +140,12 @@ export default function CreateEnterpriseDialog({
       await queryClient.invalidateQueries({ queryKey: ['/api/crm/user/enterprises'] });
 
       toast({
-        title: pledgeSignedSuccessfully ? "Welcome to Earth Care Network!" : "Enterprise created!",
+        title: pledgeSignedSuccessfully ? "Workspace Created!" : "Workspace Created!",
         description: pledgeSignedSuccessfully
-          ? "Your enterprise profile is live and you've signed the Earth Care Pledge."
+          ? "Your workspace is ready and you've signed the Earth Care Pledge. Welcome!"
           : signPledge
-            ? "Your enterprise is live, but there was an issue signing the pledge. You can sign it later from your enterprise profile."
-            : "Your profile and workspace are ready. You can sign the Earth Care Pledge anytime.",
+            ? "Your workspace is ready! There was an issue with the pledge, but you can sign it later."
+            : "Your workspace and CRM are ready to use. Start managing your partnerships!",
       });
 
       onOpenChange(false);
@@ -160,8 +160,8 @@ export default function CreateEnterpriseDialog({
     } catch (error) {
       console.error("Error creating enterprise:", error);
       toast({
-        title: "Failed to setup enterprise",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: "Workspace creation failed",
+        description: error instanceof Error ? error.message : "Please try again or contact support if the issue persists.",
         variant: "destructive",
       });
     } finally {
@@ -175,44 +175,30 @@ export default function CreateEnterpriseDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Setup Your Enterprise Profile
+            Create Your Enterprise Workspace
           </DialogTitle>
           <DialogDescription className="text-base">
-            Earth Care Network is the AI whitepages for regenerative enterprises. Create your complimentary profile and workspace to get discovered globally and manage your business relationships.
+            Set up your free enterprise profile and workspace. Get discovered in the global directory and access powerful CRM tools to manage your partnerships and opportunities.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* What is an Enterprise */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" />
-              What's an Enterprise?
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              An enterprise is any organization aligned with regenerative values - from family farms 
-              to investment funds, from open-source projects to network organizers. Each enterprise 
-              gets a <span className="font-semibold">complimentary workspace</span> with both a public 
-              profile and private CRM tools.
-            </p>
-          </div>
-
-          {/* Your Complimentary Workspace */}
+          {/* Your Free Workspace */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-sm">Your Complimentary Workspace Includes:</h3>
+            <h3 className="font-semibold text-sm">What You Get (Free):</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <Globe className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Public Profile:</span> Get discovered in the global directory. 
-                  Show up when regenerative businesses search for partners like you.
+                  <span className="font-semibold">Global Visibility:</span> A public profile in the regenerative enterprise directory. 
+                  Get discovered by potential partners, customers, and collaborators.
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Private CRM:</span> Manage contacts, track opportunities, 
-                  and grow relationships. Features expand with your membership tier.
+                  <span className="font-semibold">Private CRM Workspace:</span> Manage contacts, track opportunities, 
+                  and build meaningful partnerships. Invite team members and work together.
                 </div>
               </div>
             </div>
@@ -404,12 +390,12 @@ export default function CreateEnterpriseDialog({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Setting up...
+                      Creating workspace...
                     </>
                   ) : (
                     <>
                       <Building2 className="mr-2 h-4 w-4" />
-                      Setup Enterprise
+                      Create My Workspace
                     </>
                   )}
                 </Button>

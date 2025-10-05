@@ -119,15 +119,15 @@ export default function TeamManagement() {
     },
     onSuccess: () => {
       toast({
-        title: "Invitation sent",
-        description: "The team invitation has been sent successfully.",
+        title: "Invitation sent!",
+        description: "Your teammate will receive an email to join this workspace.",
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/enterprises", enterpriseId, "team", "invitations"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to send invitation",
+        title: "Couldn't send invitation",
         description: error.message,
         variant: "destructive",
       });
@@ -289,10 +289,10 @@ export default function TeamManagement() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5" />
-                Invite Team Member
+                Invite Team Members
               </CardTitle>
               <CardDescription>
-                Send an invitation to add a new member to your team
+                Grow your team by inviting colleagues to collaborate in this workspace
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -307,7 +307,7 @@ export default function TeamManagement() {
                           <FormLabel>Email Address</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="colleague@example.com"
+                              placeholder="teammate@example.com"
                               type="email"
                               data-testid="input-email"
                               {...field}
@@ -322,17 +322,32 @@ export default function TeamManagement() {
                       name="role"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Role</FormLabel>
+                          <FormLabel>Access Level</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger data-testid="select-role">
-                                <SelectValue placeholder="Select a role" />
+                                <SelectValue placeholder="Select access level" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="viewer">Viewer - Can view content</SelectItem>
-                              <SelectItem value="editor">Editor - Can edit content</SelectItem>
-                              <SelectItem value="admin">Admin - Can manage team</SelectItem>
+                              <SelectItem value="viewer">
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">Viewer</span>
+                                  <span className="text-xs text-muted-foreground">View workspace data only</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="editor">
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">Editor</span>
+                                  <span className="text-xs text-muted-foreground">Edit contacts, opportunities, and tasks</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="admin">
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">Admin</span>
+                                  <span className="text-xs text-muted-foreground">Full access including team management</span>
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -345,7 +360,8 @@ export default function TeamManagement() {
                     disabled={sendInvitationMutation.isPending}
                     data-testid="button-send-invitation"
                   >
-                    {sendInvitationMutation.isPending ? "Sending..." : "Send Invitation"}
+                    <Mail className="w-4 h-4 mr-2" />
+                    {sendInvitationMutation.isPending ? "Sending invitation..." : "Send Invitation"}
                   </Button>
                 </form>
               </Form>
