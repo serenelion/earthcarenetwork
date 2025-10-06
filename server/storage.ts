@@ -235,6 +235,7 @@ export interface IStorage {
   updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId?: string): Promise<User>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   updateUserSubscriptionStatus(userId: string, status: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired', currentPeriodEnd?: Date): Promise<User>;
+  updateUserPlanAndCredits(userId: string, planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle', creditAllocation: number, isYearly?: boolean): Promise<User>;
 
   // AI usage tracking operations
   logAiUsage(usage: InsertAiUsageLog): Promise<AiUsageLog>;
@@ -1739,6 +1740,34 @@ export class DatabaseStorage implements IStorage {
     if (currentPeriodEnd) {
       updateData.subscriptionCurrentPeriodEnd = currentPeriodEnd;
     }
+
+    const [updated] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async updateUserPlanAndCredits(
+    userId: string, 
+    planType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle',
+    creditAllocation: number,
+    isYearly: boolean = false
+  ): Promise<User> {
+    // Calculate credit reset date based on billing cycle
+    const resetDays = isYearly ? 365 : 30;
+    const creditResetDate = new Date(Date.now() + resetDays * 24 * 60 * 60 * 1000);
+    
+    const updateData: Partial<User> = {
+      currentPlanType: planType,
+      creditBalance: creditAllocation,
+      creditLimit: creditAllocation,
+      monthlyAllocation: creditAllocation,
+      creditResetDate,
+      overageAllowed: planType !== 'free', // Paid plans allow overage
+      maxClaimedProfiles: planType === 'free' ? 1 : 999999, // Paid plans get unlimited
+      updatedAt: new Date()
+    };
 
     const [updated] = await db.update(users)
       .set(updateData)

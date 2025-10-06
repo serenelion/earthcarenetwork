@@ -3398,22 +3398,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           // Handle subscription checkout
           else if (userId && planId && planType) {
-            // Create subscription record
-            await storage.createSubscription({
-              userId,
-              planId,
-              stripeSubscriptionId: session.subscription as string,
-              stripeCustomerId: session.customer as string,
-              stripePriceId: session.line_items?.data[0]?.price?.id || '',
-              status: 'active',
-              currentPeriodStart: new Date(),
-              currentPeriodEnd: new Date(Date.now() + (isYearly === 'true' ? 365 : 30) * 24 * 60 * 60 * 1000),
-              isYearly: isYearly === 'true'
-            });
+            try {
+              // Get the subscription plan to know credit allocation
+              const plan = await storage.getSubscriptionPlan(planId);
+              
+              if (!plan) {
+                console.error('Subscription plan not found:', planId);
+                break;
+              }
 
-            // Update user subscription status
-            await storage.updateUserSubscriptionStatus(userId, 'active');
-            console.log('Subscription created for user:', userId);
+              // Create subscription record
+              await storage.createSubscription({
+                userId,
+                planId,
+                stripeSubscriptionId: session.subscription as string,
+                stripeCustomerId: session.customer as string,
+                stripePriceId: session.line_items?.data[0]?.price?.id || '',
+                status: 'active',
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + (isYearly === 'true' ? 365 : 30) * 24 * 60 * 60 * 1000),
+                isYearly: isYearly === 'true'
+              });
+
+              // Update user subscription status
+              await storage.updateUserSubscriptionStatus(userId, 'active');
+              
+              // Update user plan type and allocate credits
+              await storage.updateUserPlanAndCredits(
+                userId, 
+                planType as 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle',
+                plan.creditAllocation || 0,
+                isYearly === 'true'
+              );
+              
+              console.log(`Subscription created for user ${userId}: plan=${planType}, credits=${plan.creditAllocation}`);
+            } catch (error) {
+              console.error('Error processing subscription checkout:', error);
+            }
           }
           break;
         }
@@ -3452,7 +3473,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             await storage.updateUserSubscriptionStatus(user.id, 'canceled');
-            console.log('Subscription canceled for user:', user.id);
+            
+            // Revert user to free plan - fetch the actual free plan allocation
+            const freePlan = await storage.getSubscriptionPlanByType('free');
+            const freeCredits = freePlan?.creditAllocation || 10; // Default to 10 cents if plan not found
+            await storage.updateUserPlanAndCredits(user.id, 'free', freeCredits, false);
+            
+            console.log('Subscription canceled for user:', user.id, '- reverted to free plan');
           }
           break;
         }

@@ -37,6 +37,7 @@ import ClaimEnterprise from "@/pages/ClaimEnterprise";
 import ClaimProfile from "@/pages/ClaimProfile";
 import Pricing from "@/pages/Pricing";
 import SubscriptionDashboard from "@/pages/SubscriptionDashboard";
+import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import NotFound from "@/pages/not-found";
 import Search from "@/pages/Search";
 import TeamManagement from "@/pages/TeamManagement";
@@ -521,20 +522,7 @@ function Router() {
 
           <Route path="/subscription/success">
             <AuthenticatedRoute>
-              <div className="p-8 text-center max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold text-green-600 mb-4">Subscription Successful!</h1>
-                <p className="text-muted-foreground mb-8">
-                  Welcome to your new subscription. You now have access to all the features of your plan.
-                </p>
-                <div className="space-x-4">
-                  <Button asChild>
-                    <Link href="/subscription/dashboard">View Dashboard</Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/crm">Start Using CRM</Link>
-                  </Button>
-                </div>
-              </div>
+              <SubscriptionSuccess />
             </AuthenticatedRoute>
           </Route>
 
