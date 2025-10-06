@@ -43,6 +43,7 @@ import Search from "@/pages/Search";
 import TeamManagement from "@/pages/TeamManagement";
 import AcceptInvitation from "@/pages/AcceptInvitation";
 import MyEnterprise from "@/pages/MyEnterprise";
+import DreamingSessions from "@/pages/DreamingSessions";
 // Documentation imports
 import DocsLayout from "@/components/docs/DocsLayout";
 import DocsHome from "@/pages/docs/DocsHome";
@@ -93,6 +94,7 @@ function Router() {
           <Route path="/claim-profile/:enterpriseId" component={ClaimProfile} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/plans" component={Pricing} />
+          <Route path="/dreaming-sessions" component={DreamingSessions} />
           
           {/* Documentation routes - accessible to all */}
           <Route path="/docs">

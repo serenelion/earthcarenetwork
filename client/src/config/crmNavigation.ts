@@ -13,6 +13,7 @@ export interface NavLink {
   href: string;
   label: string;
   icon: React.ElementType;
+  requiresCrmPro?: boolean;
 }
 
 export interface NavSection {
@@ -36,6 +37,7 @@ export function getCrmNavSections(enterpriseId: string): NavSection[] {
       title: "Insights",
       links: [
         { href: `/crm/${enterpriseId}/copilot`, label: "Copilot", icon: Sparkles },
+        { href: "/dreaming-sessions", label: "Dreaming Sessions", icon: Sparkles, requiresCrmPro: true },
       ],
     },
     {

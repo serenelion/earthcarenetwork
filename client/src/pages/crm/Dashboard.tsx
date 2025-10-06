@@ -169,36 +169,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Dreaming Session - CRM Pro Users Only */}
-      {isCrmProUser && (
-        <div className="mb-6 md:mb-8">
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6" data-testid="dreaming-session-card">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <Sparkles className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <h3 className="font-semibold text-lg text-foreground">Upgrade Your Earth Care Profile</h3>
-                <p className="text-sm text-muted-foreground">
-                  As a CRM Pro member, you're eligible for a Dreaming Session with Terralux Agency. 
-                  We'll help you transform your enterprise with our spatial network storytelling 
-                  technology—get a story on the map, digital twin tools, and AI-powered sales landing pages.
-                </p>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={() => window.open("/apply-dreaming", "_blank")}
-                  data-testid="button-apply-dreaming"
-                >
-                  Learn About Dreaming Sessions
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         {statsCards.map((stat) => {
           const Icon = stat.icon;

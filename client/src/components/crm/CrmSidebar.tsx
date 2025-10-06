@@ -5,14 +5,19 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { getCrmNavSections } from "@/config/crmNavigation";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export default function CrmSidebar() {
   const [location] = useLocation();
   const { currentEnterprise } = useWorkspace();
+  const { userSubscription } = useSubscription();
 
   // Use default enterpriseId if not available (fallback for loading state)
   const enterpriseId = currentEnterprise?.id || '';
   const navSections = getCrmNavSections(enterpriseId);
+  
+  // Check if user is CRM Pro
+  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro' || userSubscription?.currentPlanType === 'build_pro_bundle';
 
   return (
     <ScrollArea className="h-full py-6">
@@ -25,6 +30,11 @@ export default function CrmSidebar() {
                 {section.title}
               </h3>
               {section.links.map((link) => {
+                // Skip CRM Pro links if user doesn't have access
+                if (link.requiresCrmPro && !isCrmProUser) {
+                  return null;
+                }
+                
                 const Icon = link.icon;
                 const isActive = location === link.href;
                 
