@@ -48,15 +48,9 @@ export const publicNavLinks: NavLinkItem[] = [
 
 /**
  * Member navigation dropdown menu items
- * Accessible to users with 'member', 'enterprise_owner', or 'admin' roles
+ * Accessible to all authenticated users (free, crm_pro, admin)
  */
 export const memberNavItems: NavLinkItem[] = [
-  {
-    href: "/member/dashboard",
-    label: "Dashboard",
-    icon: Home,
-    testId: "nav-member-dashboard"
-  },
   {
     href: "/my-enterprise",
     label: "My Enterprise",
@@ -122,7 +116,7 @@ export const adminNavItems: NavLinkItem[] = [
 
 /**
  * CRM navigation link
- * Accessible to users with 'enterprise_owner' or 'admin' roles
+ * Accessible to all authenticated users (free, crm_pro, admin)
  */
 export const crmNavLink: NavLinkItem = {
   href: "/crm",
@@ -133,19 +127,18 @@ export const crmNavLink: NavLinkItem = {
 
 /**
  * Get navigation items based on user role
- * @param role - The user's role
+ * @param role - The user's role (null if not authenticated)
  * @returns Object containing available navigation items for the role
  */
-export function getNavigationForRole(role: UserRole) {
+export function getNavigationForRole(role: UserRole | null) {
   const hasPublic = true;
-  const hasMember = ["member", "enterprise_owner", "admin"].includes(role);
-  const hasCRM = ["enterprise_owner", "admin"].includes(role);
+  const isAuthenticated = role !== null;
   const hasAdmin = role === "admin";
 
   return {
     publicLinks: hasPublic ? publicNavLinks : [],
-    memberMenu: hasMember ? memberNavItems : null,
-    crmLink: hasCRM ? crmNavLink : null,
+    memberMenu: isAuthenticated ? memberNavItems : null,
+    crmLink: isAuthenticated ? crmNavLink : null,
     adminMenu: hasAdmin ? adminNavItems : null
   };
 }

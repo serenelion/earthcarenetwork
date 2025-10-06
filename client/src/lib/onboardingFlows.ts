@@ -27,37 +27,10 @@ export interface OnboardingFlow {
   steps: OnboardingStep[];
 }
 
-export const visitorFlow: OnboardingFlow = {
-  id: 'visitor',
-  title: 'Welcome to the Platform',
-  description: 'Get started with exploring businesses and opportunities',
-  steps: [
-    {
-      id: 'welcome',
-      title: 'Welcome!',
-      description: 'Discover businesses committed to sustainability and social impact',
-      icon: Compass,
-    },
-    {
-      id: 'platform_tour',
-      title: 'Platform Tour',
-      description: 'Learn about our directory, opportunities, and community features',
-      icon: Layers,
-    },
-    {
-      id: 'explore_directory',
-      title: 'Explore the Directory',
-      description: 'Browse our curated list of sustainable businesses',
-      action: 'View Directory',
-      icon: Building2,
-    },
-  ],
-};
-
 export const freeMemberFlow: OnboardingFlow = {
   id: 'free_member',
-  title: 'Complete Your Profile',
-  description: 'Set up your account and start claiming businesses',
+  title: 'Welcome! Get Started',
+  description: 'Set up your account and activate your first enterprise',
   steps: [
     {
       id: 'profile_setup',
@@ -177,7 +150,6 @@ export const adminFlow: OnboardingFlow = {
 };
 
 export const onboardingFlows: Record<string, OnboardingFlow> = {
-  visitor: visitorFlow,
   free_member: freeMemberFlow,
   crm_pro: crmProFlow,
   build_pro: buildProFlow,

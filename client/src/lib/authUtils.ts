@@ -4,14 +4,14 @@ export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
 }
 
-export type UserRole = "visitor" | "member" | "enterprise_owner" | "admin";
+export type UserRole = "free" | "crm_pro" | "admin";
 
 /**
  * Check if a user has any of the required roles
  */
 export function hasRole(user: User | null | undefined, requiredRoles: UserRole[]): boolean {
   if (!user || !user.role) {
-    return requiredRoles.includes("visitor");
+    return false; // Unauthenticated users have no role
   }
   
   return requiredRoles.includes(user.role as UserRole);
@@ -22,7 +22,7 @@ export function hasRole(user: User | null | undefined, requiredRoles: UserRole[]
  */
 export function hasSpecificRole(user: User | null | undefined, requiredRole: UserRole): boolean {
   if (!user || !user.role) {
-    return requiredRole === "visitor";
+    return false; // Unauthenticated users have no role
   }
   
   return user.role === requiredRole;
@@ -30,11 +30,11 @@ export function hasSpecificRole(user: User | null | undefined, requiredRole: Use
 
 /**
  * Get the highest priority role for navigation purposes
- * Admin > Enterprise Owner > Member > Visitor
+ * Admin > CRM Pro > Free
  */
-export function getPrimaryRole(user: User | null | undefined): UserRole {
+export function getPrimaryRole(user: User | null | undefined): UserRole | null {
   if (!user || !user.role) {
-    return "visitor";
+    return null;
   }
   
   return user.role as UserRole;
@@ -49,10 +49,9 @@ export function getDefaultRedirectPath(user: User | null | undefined): string {
   switch (role) {
     case "admin":
       return "/admin/dashboard";
-    case "enterprise_owner":
-      return "/enterprise/dashboard";
-    case "member":
-      return "/member/dashboard";
+    case "crm_pro":
+    case "free":
+      return "/crm"; // All authenticated users can access CRM
     default:
       return "/";
   }
@@ -63,7 +62,7 @@ export function getDefaultRedirectPath(user: User | null | undefined): string {
  */
 export function getUnauthorizedRedirectPath(user: User | null | undefined): string {
   if (!user) {
-    return "/member-benefits"; // Encourage non-users to become members
+    return "/member-benefits"; // Encourage non-users to sign up
   }
   
   const role = getPrimaryRole(user);
@@ -71,10 +70,9 @@ export function getUnauthorizedRedirectPath(user: User | null | undefined): stri
   switch (role) {
     case "admin":
       return "/admin/dashboard";
-    case "enterprise_owner":
-      return "/enterprise/dashboard";
-    case "member":
-      return "/member/dashboard";
+    case "crm_pro":
+    case "free":
+      return "/crm"; // All authenticated users can access CRM
     default:
       return "/";
   }
@@ -85,11 +83,11 @@ export function getUnauthorizedRedirectPath(user: User | null | undefined): stri
  */
 export function hasRoleOrHigher(user: User | null | undefined, minRole: UserRole): boolean {
   if (!user || !user.role) {
-    return minRole === "visitor";
+    return false; // Unauthenticated users have no role
   }
   
   const userRole = user.role as UserRole;
-  const roleHierarchy: UserRole[] = ["visitor", "member", "enterprise_owner", "admin"];
+  const roleHierarchy: UserRole[] = ["free", "crm_pro", "admin"];
   
   const userRoleIndex = roleHierarchy.indexOf(userRole);
   const minRoleIndex = roleHierarchy.indexOf(minRole);

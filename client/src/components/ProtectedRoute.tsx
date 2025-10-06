@@ -58,17 +58,9 @@ export function AdminOnlyRoute({ children, fallbackPath }: { children: React.Rea
   );
 }
 
-export function EnterpriseOrAdminRoute({ children, fallbackPath }: { children: React.ReactNode; fallbackPath?: string }) {
+export function CrmProOrAdminRoute({ children, fallbackPath }: { children: React.ReactNode; fallbackPath?: string }) {
   return (
-    <ProtectedRoute requiredRoles={["enterprise_owner", "admin"]} fallbackPath={fallbackPath}>
-      {children}
-    </ProtectedRoute>
-  );
-}
-
-export function MemberOrHigherRoute({ children, fallbackPath }: { children: React.ReactNode; fallbackPath?: string }) {
-  return (
-    <ProtectedRoute requiredRoles={["member", "enterprise_owner", "admin"]} fallbackPath={fallbackPath}>
+    <ProtectedRoute requiredRoles={["crm_pro", "admin"]} fallbackPath={fallbackPath}>
       {children}
     </ProtectedRoute>
   );
@@ -76,8 +68,12 @@ export function MemberOrHigherRoute({ children, fallbackPath }: { children: Reac
 
 export function AuthenticatedRoute({ children, fallbackPath }: { children: React.ReactNode; fallbackPath?: string }) {
   return (
-    <ProtectedRoute requiredRoles={["member", "enterprise_owner", "admin"]} fallbackPath={fallbackPath || "/member-benefits"}>
+    <ProtectedRoute requiredRoles={["free", "crm_pro", "admin"]} fallbackPath={fallbackPath || "/member-benefits"}>
       {children}
     </ProtectedRoute>
   );
 }
+
+// Legacy aliases for backwards compatibility during migration
+export const EnterpriseOrAdminRoute = CrmProOrAdminRoute;
+export const MemberOrHigherRoute = AuthenticatedRoute;
