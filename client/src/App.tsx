@@ -57,6 +57,8 @@ import AICopilotAPI from "@/pages/docs/AICopilotAPI";
 import ExamplesPage from "@/pages/docs/ExamplesPage";
 // CRM Shell
 import CrmShell from "@/pages/crm/CrmShell";
+// Admin Shell
+import AdminShell from "@/pages/admin/AdminShell";
 
 function PlaceholderDocPage({ title, description, testId }: { title: string; description: string; testId: string }) {
   return (
@@ -273,6 +275,37 @@ function Router() {
             <EnterpriseOrAdminRoute>
               <EnterpriseOwnerDashboard />
             </EnterpriseOrAdminRoute>
+          </Route>
+          
+          {/* Admin Panel Routes */}
+          <Route path="/admin/featured-enterprises">
+            <AdminOnlyRoute>
+              <AdminShell />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin/database">
+            <AdminOnlyRoute>
+              <AdminShell />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin/chat">
+            <AdminOnlyRoute>
+              <AdminShell />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin/integrations">
+            <AdminOnlyRoute>
+              <AdminShell />
+            </AdminOnlyRoute>
+          </Route>
+          
+          <Route path="/admin">
+            <AdminOnlyRoute>
+              <AdminShell />
+            </AdminOnlyRoute>
           </Route>
           
           <Route path="/admin/dashboard">

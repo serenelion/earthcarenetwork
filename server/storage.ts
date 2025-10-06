@@ -26,6 +26,7 @@ import {
   importJobErrors,
   enterpriseTeamMembers,
   enterpriseInvitations,
+  integrationConfigs,
   auditLogs,
   userRoleEnum,
   membershipStatusEnum,
@@ -73,6 +74,8 @@ import {
   type InsertExternalApiToken,
   type ExternalSearchCache,
   type InsertExternalSearchCache,
+  type IntegrationConfig,
+  type InsertIntegrationConfig,
   type ExternalEntity,
   type InsertExternalEntity,
   type ExternalSyncJob,
@@ -377,6 +380,16 @@ export interface IStorage {
     limit?: number;
     offset?: number;
   }): Promise<AuditLog[]>;
+
+  // Integration config operations
+  getIntegrationConfigs(status?: 'active' | 'inactive' | 'error'): Promise<IntegrationConfig[]>;
+  getIntegrationConfig(id: string): Promise<IntegrationConfig | undefined>;
+  getIntegrationConfigByName(name: string): Promise<IntegrationConfig | undefined>;
+  createIntegrationConfig(config: InsertIntegrationConfig): Promise<IntegrationConfig>;
+  updateIntegrationConfig(id: string, config: Partial<InsertIntegrationConfig>): Promise<IntegrationConfig>;
+  deleteIntegrationConfig(id: string): Promise<void>;
+  updateIntegrationStatus(id: string, status: 'active' | 'inactive' | 'error', errorMessage?: string): Promise<IntegrationConfig>;
+  updateIntegrationTestResult(id: string, testResult: string, success: boolean): Promise<IntegrationConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2954,6 +2967,85 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  async getIntegrationConfigs(status?: 'active' | 'inactive' | 'error'): Promise<IntegrationConfig[]> {
+    if (status) {
+      return await db
+        .select()
+        .from(integrationConfigs)
+        .where(eq(integrationConfigs.status, status))
+        .orderBy(integrationConfigs.displayName);
+    }
+    return await db.select().from(integrationConfigs).orderBy(integrationConfigs.displayName);
+  }
+
+  async getIntegrationConfig(id: string): Promise<IntegrationConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(integrationConfigs)
+      .where(eq(integrationConfigs.id, id));
+    return config;
+  }
+
+  async getIntegrationConfigByName(name: string): Promise<IntegrationConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(integrationConfigs)
+      .where(eq(integrationConfigs.name, name));
+    return config;
+  }
+
+  async createIntegrationConfig(config: InsertIntegrationConfig): Promise<IntegrationConfig> {
+    const [integrationConfig] = await db
+      .insert(integrationConfigs)
+      .values(config)
+      .returning();
+    return integrationConfig;
+  }
+
+  async updateIntegrationConfig(id: string, config: Partial<InsertIntegrationConfig>): Promise<IntegrationConfig> {
+    const [integrationConfig] = await db
+      .update(integrationConfigs)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(integrationConfigs.id, id))
+      .returning();
+    return integrationConfig;
+  }
+
+  async deleteIntegrationConfig(id: string): Promise<void> {
+    await db.delete(integrationConfigs).where(eq(integrationConfigs.id, id));
+  }
+
+  async updateIntegrationStatus(id: string, status: 'active' | 'inactive' | 'error', errorMessage?: string): Promise<IntegrationConfig> {
+    const updateData: any = {
+      status,
+      updatedAt: new Date()
+    };
+    if (errorMessage !== undefined) {
+      updateData.errorMessage = errorMessage;
+    }
+    const [integrationConfig] = await db
+      .update(integrationConfigs)
+      .set(updateData)
+      .where(eq(integrationConfigs.id, id))
+      .returning();
+    return integrationConfig;
+  }
+
+  async updateIntegrationTestResult(id: string, testResult: string, success: boolean): Promise<IntegrationConfig> {
+    const [integrationConfig] = await db
+      .update(integrationConfigs)
+      .set({
+        testResult,
+        lastTestedAt: new Date(),
+        status: success ? 'active' : 'error',
+        errorMessage: success ? null : testResult,
+        updatedAt: new Date()
+      })
+      .where(eq(integrationConfigs.id, id))
+      .returning();
+    return integrationConfig;
   }
 }
 

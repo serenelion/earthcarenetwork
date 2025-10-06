@@ -28,6 +28,7 @@ import {
   getInvitationJobStatus 
 } from "./invitationBatch";
 import { createAuditLog } from "./utils/audit";
+import { integrationService } from "./services/integrations";
 import { 
   insertEnterpriseSchema,
   editorEnterpriseUpdateSchema,
@@ -49,12 +50,24 @@ import {
   insertUserFavoriteSchema,
   insertProfileClaimSchema,
   insertEarthCarePledgeSchema,
+  insertIntegrationConfigSchema,
   opportunities,
   enterprises,
   people,
   enterpriseOwners,
   users
 } from "@shared/schema";
+import {
+  listTables,
+  getTableSchema,
+  getTableData,
+  createTableRecord,
+  updateTableRecord,
+  deleteTableRecord,
+  bulkDeleteTableRecords,
+  validateTableName,
+} from "./services/database-introspection";
+import { parseCSVStream } from "./imports/csvParser";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { z } from "zod";
@@ -3543,6 +3556,680 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating Murmurations profile:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to generate profile", message: errorMessage });
+    }
+  });
+
+  // Database Admin API Routes
+  // GET /api/admin/database/tables - List all database tables with metadata
+  app.get('/api/admin/database/tables', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const tables = await listTables();
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        metadata: { action: 'list_database_tables', tableCount: tables.length },
+      });
+
+      res.json({ tables });
+    } catch (error) {
+      console.error("Error listing database tables:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to list database tables", message: errorMessage });
+    }
+  });
+
+  // GET /api/admin/database/tables/:tableName/schema - Get table schema details
+  app.get('/api/admin/database/tables/:tableName/schema', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+
+      const schema = await getTableSchema(tableName);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        metadata: { action: 'get_table_schema', tableName },
+      });
+
+      res.json(schema);
+    } catch (error) {
+      console.error("Error getting table schema:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      res.status(500).json({ error: "Failed to get table schema", message: errorMessage });
+    }
+  });
+
+  // GET /api/admin/database/tables/:tableName/data - Get table data with pagination, filtering, sorting
+  app.get('/api/admin/database/tables/:tableName/data', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+      const { limit, offset, orderBy, orderDir, ...filters } = req.query;
+
+      const result = await getTableData(tableName, {
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+        orderBy: orderBy as string,
+        orderDir: (orderDir as 'asc' | 'desc') || 'desc',
+        filters: filters as Record<string, any>,
+      });
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        metadata: { 
+          action: 'get_table_data', 
+          tableName, 
+          recordCount: result.data.length,
+          filters 
+        },
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error getting table data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      res.status(500).json({ error: "Failed to get table data", message: errorMessage });
+    }
+  });
+
+  // POST /api/admin/database/tables/:tableName/data - Create new record in any table
+  app.post('/api/admin/database/tables/:tableName/data', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+      const data = req.body;
+
+      const record = await createTableRecord(tableName, data);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'create',
+        tableName,
+        recordId: record.id,
+        changes: data,
+        metadata: { action: 'create_record', tableName },
+      });
+
+      res.status(201).json(record);
+    } catch (error) {
+      console.error("Error creating table record:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table') || errorMessage.includes('No valid data')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'create',
+        tableName: req.params.tableName,
+        success: false,
+        errorMessage,
+      });
+      
+      res.status(500).json({ error: "Failed to create record", message: errorMessage });
+    }
+  });
+
+  // PATCH /api/admin/database/tables/:tableName/data/:id - Update record by ID
+  app.patch('/api/admin/database/tables/:tableName/data/:id', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName, id } = req.params;
+      const data = req.body;
+
+      const record = await updateTableRecord(tableName, id, data);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'update',
+        tableName,
+        recordId: id,
+        changes: data,
+        metadata: { action: 'update_record', tableName },
+      });
+
+      res.json(record);
+    } catch (error) {
+      console.error("Error updating table record:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table') || errorMessage.includes('No valid data')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'update',
+        tableName: req.params.tableName,
+        recordId: req.params.id,
+        success: false,
+        errorMessage,
+      });
+      
+      res.status(500).json({ error: "Failed to update record", message: errorMessage });
+    }
+  });
+
+  // DELETE /api/admin/database/tables/:tableName/data/:id - Delete record by ID
+  app.delete('/api/admin/database/tables/:tableName/data/:id', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName, id } = req.params;
+
+      await deleteTableRecord(tableName, id);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'delete',
+        tableName,
+        recordId: id,
+        metadata: { action: 'delete_record', tableName },
+      });
+
+      res.json({ success: true, message: "Record deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting table record:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'delete',
+        tableName: req.params.tableName,
+        recordId: req.params.id,
+        success: false,
+        errorMessage,
+      });
+      
+      res.status(500).json({ error: "Failed to delete record", message: errorMessage });
+    }
+  });
+
+  // POST /api/admin/database/tables/:tableName/bulk-delete - Bulk delete records
+  app.post('/api/admin/database/tables/:tableName/bulk-delete', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Invalid or empty ids array" });
+      }
+
+      const deletedCount = await bulkDeleteTableRecords(tableName, ids);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'bulk_operation',
+        tableName,
+        metadata: { 
+          action: 'bulk_delete', 
+          tableName, 
+          deletedCount,
+          ids 
+        },
+      });
+
+      res.json({ success: true, deletedCount, message: `${deletedCount} records deleted successfully` });
+    } catch (error) {
+      console.error("Error bulk deleting table records:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'bulk_operation',
+        tableName: req.params.tableName,
+        success: false,
+        errorMessage,
+        metadata: { action: 'bulk_delete' },
+      });
+      
+      res.status(500).json({ error: "Failed to bulk delete records", message: errorMessage });
+    }
+  });
+
+  // POST /api/admin/database/tables/:tableName/export - Export table data as CSV/JSON
+  app.post('/api/admin/database/tables/:tableName/export', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+      const { format = 'json', filters = {} } = req.body;
+
+      if (!['json', 'csv'].includes(format)) {
+        return res.status(400).json({ error: "Invalid format. Must be 'json' or 'csv'" });
+      }
+
+      const result = await getTableData(tableName, {
+        limit: 10000,
+        offset: 0,
+        filters: filters as Record<string, any>,
+      });
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'export',
+        tableName,
+        metadata: { 
+          action: 'export_table_data', 
+          tableName, 
+          format,
+          recordCount: result.data.length 
+        },
+      });
+
+      if (format === 'json') {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${tableName}_export.json"`);
+        res.json(result.data);
+      } else if (format === 'csv') {
+        if (result.data.length === 0) {
+          return res.status(400).json({ error: "No data to export" });
+        }
+
+        const headers = Object.keys(result.data[0]);
+        const csvRows = [
+          headers.join(','),
+          ...result.data.map(row => 
+            headers.map(header => {
+              const value = row[header];
+              if (value === null || value === undefined) return '';
+              const stringValue = String(value);
+              if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+              }
+              return stringValue;
+            }).join(',')
+          )
+        ];
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${tableName}_export.csv"`);
+        res.send(csvRows.join('\n'));
+      }
+    } catch (error) {
+      console.error("Error exporting table data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'export',
+        tableName: req.params.tableName,
+        success: false,
+        errorMessage,
+      });
+      
+      res.status(500).json({ error: "Failed to export table data", message: errorMessage });
+    }
+  });
+
+  // POST /api/admin/database/tables/:tableName/import - Import data from CSV/JSON
+  app.post('/api/admin/database/tables/:tableName/import', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { tableName } = req.params;
+      const { format = 'json', data: importData, csvData } = req.body;
+
+      if (!['json', 'csv'].includes(format)) {
+        return res.status(400).json({ error: "Invalid format. Must be 'json' or 'csv'" });
+      }
+
+      let records: any[] = [];
+
+      if (format === 'json') {
+        if (!Array.isArray(importData)) {
+          return res.status(400).json({ error: "Import data must be an array of records" });
+        }
+        records = importData;
+      } else if (format === 'csv') {
+        if (!csvData || typeof csvData !== 'string') {
+          return res.status(400).json({ error: "CSV data must be provided as a string" });
+        }
+
+        const csvBuffer = Buffer.from(csvData, 'utf-8');
+        records = await parseCSVStream(csvBuffer);
+      }
+
+      if (records.length === 0) {
+        return res.status(400).json({ error: "No records to import" });
+      }
+
+      validateTableName(tableName);
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as Array<{ index: number; error: string }>,
+      };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          await createTableRecord(tableName, records[i]);
+          results.success++;
+        } catch (error) {
+          results.failed++;
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          results.errors.push({ index: i, error: errorMessage });
+        }
+      }
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'import',
+        tableName,
+        metadata: { 
+          action: 'import_table_data', 
+          tableName, 
+          format,
+          totalRecords: records.length,
+          successCount: results.success,
+          failedCount: results.failed
+        },
+      });
+
+      res.json({
+        message: "Import completed",
+        results,
+      });
+    } catch (error) {
+      console.error("Error importing table data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes('not allowed') || errorMessage.includes('Invalid table')) {
+        return res.status(400).json({ error: errorMessage });
+      }
+      
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'import',
+        tableName: req.params.tableName,
+        success: false,
+        errorMessage,
+      });
+      
+      res.status(500).json({ error: "Failed to import table data", message: errorMessage });
+    }
+  });
+
+  // Integration Management Admin Routes
+  app.get('/api/admin/integrations', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { status } = req.query;
+      const integrations = await integrationService.getAllIntegrations(status as any);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'integration_configs',
+        metadata: { action: 'list_integrations', status }
+      });
+
+      res.json(integrations);
+    } catch (error) {
+      console.error("Error fetching integrations:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch integrations", message: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/integrations/:id', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const integration = await integrationService.getIntegration(id);
+
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'integration_configs',
+        recordId: id,
+        metadata: { action: 'view_integration' }
+      });
+
+      res.json(integration);
+    } catch (error) {
+      console.error("Error fetching integration:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch integration", message: errorMessage });
+    }
+  });
+
+  app.post('/api/admin/integrations', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const validatedData = insertIntegrationConfigSchema.parse(req.body);
+      const integration = await integrationService.createIntegration(validatedData);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'create',
+        tableName: 'integration_configs',
+        recordId: integration.id,
+        changes: { name: integration.name, displayName: integration.displayName },
+        metadata: { action: 'create_integration' }
+      });
+
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Error creating integration:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'create',
+        tableName: 'integration_configs',
+        success: false,
+        errorMessage
+      });
+
+      res.status(500).json({ error: "Failed to create integration", message: errorMessage });
+    }
+  });
+
+  app.patch('/api/admin/integrations/:id', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const existingIntegration = await integrationService.getIntegration(id);
+
+      if (!existingIntegration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      const validatedData = insertIntegrationConfigSchema.partial().parse(req.body);
+      const integration = await integrationService.updateIntegration(id, validatedData);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'update',
+        tableName: 'integration_configs',
+        recordId: id,
+        changes: validatedData,
+        metadata: { action: 'update_integration' }
+      });
+
+      res.json(integration);
+    } catch (error) {
+      console.error("Error updating integration:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'update',
+        tableName: 'integration_configs',
+        recordId: req.params.id,
+        success: false,
+        errorMessage
+      });
+
+      res.status(500).json({ error: "Failed to update integration", message: errorMessage });
+    }
+  });
+
+  app.delete('/api/admin/integrations/:id', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const existingIntegration = await integrationService.getIntegration(id);
+
+      if (!existingIntegration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      await integrationService.deleteIntegration(id);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'delete',
+        tableName: 'integration_configs',
+        recordId: id,
+        metadata: { action: 'delete_integration', name: existingIntegration.name }
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting integration:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'delete',
+        tableName: 'integration_configs',
+        recordId: req.params.id,
+        success: false,
+        errorMessage
+      });
+
+      res.status(500).json({ error: "Failed to delete integration", message: errorMessage });
+    }
+  });
+
+  app.post('/api/admin/integrations/:id/test', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const testResult = await integrationService.testConnection(id);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'test_integration',
+        tableName: 'integration_configs',
+        recordId: id,
+        metadata: { 
+          action: 'test_connection',
+          success: testResult.success,
+          message: testResult.message,
+          responseTime: testResult.responseTime
+        }
+      });
+
+      res.json(testResult);
+    } catch (error) {
+      console.error("Error testing integration:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      await createAuditLog(req, {
+        userId: (req.user as any)?.claims?.sub,
+        actionType: 'test_integration',
+        tableName: 'integration_configs',
+        recordId: req.params.id,
+        success: false,
+        errorMessage
+      });
+
+      res.status(500).json({ error: "Failed to test integration", message: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/integrations/:id/health', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const healthStatus = await integrationService.getHealthStatus(id);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'integration_configs',
+        recordId: id,
+        metadata: { 
+          action: 'check_health',
+          healthy: healthStatus.healthy,
+          responseTime: healthStatus.responseTime
+        }
+      });
+
+      res.json(healthStatus);
+    } catch (error) {
+      console.error("Error checking integration health:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to check integration health", message: errorMessage });
     }
   });
 
