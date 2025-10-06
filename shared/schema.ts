@@ -196,26 +196,27 @@ export const userFavorites = pgTable("user_favorites", {
   index("user_favorites_unique_idx").on(table.userId, table.enterpriseId)
 ]);
 
+// OLD CRM TABLE REMOVED - Use crmWorkspacePeople instead
 // People table
-export const people = pgTable("people", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  email: varchar("email").unique(),
-  phone: varchar("phone"),
-  title: varchar("title"),
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable for non-CRM people
-  linkedinUrl: varchar("linkedin_url"),
-  notes: text("notes"),
-  invitationStatus: invitationStatusEnum("invitation_status").default('not_invited'),
-  claimStatus: claimStatusEnum("claim_status").default('unclaimed'),
-  buildProStatus: buildProStatusEnum("build_pro_status").default('not_offered'),
-  supportStatus: supportStatusEnum("support_status").default('no_inquiry'),
-  lastContactedAt: timestamp("last_contacted_at"),
-  externalSourceRef: jsonb("external_source_ref"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+// export const people = pgTable("people", {
+//   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+//   firstName: varchar("first_name").notNull(),
+//   lastName: varchar("last_name").notNull(),
+//   email: varchar("email").unique(),
+//   phone: varchar("phone"),
+//   title: varchar("title"),
+//   enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable for non-CRM people
+//   linkedinUrl: varchar("linkedin_url"),
+//   notes: text("notes"),
+//   invitationStatus: invitationStatusEnum("invitation_status").default('not_invited'),
+//   claimStatus: claimStatusEnum("claim_status").default('unclaimed'),
+//   buildProStatus: buildProStatusEnum("build_pro_status").default('not_offered'),
+//   supportStatus: supportStatusEnum("support_status").default('no_inquiry'),
+//   lastContactedAt: timestamp("last_contacted_at"),
+//   externalSourceRef: jsonb("external_source_ref"),
+//   createdAt: timestamp("created_at").defaultNow(),
+//   updatedAt: timestamp("updated_at").defaultNow(),
+// });
 
 // Opportunity status
 export const opportunityStatusEnum = pgEnum('opportunity_status', [
@@ -227,44 +228,46 @@ export const opportunityStatusEnum = pgEnum('opportunity_status', [
   'closed_lost'
 ]);
 
+// OLD CRM TABLE REMOVED - Use crmWorkspaceOpportunities instead
 // Opportunities table
-export const opportunities = pgTable("opportunities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: varchar("title").notNull(),
-  description: text("description"),
-  value: integer("value"), // in cents
-  status: opportunityStatusEnum("status").default('lead'),
-  probability: integer("probability").default(0), // 0-100
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
-  primaryContactId: varchar("primary_contact_id").references(() => people.id),
-  expectedCloseDate: timestamp("expected_close_date"),
-  notes: text("notes"),
-  aiScore: integer("ai_score"), // AI-generated lead score 0-100
-  aiInsights: text("ai_insights"),
-  externalSourceRef: jsonb("external_source_ref"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+// export const opportunities = pgTable("opportunities", {
+//   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+//   title: varchar("title").notNull(),
+//   description: text("description"),
+//   value: integer("value"), // in cents
+//   status: opportunityStatusEnum("status").default('lead'),
+//   probability: integer("probability").default(0), // 0-100
+//   enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
+//   primaryContactId: varchar("primary_contact_id").references(() => people.id),
+//   expectedCloseDate: timestamp("expected_close_date"),
+//   notes: text("notes"),
+//   aiScore: integer("ai_score"), // AI-generated lead score 0-100
+//   aiInsights: text("ai_insights"),
+//   externalSourceRef: jsonb("external_source_ref"),
+//   createdAt: timestamp("created_at").defaultNow(),
+//   updatedAt: timestamp("updated_at").defaultNow(),
+// });
 
 // Task priority and status
 export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
 export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 
+// OLD CRM TABLE REMOVED - Use crmWorkspaceTasks instead
 // Tasks table
-export const tasks = pgTable("tasks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: varchar("title").notNull(),
-  description: text("description"),
-  priority: taskPriorityEnum("priority").default('medium'),
-  status: taskStatusEnum("status").default('pending'),
-  dueDate: timestamp("due_date"),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
-  enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
-  relatedPersonId: varchar("related_person_id").references(() => people.id),
-  relatedOpportunityId: varchar("related_opportunity_id").references(() => opportunities.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+// export const tasks = pgTable("tasks", {
+//   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+//   title: varchar("title").notNull(),
+//   description: text("description"),
+//   priority: taskPriorityEnum("priority").default('medium'),
+//   status: taskStatusEnum("status").default('pending'),
+//   dueDate: timestamp("due_date"),
+//   assignedToId: varchar("assigned_to_id").references(() => users.id),
+//   enterpriseId: varchar("enterprise_id").references(() => enterprises.id), // Nullable temporarily for migration
+//   relatedPersonId: varchar("related_person_id").references(() => people.id),
+//   relatedOpportunityId: varchar("related_opportunity_id").references(() => opportunities.id),
+//   createdAt: timestamp("created_at").defaultNow(),
+//   updatedAt: timestamp("updated_at").defaultNow(),
+// });
 
 // AI Copilot context configuration
 export const copilotContext = pgTable("copilot_context", {
@@ -376,22 +379,23 @@ export const partnerApplications = pgTable("partner_applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// OLD TABLE REMOVED - References old opportunities table
 // Opportunity transfers for admin to enterprise owner workflow
-export const opportunityTransfers = pgTable("opportunity_transfers", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  opportunityId: varchar("opportunity_id").references(() => opportunities.id).notNull(),
-  transferredBy: varchar("transferred_by").references(() => users.id).notNull(), // Admin who initiated transfer
-  transferredTo: varchar("transferred_to").references(() => users.id).notNull(), // Enterprise owner receiving transfer
-  previousOwnerId: varchar("previous_owner_id").references(() => users.id), // Previous owner (can be null for new opportunities)
-  status: transferStatusEnum("status").default('pending'),
-  reason: text("reason"), // Reason for transfer
-  notes: text("notes"), // Additional notes
-  transferredAt: timestamp("transferred_at").defaultNow(),
-  respondedAt: timestamp("responded_at"), // When the recipient responded
-  completedAt: timestamp("completed_at"), // When transfer was completed
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+// export const opportunityTransfers = pgTable("opportunity_transfers", {
+//   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+//   opportunityId: varchar("opportunity_id").references(() => opportunities.id).notNull(),
+//   transferredBy: varchar("transferred_by").references(() => users.id).notNull(), // Admin who initiated transfer
+//   transferredTo: varchar("transferred_to").references(() => users.id).notNull(), // Enterprise owner receiving transfer
+//   previousOwnerId: varchar("previous_owner_id").references(() => users.id), // Previous owner (can be null for new opportunities)
+//   status: transferStatusEnum("status").default('pending'),
+//   reason: text("reason"), // Reason for transfer
+//   notes: text("notes"), // Additional notes
+//   transferredAt: timestamp("transferred_at").defaultNow(),
+//   respondedAt: timestamp("responded_at"), // When the recipient responded
+//   completedAt: timestamp("completed_at"), // When transfer was completed
+//   createdAt: timestamp("created_at").defaultNow(),
+//   updatedAt: timestamp("updated_at").defaultNow(),
+// });
 
 // Subscription plans table - defines available subscription tiers
 export const subscriptionPlans = pgTable("subscription_plans", {
@@ -602,6 +606,25 @@ export const syncStatusEnum = pgEnum('sync_status', [
   'synced',
   'failed',
   'stale'
+]);
+
+// Workspace CRM enums
+export const relationshipStageEnum = pgEnum('relationship_stage', [
+  'cold',
+  'warm',
+  'hot',
+  'prospect',
+  'active',
+  'partner',
+  'inactive',
+  'customer'
+]);
+
+export const workspaceSyncStatusEnum = pgEnum('workspace_sync_status', [
+  'synced',
+  'pending',
+  'error',
+  'never_synced'
 ]);
 
 export const syncJobTypeEnum = pgEnum('sync_job_type', [
@@ -885,6 +908,97 @@ export const agentTools = pgTable("agent_tools", {
   index("agent_tools_category_idx").on(table.category)
 ]);
 
+// Workspace-scoped CRM tables
+export const crmWorkspaceEnterprises = pgTable("crm_workspace_enterprises", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => enterprises.id).notNull(),
+  directoryEnterpriseId: varchar("directory_enterprise_id").references(() => enterprises.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: enterpriseCategoryEnum("category").notNull(),
+  location: varchar("location"),
+  website: varchar("website"),
+  contactEmail: varchar("contact_email"),
+  tags: text("tags").array(),
+  relationshipStage: relationshipStageEnum("relationship_stage"),
+  ownerNotes: text("owner_notes"),
+  externalSourceRef: jsonb("external_source_ref"),
+  syncStatus: workspaceSyncStatusEnum("sync_status"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  isDeleted: boolean("is_deleted").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("crm_workspace_enterprises_workspace_directory_idx").on(table.workspaceId, table.directoryEnterpriseId).where(sql`directory_enterprise_id IS NOT NULL`),
+  index("crm_workspace_enterprises_workspace_deleted_idx").on(table.workspaceId, table.isDeleted)
+]);
+
+export const crmWorkspacePeople = pgTable("crm_workspace_people", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => enterprises.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  workspaceEnterpriseId: varchar("workspace_enterprise_id").references(() => crmWorkspaceEnterprises.id),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  title: varchar("title"),
+  linkedinUrl: varchar("linkedin_url"),
+  notes: text("notes"),
+  relationshipStage: relationshipStageEnum("relationship_stage"),
+  lastContactedAt: timestamp("last_contacted_at"),
+  externalSourceRef: jsonb("external_source_ref"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("crm_workspace_people_workspace_enterprise_idx").on(table.workspaceId, table.workspaceEnterpriseId),
+  index("crm_workspace_people_workspace_user_idx").on(table.workspaceId, table.userId).where(sql`user_id IS NOT NULL`)
+]);
+
+export const crmWorkspaceOpportunities = pgTable("crm_workspace_opportunities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => enterprises.id).notNull(),
+  workspaceEnterpriseId: varchar("workspace_enterprise_id").references(() => crmWorkspaceEnterprises.id, { onDelete: 'cascade' }),
+  workspacePersonId: varchar("workspace_person_id").references(() => crmWorkspacePeople.id, { onDelete: 'cascade' }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  value: integer("value"),
+  status: opportunityStatusEnum("status").default('lead'),
+  probability: integer("probability").default(0),
+  expectedCloseDate: timestamp("expected_close_date"),
+  notes: text("notes"),
+  aiScore: integer("ai_score"),
+  aiInsights: text("ai_insights"),
+  ownerId: varchar("owner_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("crm_workspace_opportunities_workspace_status_idx").on(table.workspaceId, table.status),
+  index("crm_workspace_opportunities_workspace_enterprise_idx").on(table.workspaceId, table.workspaceEnterpriseId)
+]);
+
+export const crmWorkspaceTasks = pgTable("crm_workspace_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => enterprises.id).notNull(),
+  workspaceEnterpriseId: varchar("workspace_enterprise_id").references(() => crmWorkspaceEnterprises.id, { onDelete: 'cascade' }),
+  workspacePersonId: varchar("workspace_person_id").references(() => crmWorkspacePeople.id, { onDelete: 'cascade' }),
+  workspaceOpportunityId: varchar("workspace_opportunity_id").references(() => crmWorkspaceOpportunities.id, { onDelete: 'cascade' }),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  priority: taskPriorityEnum("priority").default('medium'),
+  status: taskStatusEnum("status").default('pending'),
+  dueDate: timestamp("due_date"),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("crm_workspace_tasks_workspace_status_idx").on(table.workspaceId, table.status),
+  index("crm_workspace_tasks_workspace_assigned_idx").on(table.workspaceId, table.assignedToId).where(sql`assigned_to_id IS NOT NULL`)
+]);
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -911,23 +1025,24 @@ export const adminEnterpriseUpdateSchema = insertEnterpriseSchema.pick({
 
 export const ownerEnterpriseUpdateSchema = adminEnterpriseUpdateSchema;
 
-export const insertPersonSchema = createInsertSchema(people).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// OLD CRM SCHEMAS REMOVED - Use workspace schemas instead
+// export const insertPersonSchema = createInsertSchema(people).omit({
+//   id: true,
+//   createdAt: true,
+//   updatedAt: true,
+// });
 
-export const insertOpportunitySchema = createInsertSchema(opportunities).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// export const insertOpportunitySchema = createInsertSchema(opportunities).omit({
+//   id: true,
+//   createdAt: true,
+//   updatedAt: true,
+// });
 
-export const insertTaskSchema = createInsertSchema(tasks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// export const insertTaskSchema = createInsertSchema(tasks).omit({
+//   id: true,
+//   createdAt: true,
+//   updatedAt: true,
+// });
 
 export const insertCopilotContextSchema = createInsertSchema(copilotContext).omit({
   id: true,
@@ -964,11 +1079,12 @@ export const insertPartnerApplicationSchema = createInsertSchema(partnerApplicat
   updatedAt: true,
 });
 
-export const insertOpportunityTransferSchema = createInsertSchema(opportunityTransfers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// OLD SCHEMA REMOVED - References old opportunities table
+// export const insertOpportunityTransferSchema = createInsertSchema(opportunityTransfers).omit({
+//   id: true,
+//   createdAt: true,
+//   updatedAt: true,
+// });
 
 export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
   id: true,
@@ -1084,12 +1200,13 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertEnterprise = z.infer<typeof insertEnterpriseSchema>;
 export type Enterprise = typeof enterprises.$inferSelect;
-export type InsertPerson = z.infer<typeof insertPersonSchema>;
-export type Person = typeof people.$inferSelect;
-export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
-export type Opportunity = typeof opportunities.$inferSelect;
-export type InsertTask = z.infer<typeof insertTaskSchema>;
-export type Task = typeof tasks.$inferSelect;
+// OLD CRM TYPES REMOVED - Use workspace types instead
+// export type InsertPerson = z.infer<typeof insertPersonSchema>;
+// export type Person = typeof people.$inferSelect;
+// export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
+// export type Opportunity = typeof opportunities.$inferSelect;
+// export type InsertTask = z.infer<typeof insertTaskSchema>;
+// export type Task = typeof tasks.$inferSelect;
 export type InsertCopilotContext = z.infer<typeof insertCopilotContextSchema>;
 export type CopilotContext = typeof copilotContext.$inferSelect;
 export type InsertBusinessContext = z.infer<typeof insertBusinessContextSchema>;
@@ -1102,8 +1219,9 @@ export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
 export type CustomField = typeof customFields.$inferSelect;
 export type InsertPartnerApplication = z.infer<typeof insertPartnerApplicationSchema>;
 export type PartnerApplication = typeof partnerApplications.$inferSelect;
-export type InsertOpportunityTransfer = z.infer<typeof insertOpportunityTransferSchema>;
-export type OpportunityTransfer = typeof opportunityTransfers.$inferSelect;
+// OLD TYPE REMOVED - References old opportunities table
+// export type InsertOpportunityTransfer = z.infer<typeof insertOpportunityTransferSchema>;
+// export type OpportunityTransfer = typeof opportunityTransfers.$inferSelect;
 export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
@@ -1175,3 +1293,36 @@ export const insertAgentToolSchema = createInsertSchema(agentTools).omit({
 
 export type InsertAgentTool = z.infer<typeof insertAgentToolSchema>;
 export type AgentTool = typeof agentTools.$inferSelect;
+
+export const insertCrmWorkspaceEnterpriseSchema = createInsertSchema(crmWorkspaceEnterprises).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrmWorkspacePersonSchema = createInsertSchema(crmWorkspacePeople).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrmWorkspaceOpportunitySchema = createInsertSchema(crmWorkspaceOpportunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrmWorkspaceTaskSchema = createInsertSchema(crmWorkspaceTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCrmWorkspaceEnterprise = z.infer<typeof insertCrmWorkspaceEnterpriseSchema>;
+export type CrmWorkspaceEnterprise = typeof crmWorkspaceEnterprises.$inferSelect;
+export type InsertCrmWorkspacePerson = z.infer<typeof insertCrmWorkspacePersonSchema>;
+export type CrmWorkspacePerson = typeof crmWorkspacePeople.$inferSelect;
+export type InsertCrmWorkspaceOpportunity = z.infer<typeof insertCrmWorkspaceOpportunitySchema>;
+export type CrmWorkspaceOpportunity = typeof crmWorkspaceOpportunities.$inferSelect;
+export type InsertCrmWorkspaceTask = z.infer<typeof insertCrmWorkspaceTaskSchema>;
+export type CrmWorkspaceTask = typeof crmWorkspaceTasks.$inferSelect;
