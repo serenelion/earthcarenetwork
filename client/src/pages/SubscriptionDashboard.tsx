@@ -1,15 +1,46 @@
 import { useState } from "react";
-import { Calendar, CreditCard, AlertCircle, Check, X, Loader2 } from "lucide-react";
+import { Calendar, CreditCard, AlertCircle, Check, X, Loader2, FileText, Download, ExternalLink, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSubscription, SubscriptionStatusBadge, TokenUsageIndicator } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
+
+const supportRequestSchema = z.object({
+  subject: z.string().min(1, "Subject is required"),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+  includeSubscriptionInfo: z.boolean().default(true),
+});
+
+type SupportRequest = z.infer<typeof supportRequestSchema>;
+
+interface Invoice {
+  id: string;
+  number: string | null;
+  status: string | null;
+  amount_paid: number;
+  created: number;
+  invoice_pdf: string | null;
+  hosted_invoice_url: string | null;
+}
 
 export default function SubscriptionDashboard() {
   const { 
@@ -26,6 +57,7 @@ export default function SubscriptionDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
 
   const handleManageBilling = async () => {
     try {
@@ -45,6 +77,47 @@ export default function SubscriptionDashboard() {
     } finally {
       setIsCanceling(false);
     }
+  };
+
+  const { data: invoicesData, isLoading: isLoadingInvoices } = useQuery<{ invoices: Invoice[] }>({
+    queryKey: ['/api/subscription/invoices'],
+    enabled: userSubscription?.currentPlanType !== 'free' && !!subscription?.stripeCustomerId,
+  });
+
+  const supportForm = useForm<SupportRequest>({
+    resolver: zodResolver(supportRequestSchema),
+    defaultValues: {
+      subject: "",
+      priority: "medium",
+      message: "",
+      includeSubscriptionInfo: true,
+    },
+  });
+
+  const supportMutation = useMutation({
+    mutationFn: async (data: SupportRequest) => {
+      const response = await apiRequest('POST', '/api/support/request', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Support request submitted",
+        description: "Our team will get back to you soon.",
+      });
+      setIsSupportDialogOpen(false);
+      supportForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit support request",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSupportSubmit = (data: SupportRequest) => {
+    supportMutation.mutate(data);
   };
 
   if (isLoadingSubscription) {
@@ -218,6 +291,97 @@ export default function SubscriptionDashboard() {
               </CardContent>
             </Card>
 
+            {/* Invoice History (only for paid users) */}
+            {userSubscription?.currentPlanType !== 'free' && (
+              <Card data-testid="invoice-history-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Invoice History
+                  </CardTitle>
+                  <CardDescription>
+                    View and download your past invoices
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingInvoices ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : !invoicesData?.invoices || invoicesData.invoices.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground" data-testid="no-invoices-message">
+                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No invoices yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead data-testid="header-invoice-number">Invoice #</TableHead>
+                            <TableHead data-testid="header-date">Date</TableHead>
+                            <TableHead data-testid="header-amount">Amount</TableHead>
+                            <TableHead data-testid="header-status">Status</TableHead>
+                            <TableHead data-testid="header-actions">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invoicesData.invoices.map((invoice) => (
+                            <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`}>
+                              <TableCell className="font-medium" data-testid={`invoice-number-${invoice.id}`}>
+                                {invoice.number || invoice.id.substring(0, 10)}
+                              </TableCell>
+                              <TableCell data-testid={`invoice-date-${invoice.id}`}>
+                                {new Date(invoice.created * 1000).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell data-testid={`invoice-amount-${invoice.id}`}>
+                                ${(invoice.amount_paid / 100).toFixed(2)}
+                              </TableCell>
+                              <TableCell data-testid={`invoice-status-${invoice.id}`}>
+                                <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
+                                  {invoice.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  {invoice.hosted_invoice_url && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      asChild
+                                      data-testid={`button-view-invoice-${invoice.id}`}
+                                    >
+                                      <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="w-4 h-4 mr-1" />
+                                        View
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {invoice.invoice_pdf && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      asChild
+                                      data-testid={`button-download-invoice-${invoice.id}`}
+                                    >
+                                      <a href={invoice.invoice_pdf} target="_blank" rel="noopener noreferrer" download>
+                                        <Download className="w-4 h-4 mr-1" />
+                                        PDF
+                                      </a>
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Available Upgrades for Free Users */}
             {userSubscription?.currentPlanType === 'free' && (
               <Card data-testid="upgrade-options-card">
@@ -387,8 +551,14 @@ export default function SubscriptionDashboard() {
                       View Documentation
                     </Link>
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Calendar className="w-4 h-4 mr-2" />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setIsSupportDialogOpen(true)}
+                    data-testid="button-contact-support"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
                     Contact Support
                   </Button>
                 </div>
@@ -396,6 +566,126 @@ export default function SubscriptionDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Support Request Dialog */}
+        <Dialog open={isSupportDialogOpen} onOpenChange={setIsSupportDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Contact Support</DialogTitle>
+              <DialogDescription>
+                Submit a support request and our team will get back to you soon.
+              </DialogDescription>
+            </DialogHeader>
+
+            <Form {...supportForm}>
+              <form onSubmit={supportForm.handleSubmit(handleSupportSubmit)} className="space-y-4">
+                <FormField
+                  control={supportForm.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Brief description of your issue"
+                          {...field}
+                          data-testid="input-support-subject"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={supportForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-support-priority">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="low" data-testid="priority-low">Low</SelectItem>
+                          <SelectItem value="medium" data-testid="priority-medium">Medium</SelectItem>
+                          <SelectItem value="high" data-testid="priority-high">High</SelectItem>
+                          <SelectItem value="urgent" data-testid="priority-urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={supportForm.control}
+                  name="message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe your issue or question in detail..."
+                          rows={6}
+                          {...field}
+                          data-testid="textarea-support-message"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={supportForm.control}
+                  name="includeSubscriptionInfo"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-include-subscription-info"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Include subscription information
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Help us assist you faster by including your subscription details
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsSupportDialogOpen(false)}
+                    data-testid="button-cancel-support"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={supportMutation.isPending}
+                    data-testid="button-submit-support"
+                  >
+                    {supportMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Submit Request
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

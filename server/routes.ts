@@ -3044,6 +3044,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user invoices from Stripe
+  app.get('/api/subscription/invoices', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe not configured" });
+      }
+
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.stripeCustomerId) {
+        return res.json({ invoices: [] });
+      }
+
+      const invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: 100,
+      });
+
+      const formattedInvoices = invoices.data.map(invoice => ({
+        id: invoice.id,
+        number: invoice.number,
+        status: invoice.status,
+        amount_paid: invoice.amount_paid,
+        created: invoice.created,
+        invoice_pdf: invoice.invoice_pdf,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+      }));
+
+      res.json({ invoices: formattedInvoices });
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch invoices", error: errorMessage });
+    }
+  });
+
+  // ====== SUPPORT REQUEST ROUTES ======
+
+  // Submit support request
+  app.post('/api/support/request', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const supportRequestSchema = z.object({
+        subject: z.string().min(1, "Subject is required"),
+        priority: z.enum(["low", "medium", "high", "urgent"]),
+        message: z.string().min(1, "Message is required"),
+        includeSubscriptionInfo: z.boolean().optional().default(true),
+      });
+
+      const validatedData = supportRequestSchema.parse(req.body);
+
+      const user = await storage.getUser(userId);
+      const subscription = await storage.getUserSubscription(userId);
+
+      console.log("=== SUPPORT REQUEST ===");
+      console.log("From:", user?.email);
+      console.log("User ID:", userId);
+      console.log("Subject:", validatedData.subject);
+      console.log("Priority:", validatedData.priority);
+      console.log("Message:", validatedData.message);
+      
+      if (validatedData.includeSubscriptionInfo && subscription) {
+        console.log("Current Plan:", user?.currentPlanType || 'free');
+        console.log("Subscription Status:", subscription.status);
+        console.log("Subscription ID:", subscription.stripeSubscriptionId);
+      }
+      console.log("======================");
+
+      res.json({ 
+        message: "Support request submitted successfully. Our team will get back to you soon.",
+        success: true 
+      });
+    } catch (error) {
+      console.error("Error submitting support request:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to submit support request", error: errorMessage });
+    }
+  });
+
   // ====== ONBOARDING PROGRESS ROUTES ======
 
   // Get onboarding progress for a specific flow
