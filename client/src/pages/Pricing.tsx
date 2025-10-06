@@ -112,93 +112,61 @@ export default function Pricing() {
     }
   ];
 
-  const plans = subscriptionPlans.length > 0 ? subscriptionPlans : defaultPlans;
+  const plans = (subscriptionPlans.length > 0 ? subscriptionPlans : defaultPlans).filter(
+    plan => plan.planType !== 'build_pro_bundle'
+  );
   const currentPlanType = userSubscription?.currentPlanType || 'free';
 
   const comparisonData = [
     {
       category: "Directory Access",
       free: "Browse only",
-      crmPro: "Full access",
-      buildPro: "Full access"
+      crmPro: "Full access"
     },
     {
       category: "Enterprise Profiles",
       free: "Claim 1 profile",
-      crmPro: "Unlimited profiles",
-      buildPro: "Unlimited profiles"
+      crmPro: "Unlimited profiles"
     },
     {
       category: "CRM - Opportunities",
       free: false,
-      crmPro: true,
-      buildPro: true
+      crmPro: true
     },
     {
       category: "CRM - Tasks",
       free: false,
-      crmPro: true,
-      buildPro: true
+      crmPro: true
     },
     {
       category: "CRM - People",
       free: false,
-      crmPro: true,
-      buildPro: true
+      crmPro: true
     },
     {
       category: "Lead Scoring",
       free: false,
-      crmPro: true,
-      buildPro: true
+      crmPro: true
     },
     {
       category: "AI Credits/month",
       free: "$0.10",
-      crmPro: "$42",
-      buildPro: "$88.11"
+      crmPro: "$42"
     },
     {
       category: "AI Copilot",
       free: "Limited",
-      crmPro: "Full access",
-      buildPro: "Full access"
+      crmPro: "Full access"
     },
     {
       category: "Analytics & Reporting",
       free: "Basic",
-      crmPro: "Advanced",
-      buildPro: "Advanced"
-    },
-    {
-      category: "Spatial Network Tools",
-      free: false,
-      crmPro: false,
-      buildPro: true
-    },
-    {
-      category: "Geographic Visualization",
-      free: false,
-      crmPro: false,
-      buildPro: true
-    },
-    {
-      category: "Team Collaboration",
-      free: false,
-      crmPro: false,
-      buildPro: true
-    },
-    {
-      category: "Custom Integrations",
-      free: false,
-      crmPro: false,
-      buildPro: true
+      crmPro: "Advanced"
     },
     {
       category: "Support Level",
       free: "Community",
-      crmPro: "Priority",
-      buildPro: "Dedicated"
+      crmPro: "Priority"
     }
   ];
 
@@ -223,7 +191,7 @@ export default function Pricing() {
           </h1>
           <p className="text-xl text-muted-foreground mb-4 max-w-3xl mx-auto">
             Earth Care Network is completely free and open source. Self-host it yourself or 
-            choose professional hosting with CRM features for regenerative enterprises.
+            upgrade to CRM Pro for powerful relationship management features.
           </p>
           <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto">
             💚 All code is open source and available for self-hosting at no cost
@@ -246,7 +214,7 @@ export default function Pricing() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
           {plans.map((plan) => {
             const price = isYearly && plan.priceYearly ? plan.priceYearly : plan.priceMonthly;
             const yearlyPrice = plan.priceYearly || 0;
@@ -408,12 +376,12 @@ export default function Pricing() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-4">Your Growth Path</h2>
           <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Start free and upgrade as your needs grow. Each tier unlocks more powerful tools for your regenerative journey.
+            Start free and upgrade to CRM Pro when you're ready for powerful relationship management tools.
           </p>
           
           {/* Desktop view */}
-          <div className="hidden md:flex items-center justify-center gap-4" data-testid="upgrade-path-desktop">
-            <Card className="flex-1 max-w-xs">
+          <div className="hidden md:flex items-center justify-center gap-4 max-w-3xl mx-auto" data-testid="upgrade-path-desktop">
+            <Card className="flex-1 max-w-sm">
               <CardContent className="pt-6">
                 <div className="flex justify-center mb-3">
                   <Target className="w-10 h-10 text-green-600 dark:text-green-400" />
@@ -432,7 +400,7 @@ export default function Pricing() {
             
             <ChevronRight className="w-8 h-8 text-primary flex-shrink-0" />
             
-            <Card className="flex-1 max-w-xs border-primary">
+            <Card className="flex-1 max-w-sm border-primary">
               <CardContent className="pt-6">
                 <div className="flex justify-center mb-3">
                   <Briefcase className="w-10 h-10 text-blue-600 dark:text-blue-400" />
@@ -444,25 +412,6 @@ export default function Pricing() {
                 <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
                   <p className="text-xs text-center">
                     Manage opportunities, tasks, and relationships with AI insights
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <ChevronRight className="w-8 h-8 text-primary flex-shrink-0" />
-            
-            <Card className="flex-1 max-w-xs">
-              <CardContent className="pt-6">
-                <div className="flex justify-center mb-3">
-                  <Building2 className="w-10 h-10 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h3 className="text-xl font-bold text-center mb-2">Build Pro</h3>
-                <p className="text-sm text-center text-muted-foreground mb-3">
-                  Advanced Tools
-                </p>
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="text-xs text-center">
-                    Spatial network tools for complex project management
                   </p>
                 </div>
               </CardContent>
@@ -502,24 +451,6 @@ export default function Pricing() {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-center">
-              <div className="w-0.5 h-8 bg-primary" />
-            </div>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <Building2 className="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold mb-1">Build Pro - Advanced Tools</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Spatial network tools for complex project management
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -537,10 +468,9 @@ export default function Pricing() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-1/4">Feature</TableHead>
+                  <TableHead className="w-1/2">Feature</TableHead>
                   <TableHead className="text-center w-1/4">Free</TableHead>
                   <TableHead className="text-center w-1/4 bg-primary/5">CRM Pro</TableHead>
-                  <TableHead className="text-center w-1/4">Build Pro</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -549,7 +479,6 @@ export default function Pricing() {
                     <TableCell className="font-medium">{row.category}</TableCell>
                     <TableCell className="text-center">{renderFeatureCell(row.free)}</TableCell>
                     <TableCell className="text-center bg-primary/5">{renderFeatureCell(row.crmPro)}</TableCell>
-                    <TableCell className="text-center">{renderFeatureCell(row.buildPro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -591,25 +520,6 @@ export default function Pricing() {
                       <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
                         <span className="text-sm font-medium">{row.category}</span>
                         <div>{renderFeatureCell(row.crmPro)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="build_pro" data-testid="accordion-build-pro">
-                <AccordionTrigger className="text-lg font-semibold">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-purple-600" />
-                    Build Pro Bundle
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-3 pt-2">
-                    {comparisonData.map((row, index) => (
-                      <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                        <span className="text-sm font-medium">{row.category}</span>
-                        <div>{renderFeatureCell(row.buildPro)}</div>
                       </div>
                     ))}
                   </div>
@@ -659,15 +569,6 @@ export default function Pricing() {
                 Absolutely! Earth Care Network is open source, so you can self-host the entire platform 
                 for free on your own infrastructure. Paid plans are for those who prefer managed hosting 
                 with professional support and additional CRM features.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="text-xl font-semibold mb-2">What's the Build Pro Bundle?</h3>
-              <p className="text-muted-foreground">
-                The Build Pro Bundle includes everything in CRM Pro plus access to Spatial Network Build Pro 
-                for advanced project management and geographic visualization tools. Perfect for teams managing 
-                complex regenerative projects.
               </p>
             </div>
             

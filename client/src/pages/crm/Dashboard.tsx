@@ -425,29 +425,12 @@ export default function Dashboard() {
             <div className="text-left">
               <ExternalLink className="w-5 h-5 md:w-6 md:h-6 mb-2 text-muted-foreground" />
               <p className="font-medium text-foreground text-sm md:text-base">Spatial Network</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Upgrade to Build Pro</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Visit Website</p>
             </div>
           </Button>
         </div>
       </div>
 
-      {/* Build Pro Upgrade Prompt for CRM Pro Users */}
-      {isCrmProUser && (
-        <div className="mt-8 md:mt-10">
-          <UpgradePrompt
-            variant="build_pro"
-            feature="advanced spatial tools and premium capabilities"
-            title="Unlock Build Pro Power Features"
-            benefits={[
-              "Spatial Network Build Pro access with geographic visualization",
-              "Advanced project management and collaboration tools",
-              "Custom integrations and API access",
-              "Advanced analytics and reporting dashboards",
-              "Priority access to new features",
-            ]}
-          />
-        </div>
-      )}
 
       {/* CRM Pro Onboarding Modal */}
       {isCrmProUser && (

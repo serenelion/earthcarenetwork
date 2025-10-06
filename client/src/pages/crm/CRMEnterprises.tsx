@@ -1017,23 +1017,6 @@ export default function CRMEnterprises() {
           }}
         />
       )}
-
-      {/* Build Pro Upgrade Prompt for CRM Pro Power Users */}
-      {isCrmProUser && filteredEnterprises.length >= 10 && (
-        <div className="mt-6">
-          <UpgradePrompt
-            variant="build_pro"
-            feature="advanced enterprise management and spatial tools"
-            title="Managing Multiple Enterprises? Upgrade to Build Pro"
-            benefits={[
-              "Spatial Network Build Pro for geographic visualization",
-              "Advanced collaboration tools for large networks",
-              "Custom enterprise integrations and API access",
-              "Bulk operations and advanced automation",
-            ]}
-          />
-        </div>
-      )}
     </div>
   );
 }

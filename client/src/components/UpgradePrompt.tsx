@@ -26,14 +26,12 @@ interface UpgradePromptProps {
   feature: string;
   benefits: string[];
   title?: string;
-  variant?: 'crm_pro' | 'build_pro';
 }
 
 export default function UpgradePrompt({
   feature,
   benefits,
   title,
-  variant = 'crm_pro',
 }: UpgradePromptProps) {
   const { createCheckoutSession } = useSubscription();
   const { toast } = useToast();
@@ -42,8 +40,7 @@ export default function UpgradePrompt({
   const handleUpgrade = async () => {
     try {
       setIsUpgrading(true);
-      const planType = variant === 'build_pro' ? 'build_pro_bundle' : 'crm_pro';
-      const { url } = await createCheckoutSession(planType, false);
+      const { url } = await createCheckoutSession('crm_pro', false);
       window.location.href = url;
     } catch (error) {
       toast({
@@ -55,85 +52,60 @@ export default function UpgradePrompt({
     }
   };
 
-  const isBuildPro = variant === 'build_pro';
-  
   const config = {
-    crm_pro: {
-      borderColor: 'border-primary/20',
-      bgGradient: 'bg-gradient-to-br from-primary/5 via-background to-background',
-      iconBg: 'bg-primary/10',
-      iconColor: 'text-primary',
-      badgeBg: 'bg-primary/10',
-      badgeText: 'text-primary',
-      badgeBorder: 'border-primary/20',
-      badgeLabel: 'Free Plan',
-      icon: Lock,
-      checkColor: 'text-primary',
-      buttonBg: 'bg-primary hover:bg-primary/90',
-      defaultTitle: 'Unlock Full CRM Capabilities',
-      description: `Upgrade to CRM Pro to unlock ${feature} and powerful features`,
-      ctaText: 'Upgrade to CRM Pro - $42/month',
-      additionalBenefits: [
-        { icon: Zap, color: 'text-yellow-500', text: <><strong>$42 in AI credits/month</strong> for lead scoring & insights</> },
-        { icon: Shield, color: 'text-blue-500', text: 'Priority support & advanced security' }
-      ]
-    },
-    build_pro: {
-      borderColor: 'border-purple-500/30',
-      bgGradient: 'bg-gradient-to-br from-purple-500/10 via-background to-background',
-      iconBg: 'bg-purple-500/20',
-      iconColor: 'text-purple-600 dark:text-purple-400',
-      badgeBg: 'bg-purple-500/20',
-      badgeText: 'text-purple-700 dark:text-purple-300',
-      badgeBorder: 'border-purple-500/30',
-      badgeLabel: 'CRM Pro',
-      icon: Crown,
-      checkColor: 'text-purple-600 dark:text-purple-400',
-      buttonBg: 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white',
-      defaultTitle: 'Ready for Advanced Features?',
-      description: `Upgrade to Build Pro Bundle for ${feature} and premium capabilities`,
-      ctaText: 'Upgrade to Build Pro - +$46.11/month',
-      additionalBenefits: [
-        { icon: Zap, color: 'text-yellow-500', text: <><strong>Double your AI credits</strong> - $88.11/month for advanced insights</> },
-        { icon: Rocket, color: 'text-purple-600 dark:text-purple-400', text: 'Dedicated account manager & custom integrations' }
-      ]
-    }
+    borderColor: 'border-primary/20',
+    bgGradient: 'bg-gradient-to-br from-primary/5 via-background to-background',
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
+    badgeBg: 'bg-primary/10',
+    badgeText: 'text-primary',
+    badgeBorder: 'border-primary/20',
+    badgeLabel: 'Free Plan',
+    icon: Lock,
+    checkColor: 'text-primary',
+    buttonBg: 'bg-primary hover:bg-primary/90',
+    defaultTitle: 'Unlock Full CRM Capabilities',
+    description: `Upgrade to CRM Pro to unlock ${feature} and powerful features`,
+    ctaText: 'Upgrade to CRM Pro - $42/month',
+    additionalBenefits: [
+      { icon: Zap, color: 'text-yellow-500', text: <><strong>$42 in AI credits/month</strong> for lead scoring & insights</> },
+      { icon: Shield, color: 'text-blue-500', text: 'Priority support & advanced security' }
+    ]
   };
 
-  const currentConfig = config[variant];
-  const Icon = currentConfig.icon;
-  const displayTitle = title || currentConfig.defaultTitle;
+  const Icon = config.icon;
+  const displayTitle = title || config.defaultTitle;
 
   return (
-    <Card className={`border-2 ${currentConfig.borderColor} ${currentConfig.bgGradient}`} data-testid={`upgrade-prompt-${variant}`}>
+    <Card className={`border-2 ${config.borderColor} ${config.bgGradient}`} data-testid="upgrade-prompt-crm-pro">
       <CardHeader className="space-y-1">
         <div className="flex items-center gap-2 mb-2">
-          <div className={`p-2 ${currentConfig.iconBg} rounded-lg`}>
-            <Icon className={`w-5 h-5 ${currentConfig.iconColor}`} />
+          <div className={`p-2 ${config.iconBg} rounded-lg`}>
+            <Icon className={`w-5 h-5 ${config.iconColor}`} />
           </div>
-          <Badge variant="secondary" className={`${currentConfig.badgeBg} ${currentConfig.badgeText} ${currentConfig.badgeBorder}`}>
+          <Badge variant="secondary" className={`${config.badgeBg} ${config.badgeText} ${config.badgeBorder}`}>
             <Sparkles className="w-3 h-3 mr-1" />
-            {currentConfig.badgeLabel}
+            {config.badgeLabel}
           </Badge>
         </div>
         <CardTitle className="text-2xl font-lato">{displayTitle}</CardTitle>
         <CardDescription className="text-base">
-          {currentConfig.description}
+          {config.description}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
           <p className="text-sm font-medium text-muted-foreground">
-            {isBuildPro ? 'Everything in CRM Pro, plus:' : 'With CRM Pro, you get:'}
+            With CRM Pro, you get:
           </p>
           <ul className="space-y-2">
             {benefits.map((benefit, index) => (
               <li key={index} className="flex items-start gap-2">
-                <CheckCircle className={`w-5 h-5 ${currentConfig.checkColor} flex-shrink-0 mt-0.5`} />
+                <CheckCircle className={`w-5 h-5 ${config.checkColor} flex-shrink-0 mt-0.5`} />
                 <span className="text-sm text-foreground">{benefit}</span>
               </li>
             ))}
-            {currentConfig.additionalBenefits.map((benefit, index) => {
+            {config.additionalBenefits.map((benefit, index) => {
               const BenefitIcon = benefit.icon;
               return (
                 <li key={`extra-${index}`} className="flex items-start gap-2">
@@ -150,14 +122,14 @@ export default function UpgradePrompt({
             <Button
               onClick={handleUpgrade}
               disabled={isUpgrading}
-              className={`flex-1 ${currentConfig.buttonBg}`}
-              data-testid={`button-upgrade-to-${variant === 'build_pro' ? 'build-pro' : 'crm-pro'}`}
+              className={`flex-1 ${config.buttonBg}`}
+              data-testid="button-upgrade-to-crm-pro"
             >
               {isUpgrading ? (
                 "Loading..."
               ) : (
                 <>
-                  {currentConfig.ctaText}
+                  {config.ctaText}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
@@ -174,7 +146,7 @@ export default function UpgradePrompt({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-3">
-            {isBuildPro ? 'Unlock premium features • Advanced support included' : 'Cancel anytime • No long-term commitment'}
+            Cancel anytime • No long-term commitment
           </p>
         </div>
       </CardContent>
