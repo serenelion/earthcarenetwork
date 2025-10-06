@@ -43,9 +43,8 @@ export const sessions = pgTable(
 
 // User role enum for role-based access control
 export const userRoleEnum = pgEnum('user_role', [
-  'visitor',
-  'member',
-  'enterprise_owner',
+  'free',
+  'crm_pro',
   'admin'
 ]);
 
@@ -85,7 +84,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: userRoleEnum("role").default('visitor'),
+  role: userRoleEnum("role").default('free'),
   membershipStatus: membershipStatusEnum("membership_status").default('free'),
   // Stripe integration fields
   stripeCustomerId: varchar("stripe_customer_id"),

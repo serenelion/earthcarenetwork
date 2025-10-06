@@ -60,25 +60,35 @@ async function upsertUser(
   // Check if user already exists to avoid overwriting their role/membership
   const existingUser = await storage.getUser(claims["sub"]);
   
+  const email = claims["email"];
+  const isStialNetworkAdmin = email && email.endsWith('@thestialnetwork.net');
+  
   if (existingUser) {
-    // User exists - only update profile information, preserve role/membership
-    await storage.upsertUser({
+    // User exists - update profile information
+    // Auto-upgrade to admin if they have @thestialnetwork.net email
+    const updates: any = {
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
-      // Don't include role/membershipStatus to preserve existing values
-    });
+    };
+    
+    // Auto-upgrade to admin for thestialnetwork.net domain
+    if (isStialNetworkAdmin && existingUser.role !== 'admin') {
+      updates.role = 'admin';
+    }
+    
+    await storage.upsertUser(updates);
   } else {
-    // New user - use role from claims if provided, otherwise default to 'member'
+    // New user - default to 'free', or 'admin' for @thestialnetwork.net
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
-      role: claims["role"] || 'member',
+      role: isStialNetworkAdmin ? 'admin' : 'free',
       membershipStatus: 'free',
     });
   }
