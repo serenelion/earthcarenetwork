@@ -79,7 +79,7 @@ import {
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertTaskSchema, type Task, type InsertTask, type Enterprise, type Person, type Opportunity } from "@shared/schema";
+import { insertCrmWorkspaceTaskSchema, type CrmWorkspaceTask, type InsertCrmWorkspaceTask, type CrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceOpportunity } from "@shared/schema";
 const taskPriorities = [
   { value: "low", label: "Low", color: "bg-gray-100 text-gray-800" },
   { value: "medium", label: "Medium", color: "bg-blue-100 text-blue-800" },
@@ -105,30 +105,31 @@ export default function Tasks() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<CrmWorkspaceTask | null>(null);
 
-  const form = useForm<InsertTask>({
-    resolver: zodResolver(insertTaskSchema),
+  const form = useForm<InsertCrmWorkspaceTask>({
+    resolver: zodResolver(insertCrmWorkspaceTaskSchema),
     defaultValues: {
       title: "",
       description: "",
       priority: "medium",
       status: "pending",
       assignedToId: "",
-      enterpriseId: "",
-      relatedPersonId: "",
-      relatedOpportunityId: "",
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: "",
+      workspacePersonId: "",
+      workspaceOpportunityId: "",
     },
   });
 
   const { data: tasks = [], isLoading, error: tasksError } = useQuery({
-    queryKey: ["/api/crm", enterpriseId, "tasks", searchQuery],
-    queryFn: async (): Promise<Task[]> => {
+    queryKey: ["/api/crm", enterpriseId, "workspace", "tasks", searchQuery],
+    queryFn: async (): Promise<CrmWorkspaceTask[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/${enterpriseId}/tasks?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/tasks?${params}`);
       if (!response.ok) throw new Error("Failed to fetch tasks");
       return response.json();
     },
@@ -151,44 +152,44 @@ export default function Tasks() {
   }, [tasksError, toast]);
 
   const { data: enterprises = [] } = useQuery({
-    queryKey: ["/api/enterprises"],
-    queryFn: async (): Promise<Enterprise[]> => {
-      const response = await fetch("/api/enterprises?limit=200");
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"],
+    queryFn: async (): Promise<CrmWorkspaceEnterprise[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprises?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
   const { data: people = [] } = useQuery({
-    queryKey: ["/api/crm/people"],
-    queryFn: async (): Promise<Person[]> => {
-      const response = await fetch("/api/crm/people?limit=200");
+    queryKey: ["/api/crm", enterpriseId, "workspace", "people"],
+    queryFn: async (): Promise<CrmWorkspacePerson[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
   const { data: opportunities = [] } = useQuery({
-    queryKey: ["/api/crm/opportunities"],
-    queryFn: async (): Promise<Opportunity[]> => {
-      const response = await fetch("/api/crm/opportunities?limit=200");
+    queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"],
+    queryFn: async (): Promise<CrmWorkspaceOpportunity[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/opportunities?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch opportunities");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: InsertTask) => {
-      return apiRequest("POST", `/api/crm/${enterpriseId}/tasks`, data);
+    mutationFn: async (data: InsertCrmWorkspaceTask) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/tasks`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -218,11 +219,11 @@ export default function Tasks() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertTask> }) => {
-      return apiRequest("PUT", `/api/crm/${enterpriseId}/tasks/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertCrmWorkspaceTask> }) => {
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/tasks/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -253,10 +254,10 @@ export default function Tasks() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/${enterpriseId}/tasks/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -296,13 +297,14 @@ export default function Tasks() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const handleSubmit = (data: InsertTask) => {
+  const handleSubmit = (data: InsertCrmWorkspaceTask) => {
     const processedData = {
       ...data,
+      workspaceId: enterpriseId,
       assignedToId: data.assignedToId || null,
-      enterpriseId: data.enterpriseId || null,
-      relatedPersonId: data.relatedPersonId || null,
-      relatedOpportunityId: data.relatedOpportunityId || null,
+      workspaceEnterpriseId: data.workspaceEnterpriseId || null,
+      workspacePersonId: data.workspacePersonId || null,
+      workspaceOpportunityId: data.workspaceOpportunityId || null,
       dueDate: data.dueDate || null,
     };
 
@@ -313,7 +315,7 @@ export default function Tasks() {
     }
   };
 
-  const handleEdit = (task: Task) => {
+  const handleEdit = (task: CrmWorkspaceTask) => {
     setEditingTask(task);
     form.reset({
       title: task.title,
@@ -321,9 +323,10 @@ export default function Tasks() {
       priority: task.priority,
       status: task.status,
       assignedToId: task.assignedToId || "",
-      enterpriseId: task.enterpriseId || "",
-      relatedPersonId: task.relatedPersonId || "",
-      relatedOpportunityId: task.relatedOpportunityId || "",
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: task.workspaceEnterpriseId || "",
+      workspacePersonId: task.workspacePersonId || "",
+      workspaceOpportunityId: task.workspaceOpportunityId || "",
       dueDate: task.dueDate ? new Date(task.dueDate) : null,
     });
     setIsDialogOpen(true);
@@ -546,7 +549,7 @@ export default function Tasks() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
-                      name="enterpriseId"
+                      name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Enterprise</FormLabel>
@@ -572,7 +575,7 @@ export default function Tasks() {
 
                     <FormField
                       control={form.control}
-                      name="relatedPersonId"
+                      name="workspacePersonId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Person</FormLabel>
@@ -598,7 +601,7 @@ export default function Tasks() {
 
                     <FormField
                       control={form.control}
-                      name="relatedOpportunityId"
+                      name="workspaceOpportunityId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Related Opportunity</FormLabel>
@@ -757,9 +760,9 @@ export default function Tasks() {
                 {/* Mobile Card View */}
                 <div className="block lg:hidden space-y-3">
                   {filteredTasks.map((task) => {
-                    const enterprise = enterprises.find(e => e.id === task.enterpriseId);
-                    const person = people.find(p => p.id === task.relatedPersonId);
-                    const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
+                    const enterprise = enterprises.find(e => e.id === task.workspaceEnterpriseId);
+                    const person = people.find(p => p.id === task.workspacePersonId);
+                    const opportunity = opportunities.find(o => o.id === task.workspaceOpportunityId);
                     const priority = taskPriorities.find(p => p.value === task.priority);
                     const status = taskStatuses.find(s => s.value === task.status);
                     const overdue = isOverdue(task);
@@ -883,9 +886,9 @@ export default function Tasks() {
                     </TableHeader>
                     <TableBody>
                       {filteredTasks.map((task) => {
-                        const enterprise = enterprises.find(e => e.id === task.enterpriseId);
-                        const person = people.find(p => p.id === task.relatedPersonId);
-                        const opportunity = opportunities.find(o => o.id === task.relatedOpportunityId);
+                        const enterprise = enterprises.find(e => e.id === task.workspaceEnterpriseId);
+                        const person = people.find(p => p.id === task.workspacePersonId);
+                        const opportunity = opportunities.find(o => o.id === task.workspaceOpportunityId);
                         const priority = taskPriorities.find(p => p.value === task.priority);
                         const status = taskStatuses.find(s => s.value === task.status);
                         const overdue = isOverdue(task);

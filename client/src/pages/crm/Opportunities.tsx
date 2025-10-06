@@ -101,7 +101,7 @@ import {
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertOpportunitySchema, type Opportunity, type InsertOpportunity, type Enterprise, type Person } from "@shared/schema";
+import { insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson } from "@shared/schema";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
   { value: "qualified", label: "Qualified", color: "bg-blue-100 text-blue-800" },
@@ -135,35 +135,36 @@ export default function Opportunities() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [editingOpportunity, setEditingOpportunity] = useState<CrmWorkspaceOpportunity | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
+  const [viewingOpportunity, setViewingOpportunity] = useState<CrmWorkspaceOpportunity | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [enterprisePopoverOpen, setEnterprisePopoverOpen] = useState(false);
   const [contactPopoverOpen, setContactPopoverOpen] = useState(false);
 
-  const form = useForm<InsertOpportunity>({
-    resolver: zodResolver(insertOpportunitySchema),
+  const form = useForm<InsertCrmWorkspaceOpportunity>({
+    resolver: zodResolver(insertCrmWorkspaceOpportunitySchema),
     defaultValues: {
       title: "",
       description: "",
       value: 0,
       status: "lead",
       probability: 0,
-      enterpriseId: "",
-      primaryContactId: "",
+      workspaceEnterpriseId: "",
+      workspacePersonId: "",
       notes: "",
+      workspaceId: enterpriseId,
     },
   });
 
   const { data: opportunities = [], isLoading, error: opportunitiesError } = useQuery({
-    queryKey: ["/api/crm", enterpriseId, "opportunities", searchQuery],
-    queryFn: async (): Promise<Opportunity[]> => {
+    queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities", searchQuery],
+    queryFn: async (): Promise<CrmWorkspaceOpportunity[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/${enterpriseId}/opportunities?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/opportunities?${params}`);
       if (!response.ok) throw new Error("Failed to fetch opportunities");
       return response.json();
     },
@@ -197,9 +198,9 @@ export default function Opportunities() {
   });
 
   const { data: people = [] } = useQuery({
-    queryKey: ["/api/crm", enterpriseId, "people"],
-    queryFn: async (): Promise<Person[]> => {
-      const response = await fetch(`/api/crm/${enterpriseId}/people?limit=200`);
+    queryKey: ["/api/crm", enterpriseId, "workspace", "people"],
+    queryFn: async (): Promise<CrmWorkspacePerson[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
@@ -208,11 +209,11 @@ export default function Opportunities() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: InsertOpportunity) => {
-      return apiRequest("POST", `/api/crm/${enterpriseId}/opportunities`, data);
+    mutationFn: async (data: InsertCrmWorkspaceOpportunity) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/opportunities`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -242,11 +243,11 @@ export default function Opportunities() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertOpportunity> }) => {
-      return apiRequest("PUT", `/api/crm/${enterpriseId}/opportunities/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertCrmWorkspaceOpportunity> }) => {
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/opportunities/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       toast({
         title: "Success",
         description: "Opportunity updated successfully",
@@ -277,10 +278,10 @@ export default function Opportunities() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/${enterpriseId}/opportunities/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/opportunities/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -313,13 +314,13 @@ export default function Opportunities() {
       if (!opportunity) throw new Error("Opportunity not found");
 
       return apiRequest("POST", `/api/crm/${enterpriseId}/ai/lead-score`, {
-        enterpriseId: opportunity.enterpriseId,
-        personId: opportunity.primaryContactId,
+        workspaceEnterpriseId: opportunity.workspaceEnterpriseId,
+        workspacePersonId: opportunity.workspacePersonId,
         opportunityId: opportunityId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       toast({
         title: "Success",
         description: "AI lead score generated successfully",
@@ -358,12 +359,13 @@ export default function Opportunities() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const handleSubmit = (data: InsertOpportunity) => {
+  const handleSubmit = (data: InsertCrmWorkspaceOpportunity) => {
     const processedData = {
       ...data,
       value: data.value ? data.value * 100 : 0, // Convert to cents
-      enterpriseId: data.enterpriseId || null,
-      primaryContactId: data.primaryContactId || null,
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: data.workspaceEnterpriseId || null,
+      workspacePersonId: data.workspacePersonId || null,
       expectedCloseDate: data.expectedCloseDate || null,
     };
 
@@ -374,7 +376,7 @@ export default function Opportunities() {
     }
   };
 
-  const handleEdit = (opportunity: Opportunity) => {
+  const handleEdit = (opportunity: CrmWorkspaceOpportunity) => {
     setEditingOpportunity(opportunity);
     form.reset({
       title: opportunity.title,
@@ -382,10 +384,11 @@ export default function Opportunities() {
       value: opportunity.value ? opportunity.value / 100 : 0, // Convert from cents
       status: opportunity.status,
       probability: opportunity.probability || 0,
-      enterpriseId: opportunity.enterpriseId || "",
-      primaryContactId: opportunity.primaryContactId || "",
+      workspaceEnterpriseId: opportunity.workspaceEnterpriseId || "",
+      workspacePersonId: opportunity.workspacePersonId || "",
       expectedCloseDate: opportunity.expectedCloseDate || null,
       notes: opportunity.notes || "",
+      workspaceId: enterpriseId,
     });
     setIsDialogOpen(true);
   };
@@ -632,7 +635,7 @@ export default function Opportunities() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="enterpriseId"
+                      name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Enterprise</FormLabel>
@@ -667,7 +670,7 @@ export default function Opportunities() {
                                     <CommandItem
                                       value="none"
                                       onSelect={() => {
-                                        form.setValue("enterpriseId", null);
+                                        form.setValue("workspaceEnterpriseId", null);
                                         setEnterprisePopoverOpen(false);
                                       }}
                                     >
@@ -684,7 +687,7 @@ export default function Opportunities() {
                                         key={enterprise.id}
                                         value={enterprise.name}
                                         onSelect={() => {
-                                          form.setValue("enterpriseId", enterprise.id);
+                                          form.setValue("workspaceEnterpriseId", enterprise.id);
                                           setEnterprisePopoverOpen(false);
                                         }}
                                       >
@@ -709,7 +712,7 @@ export default function Opportunities() {
 
                     <FormField
                       control={form.control}
-                      name="primaryContactId"
+                      name="workspacePersonId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Primary Contact</FormLabel>
@@ -747,7 +750,7 @@ export default function Opportunities() {
                                     <CommandItem
                                       value="none"
                                       onSelect={() => {
-                                        form.setValue("primaryContactId", null);
+                                        form.setValue("workspacePersonId", null);
                                         setContactPopoverOpen(false);
                                       }}
                                     >
@@ -760,7 +763,7 @@ export default function Opportunities() {
                                       No Contact
                                     </CommandItem>
                                     {people.map((person) => {
-                                      const enterprise = enterprises.find(e => e.id === person.enterpriseId);
+                                      const enterprise = enterprises.find(e => e.id === person.workspaceEnterpriseId);
                                       const displayName = `${person.firstName} ${person.lastName}`;
                                       const searchValue = enterprise 
                                         ? `${displayName} ${enterprise.name}`
@@ -771,7 +774,7 @@ export default function Opportunities() {
                                           key={person.id}
                                           value={searchValue}
                                           onSelect={() => {
-                                            form.setValue("primaryContactId", person.id);
+                                            form.setValue("workspacePersonId", person.id);
                                             setContactPopoverOpen(false);
                                           }}
                                         >

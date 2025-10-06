@@ -75,7 +75,7 @@ import {
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertPersonSchema, type Person, type InsertPerson, type Enterprise } from "@shared/schema";
+import { insertCrmWorkspacePersonSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise } from "@shared/schema";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
   { value: "invited", label: "Invited", color: "bg-blue-100 text-blue-800" },
@@ -108,34 +108,31 @@ export default function People() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [editingPerson, setEditingPerson] = useState<CrmWorkspacePerson | null>(null);
 
-  const form = useForm<InsertPerson>({
-    resolver: zodResolver(insertPersonSchema),
+  const form = useForm<InsertCrmWorkspacePerson>({
+    resolver: zodResolver(insertCrmWorkspacePersonSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
       phone: "",
       title: "",
-      enterpriseId: "",
+      workspaceEnterpriseId: "",
       linkedinUrl: "",
       notes: "",
-      invitationStatus: "not_invited",
-      claimStatus: "unclaimed",
-      buildProStatus: "not_offered",
-      supportStatus: "no_inquiry",
+      workspaceId: enterpriseId,
     },
   });
 
   const { data: people = [], isLoading, error: peopleError } = useQuery({
-    queryKey: ["/api/crm", enterpriseId, "people", searchQuery],
-    queryFn: async (): Promise<Person[]> => {
+    queryKey: ["/api/crm", enterpriseId, "workspace", "people", searchQuery],
+    queryFn: async (): Promise<CrmWorkspacePerson[]> => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/crm/${enterpriseId}/people?${params}`);
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?${params}`);
       if (!response.ok) throw new Error("Failed to fetch people");
       return response.json();
     },
@@ -169,11 +166,11 @@ export default function People() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: InsertPerson) => {
-      return apiRequest("POST", `/api/crm/${enterpriseId}/people`, data);
+    mutationFn: async (data: InsertCrmWorkspacePerson) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/people`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -203,11 +200,11 @@ export default function People() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertPerson> }) => {
-      return apiRequest("PUT", `/api/crm/${enterpriseId}/people/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertCrmWorkspacePerson> }) => {
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/people/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
       toast({
         title: "Success",
         description: "Person updated successfully",
@@ -238,10 +235,10 @@ export default function People() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/${enterpriseId}/people/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/people/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
@@ -281,10 +278,11 @@ export default function People() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const handleSubmit = (data: InsertPerson) => {
+  const handleSubmit = (data: InsertCrmWorkspacePerson) => {
     const processedData = {
       ...data,
-      enterpriseId: data.enterpriseId || null,
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: data.workspaceEnterpriseId || null,
     };
 
     if (editingPerson) {
@@ -294,7 +292,7 @@ export default function People() {
     }
   };
 
-  const handleEdit = (person: Person) => {
+  const handleEdit = (person: CrmWorkspacePerson) => {
     setEditingPerson(person);
     form.reset({
       firstName: person.firstName,
@@ -302,13 +300,10 @@ export default function People() {
       email: person.email || "",
       phone: person.phone || "",
       title: person.title || "",
-      enterpriseId: person.enterpriseId || "",
+      workspaceEnterpriseId: person.workspaceEnterpriseId || "",
       linkedinUrl: person.linkedinUrl || "",
       notes: person.notes || "",
-      invitationStatus: person.invitationStatus,
-      claimStatus: person.claimStatus,
-      buildProStatus: person.buildProStatus,
-      supportStatus: person.supportStatus,
+      workspaceId: enterpriseId,
     });
     setIsDialogOpen(true);
   };
@@ -325,13 +320,7 @@ export default function People() {
     setIsDialogOpen(true);
   };
 
-  const filteredPeople = statusFilter
-    ? people.filter(person => 
-        person.invitationStatus === statusFilter ||
-        person.claimStatus === statusFilter ||
-        person.buildProStatus === statusFilter
-      )
-    : people;
+  const filteredPeople = people;
 
 
   return (
@@ -503,7 +492,7 @@ export default function People() {
 
                     <FormField
                       control={form.control}
-                      name="enterpriseId"
+                      name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Enterprise</FormLabel>
@@ -546,83 +535,6 @@ export default function People() {
                       </FormItem>
                     )}
                   />
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="invitationStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invitation Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-invitation-status">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {invitationStatuses.map((status) => (
-                                <SelectItem key={status.value} value={status.value}>
-                                  {status.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="claimStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Claim Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-claim-status">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {claimStatuses.map((status) => (
-                                <SelectItem key={status.value} value={status.value}>
-                                  {status.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="buildProStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Build Pro Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-build-pro-status">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {buildProStatuses.map((status) => (
-                                <SelectItem key={status.value} value={status.value}>
-                                  {status.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
 
                   <FormField
                     control={form.control}
