@@ -185,9 +185,16 @@ export default function AddEnterprise() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      
+      if (variables.addToDirectory) {
+        queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
+      }
+      
       toast({
         title: "Success",
-        description: "Enterprise created successfully",
+        description: variables.addToDirectory 
+          ? "Enterprise added to the public directory and your workspace"
+          : "Enterprise added to your workspace (private)",
       });
       
       if (variables.addToDirectory) {
