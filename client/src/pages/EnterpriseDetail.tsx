@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { hasRole } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,8 @@ import {
   Shield
 } from "lucide-react";
 import FavoriteButton from "@/components/FavoriteButton";
+import PledgeAffirmationModal from "@/components/PledgeAffirmationModal";
+import { queryClient } from "@/lib/queryClient";
 import type { Enterprise, EarthCarePledge } from "@shared/schema";
 
 const categoryColors = {
@@ -39,6 +42,7 @@ export default function EnterpriseDetail() {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
   const isAdmin = hasRole(user, ["admin"]);
+  const [pledgeModalOpen, setPledgeModalOpen] = useState(false);
 
   const { data: enterprise, isLoading, error } = useQuery<Enterprise>({
     queryKey: ["/api/enterprises", id],
@@ -124,6 +128,8 @@ export default function EnterpriseDetail() {
   
   const pledge = pledgeData?.pledge;
   const isAffirmed = pledge?.status === 'affirmed';
+  
+  const canSignPledge = isAuthenticated && (isAdmin || canManageTeam);
 
   return (
     <div className="min-h-screen bg-background">
@@ -218,7 +224,28 @@ export default function EnterpriseDetail() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {canSignPledge && !isAffirmed && (
+                  <Button
+                    variant="default"
+                    onClick={() => setPledgeModalOpen(true)}
+                    data-testid="button-sign-pledge"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Sprout className="w-4 h-4 mr-2" />
+                    Sign Pledge
+                  </Button>
+                )}
+                {canSignPledge && isAffirmed && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setPledgeModalOpen(true)}
+                    data-testid="button-manage-pledge"
+                  >
+                    <Sprout className="w-4 h-4 mr-2" />
+                    Manage Pledge
+                  </Button>
+                )}
                 {isAuthenticated && canClaim && (
                   <Button
                     variant="default"
@@ -333,6 +360,22 @@ export default function EnterpriseDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pledge Affirmation Modal */}
+      {enterprise && (
+        <PledgeAffirmationModal
+          enterpriseId={enterprise.id}
+          enterpriseName={enterprise.name}
+          existingPledge={pledge}
+          open={pledgeModalOpen}
+          onOpenChange={setPledgeModalOpen}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/enterprises", id, "pledge"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/enterprises", id] });
+            setPledgeModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
