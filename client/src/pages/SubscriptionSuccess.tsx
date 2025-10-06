@@ -1,64 +1,68 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Sparkles, CreditCard } from "lucide-react";
+import { CheckCircle2, Sparkles, CreditCard, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SubscriptionSuccess() {
   const [, setLocation] = useLocation();
 
-  // Fetch user subscription status
-  const { data: subscriptionData, isLoading, error } = useQuery({
-    queryKey: ['/api/subscription/status'],
+  const sessionId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('session_id');
+  }, []);
+
+  const { data: verifiedData, isLoading, error } = useQuery({
+    queryKey: ['/api/subscription/verify-session', sessionId],
+    queryFn: async () => {
+      if (!sessionId) {
+        throw new Error('No session ID provided');
+      }
+      const response = await fetch(`/api/subscription/verify-session/${sessionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to verify session');
+      }
+      return response.json();
+    },
+    enabled: !!sessionId,
+    retry: 1,
   });
 
   useEffect(() => {
-    // Redirect to dashboard after 10 seconds
-    const timer = setTimeout(() => {
-      setLocation('/crm');
-    }, 10000);
+    if (verifiedData && !error) {
+      const timer = setTimeout(() => {
+        setLocation('/crm');
+      }, 10000);
 
-    return () => clearTimeout(timer);
-  }, [setLocation]);
+      return () => clearTimeout(timer);
+    }
+  }, [setLocation, verifiedData, error]);
 
-  if (isLoading) {
+  if (!sessionId) {
     return (
-      <div className="container max-w-4xl mx-auto py-12 px-4">
-        <div className="text-center mb-8">
-          <Skeleton className="h-12 w-96 mx-auto mb-4" />
-          <Skeleton className="h-6 w-64 mx-auto" />
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container max-w-4xl mx-auto py-12 px-4">
+      <div className="container max-w-4xl mx-auto py-12 px-4" data-testid="error-missing-session">
         <Card className="border-red-200 dark:border-red-900">
           <CardHeader>
-            <CardTitle className="text-red-600 dark:text-red-500">Unable to Load Subscription Details</CardTitle>
+            <CardTitle className="text-red-600 dark:text-red-500 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Missing Session ID
+            </CardTitle>
             <CardDescription>
-              We encountered an error loading your subscription information. Your subscription was successful, but we couldn't fetch the details.
+              No session ID was found in the URL. This page requires a valid session ID to verify your subscription.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please try refreshing the page or visit your subscription dashboard.
+            <p className="text-sm text-muted-foreground mb-4" data-testid="text-error-description">
+              If you just completed a payment, please check your email for a confirmation link, or try accessing this page from the payment confirmation.
             </p>
             <div className="flex gap-4">
-              <Button onClick={() => window.location.reload()} data-testid="button-retry">
-                Retry
+              <Button asChild data-testid="button-pricing">
+                <Link href="/pricing">
+                  View Pricing
+                </Link>
               </Button>
               <Button asChild variant="outline" data-testid="button-dashboard">
                 <Link href="/subscription/dashboard">
@@ -72,18 +76,68 @@ export default function SubscriptionSuccess() {
     );
   }
 
-  const planName = subscriptionData?.user?.currentPlanType === 'build_pro_bundle' 
-    ? 'Build Pro Bundle' 
-    : subscriptionData?.user?.currentPlanType === 'crm_pro'
-    ? 'CRM Pro'
-    : subscriptionData?.user?.currentPlanType === 'crm_basic'
-    ? 'CRM Basic'
-    : 'Free';
+  if (isLoading) {
+    return (
+      <div className="container max-w-4xl mx-auto py-12 px-4" data-testid="loading-state">
+        <div className="text-center mb-8">
+          <Skeleton className="h-12 w-96 mx-auto mb-4" data-testid="skeleton-title" />
+          <Skeleton className="h-6 w-64 mx-auto" data-testid="skeleton-subtitle" />
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" data-testid="skeleton-card-1" />
+              <Skeleton className="h-20 w-full" data-testid="skeleton-card-2" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const creditBalance = subscriptionData?.user?.creditBalance || 0;
-  const monthlyAllocation = subscriptionData?.user?.monthlyAllocation || 0;
+  if (error) {
+    return (
+      <div className="container max-w-4xl mx-auto py-12 px-4" data-testid="error-state">
+        <Card className="border-red-200 dark:border-red-900">
+          <CardHeader>
+            <CardTitle className="text-red-600 dark:text-red-500 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Unable to Verify Session
+            </CardTitle>
+            <CardDescription>
+              We encountered an error verifying your subscription session.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4" data-testid="text-error-message">
+              {error instanceof Error ? error.message : 'An unexpected error occurred. Please try again or contact support if the problem persists.'}
+            </p>
+            <div className="flex gap-4">
+              <Button onClick={() => window.location.reload()} data-testid="button-retry">
+                Retry
+              </Button>
+              <Button asChild variant="outline" data-testid="button-support">
+                <Link href="/subscription/dashboard">
+                  Go to Dashboard
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const planName = verifiedData?.plan?.name || 'Unknown Plan';
+  const creditAllocation = verifiedData?.plan?.creditAllocation || 0;
+  const creditBalance = verifiedData?.user?.creditBalance || 0;
+  const monthlyAllocation = verifiedData?.user?.monthlyAllocation || 0;
+  const displayCreditAllocation = (creditAllocation / 100).toFixed(2);
   const displayCredits = (creditBalance / 100).toFixed(2);
   const displayMonthly = (monthlyAllocation / 100).toFixed(2);
+  const billingCycle = verifiedData?.subscription?.isYearly ? 'Yearly' : 'Monthly';
+  const isNewlyProcessed = verifiedData?.processed === true;
+  const isAlreadyProcessed = verifiedData?.alreadyProcessed === true;
 
   return (
     <div className="container max-w-4xl mx-auto py-12 px-4">
@@ -100,6 +154,26 @@ export default function SubscriptionSuccess() {
           Welcome to {planName}
         </p>
       </div>
+
+      {isNewlyProcessed && (
+        <Alert className="mb-6 bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800" data-testid="alert-newly-processed">
+          <Sparkles className="h-4 w-4 text-green-600 dark:text-green-500" />
+          <AlertTitle className="text-green-600 dark:text-green-500">Subscription Activated!</AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-400">
+            Your subscription has been successfully activated and your account has been upgraded.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isAlreadyProcessed && (
+        <Alert className="mb-6 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800" data-testid="alert-already-processed">
+          <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+          <AlertTitle className="text-blue-600 dark:text-blue-500">Subscription Confirmed</AlertTitle>
+          <AlertDescription className="text-blue-700 dark:text-blue-400">
+            Your subscription was already processed and is active.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card data-testid="card-plan-details">
@@ -119,14 +193,20 @@ export default function SubscriptionSuccess() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Status</span>
                 <span className="font-semibold text-green-600 dark:text-green-500" data-testid="text-status">
-                  {subscriptionData?.user?.subscriptionStatus || 'Active'}
+                  {verifiedData?.session?.paymentStatus || verifiedData?.user?.subscriptionStatus || 'Active'}
                 </span>
               </div>
-              {subscriptionData?.subscription?.isYearly !== undefined && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Billing Cycle</span>
+                <span className="font-semibold" data-testid="text-billing-cycle">
+                  {billingCycle}
+                </span>
+              </div>
+              {verifiedData?.session?.id && (
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Billing Cycle</span>
-                  <span className="font-semibold" data-testid="text-billing-cycle">
-                    {subscriptionData.subscription.isYearly ? 'Yearly' : 'Monthly'}
+                  <span className="text-sm text-muted-foreground">Session ID</span>
+                  <span className="font-mono text-xs truncate max-w-[200px]" data-testid="text-session-id" title={verifiedData.session.id}>
+                    {verifiedData.session.id}
                   </span>
                 </div>
               )}
@@ -145,8 +225,14 @@ export default function SubscriptionSuccess() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Plan Allocation</span>
+                <span className="font-semibold text-2xl text-primary" data-testid="text-plan-allocation">
+                  ${displayCreditAllocation}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Current Balance</span>
-                <span className="font-semibold text-2xl" data-testid="text-credit-balance">
+                <span className="font-semibold" data-testid="text-credit-balance">
                   ${displayCredits}
                 </span>
               </div>
@@ -156,7 +242,7 @@ export default function SubscriptionSuccess() {
                   ${displayMonthly}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-2" data-testid="text-credit-info">
                 Credits reset automatically each month
               </p>
             </div>
@@ -171,7 +257,7 @@ export default function SubscriptionSuccess() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3" data-testid="next-step-crm">
               <div className="rounded-full bg-primary/10 p-2 mt-1">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
@@ -182,7 +268,7 @@ export default function SubscriptionSuccess() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3" data-testid="next-step-ai">
               <div className="rounded-full bg-primary/10 p-2 mt-1">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
@@ -193,7 +279,7 @@ export default function SubscriptionSuccess() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3" data-testid="next-step-profiles">
               <div className="rounded-full bg-primary/10 p-2 mt-1">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
