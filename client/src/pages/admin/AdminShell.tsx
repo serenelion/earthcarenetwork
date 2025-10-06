@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { Menu, Star, Database, MessageSquare, Puzzle } from "lucide-react";
 import { useState } from "react";
 import FeaturedEnterprises from "./FeaturedEnterprises";
+import DatabaseAdmin from "./Database";
+import AIChat from "./AIChat";
+import Integrations from "./Integrations";
 
 const adminNavSections = [
   {
@@ -167,22 +170,13 @@ export default function AdminShell() {
               <FeaturedEnterprises />
             </Route>
             <Route path="/admin/database">
-              <PlaceholderPage
-                title="Database Admin"
-                description="Manage database tables, records, and configurations"
-              />
+              <DatabaseAdmin />
             </Route>
             <Route path="/admin/chat">
-              <PlaceholderPage
-                title="AI Chat Admin"
-                description="Monitor and manage AI chat interactions"
-              />
+              <AIChat />
             </Route>
             <Route path="/admin/integrations">
-              <PlaceholderPage
-                title="Integrations Management"
-                description="Configure and manage platform integrations"
-              />
+              <Integrations />
             </Route>
             <Route path="/admin">
               <FeaturedEnterprises />

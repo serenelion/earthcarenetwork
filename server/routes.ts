@@ -29,6 +29,7 @@ import {
 } from "./invitationBatch";
 import { createAuditLog } from "./utils/audit";
 import { integrationService } from "./services/integrations";
+import { aiAgent } from "./services/ai-agent";
 import { 
   insertEnterpriseSchema,
   editorEnterpriseUpdateSchema,
@@ -4230,6 +4231,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error checking integration health:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to check integration health", message: errorMessage });
+    }
+  });
+
+  // AI Database Agent routes
+  app.post('/api/admin/ai-agent/chat', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { message, conversationId } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const sendEvent = (data: any) => {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      try {
+        const response = await aiAgent.chat(
+          userId,
+          message,
+          conversationId,
+          (chunk) => {
+            sendEvent(chunk);
+          }
+        );
+
+        sendEvent({ type: 'final', response });
+        res.end();
+
+        await createAuditLog(req, {
+          userId,
+          actionType: 'feature',
+          tableName: 'ai_agent_conversations',
+          metadata: { 
+            action: 'chat',
+            conversationId: response.conversationId,
+            toolCallsCount: response.toolCalls?.length || 0,
+            messageLength: message.length
+          }
+        });
+      } catch (error) {
+        console.error("Error in AI agent chat:", error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        
+        if (error instanceof InsufficientCreditsError) {
+          sendEvent({ 
+            type: 'error', 
+            error: errorMessage,
+            errorType: 'insufficient_credits'
+          });
+        } else {
+          sendEvent({ type: 'error', error: errorMessage });
+        }
+        
+        res.end();
+
+        await createAuditLog(req, {
+          userId,
+          actionType: 'feature',
+          tableName: 'ai_agent_conversations',
+          success: false,
+          errorMessage
+        });
+      }
+    } catch (error) {
+      console.error("Error setting up AI agent chat stream:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to initialize chat stream", message: errorMessage });
+      }
+    }
+  });
+
+  app.get('/api/admin/ai-agent/history/:conversationId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { conversationId } = req.params;
+      
+      if (!conversationId) {
+        return res.status(400).json({ error: "Conversation ID is required" });
+      }
+
+      const history = aiAgent.getConversationHistory(conversationId);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'ai_agent_conversations',
+        recordId: conversationId,
+        metadata: { 
+          action: 'get_history',
+          messageCount: history.length
+        }
+      });
+
+      res.json({ 
+        conversationId,
+        messageCount: history.length,
+        messages: history 
+      });
+    } catch (error) {
+      console.error("Error fetching conversation history:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch conversation history", message: errorMessage });
+    }
+  });
+
+  app.delete('/api/admin/ai-agent/history/:conversationId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { conversationId } = req.params;
+      
+      if (!conversationId) {
+        return res.status(400).json({ error: "Conversation ID is required" });
+      }
+
+      aiAgent.clearConversationHistory(conversationId);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'delete',
+        tableName: 'ai_agent_conversations',
+        recordId: conversationId,
+        metadata: { 
+          action: 'clear_history'
+        }
+      });
+
+      res.json({ 
+        success: true,
+        message: `Conversation ${conversationId} history cleared`
+      });
+    } catch (error) {
+      console.error("Error clearing conversation history:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to clear conversation history", message: errorMessage });
+    }
+  });
+
+  app.get('/api/admin/ai-agent/tools', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const tools = aiAgent.getAvailableTools();
+      const toolStats = aiAgent.getToolStats();
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'agent_tools',
+        metadata: { 
+          action: 'list_tools',
+          toolCount: tools.length
+        }
+      });
+
+      res.json({ 
+        toolCount: tools.length,
+        tools: tools.map(tool => ({
+          name: tool.function.name,
+          description: tool.function.description,
+          parameters: tool.function.parameters,
+          stats: toolStats[tool.function.name] || { usageCount: 0, successCount: 0 }
+        }))
+      });
+    } catch (error) {
+      console.error("Error listing AI agent tools:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to list tools", message: errorMessage });
     }
   });
 
