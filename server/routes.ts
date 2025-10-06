@@ -3024,8 +3024,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${req.headers.origin}/crm/dashboard?credit_purchase=success`,
-        cancel_url: `${req.headers.origin}/crm/dashboard?credit_purchase=canceled`,
+        success_url: `${req.headers.origin}/crm?credit_purchase=success`,
+        cancel_url: `${req.headers.origin}/crm?credit_purchase=canceled`,
         metadata: {
           userId,
           creditPurchaseId: creditPurchase.id,

@@ -156,7 +156,14 @@ export default function ClaimProfile() {
       });
 
       setTimeout(() => {
-        navigate("/crm/dashboard");
+        // Navigate to the CRM with the enterprise ID from the response
+        const enterpriseId = result.enterprise?.id || claimData?.enterprise.id;
+        if (enterpriseId) {
+          navigate(`/crm/${enterpriseId}/dashboard`);
+        } else {
+          // Fallback to /crm which will auto-redirect to first enterprise
+          navigate("/crm");
+        }
       }, 2000);
     } catch (err) {
       console.error("Error claiming profile:", err);

@@ -30,13 +30,8 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
     // Wait for enterprises to load
     if (isLoading) return;
 
-    // Check if user has no enterprises
+    // If user has no enterprises, don't redirect - show the UI below
     if (userEnterprises.length === 0) {
-      toast({
-        title: "Set up your workspace",
-        description: "Create your enterprise profile to access your workspace and CRM tools.",
-      });
-      setLocation("/crm");
       return;
     }
 
@@ -55,7 +50,8 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
         description: "You don't have access to this workspace. Switching to your available workspaces.",
         variant: "destructive",
       });
-      setLocation("/crm");
+      // Redirect to first available enterprise instead of /crm to avoid loops
+      setLocation(`/crm/${userEnterprises[0].id}/dashboard`);
       return;
     }
   }, [enterpriseId, userEnterprises, isLoading, setLocation, toast]);
