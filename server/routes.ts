@@ -72,7 +72,7 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 // Role-based authorization middleware
-function requireRole(roles: Array<'visitor' | 'member' | 'enterprise_owner' | 'admin'>): RequestHandler {
+function requireRole(roles: Array<'free' | 'crm_pro' | 'admin'>): RequestHandler {
   return async (req: any, res, next) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
@@ -406,10 +406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw memberError; // Re-throw if it's a different error
       }
 
-      // Update user's role to enterprise_owner and increment claimed profiles count
+      // Increment claimed profiles count (ownership tracked in enterpriseTeamMembers)
       await db.update(users)
         .set({ 
-          role: 'enterprise_owner',
           claimedProfilesCount: (user.claimedProfilesCount || 0) + 1,
           updatedAt: new Date()
         })
@@ -1917,7 +1916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile Claim Routes
-  app.post('/api/crm/enterprises/:id/invite', isAuthenticated, requireRole(['admin', 'enterprise_owner']), async (req: any, res) => {
+  app.post('/api/crm/enterprises/:id/invite', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) {
@@ -1934,6 +1933,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enterprise = await storage.getEnterprise(enterpriseId);
       if (!enterprise) {
         return res.status(404).json({ message: "Enterprise not found" });
+      }
+
+      // Check if user is admin or owner of this enterprise
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.role === 'admin';
+      const userEnterpriseRole = await getUserEnterpriseRole(userId, enterpriseId);
+      const isOwner = userEnterpriseRole === 'owner';
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Forbidden - must be enterprise owner or admin" });
       }
 
       const claimToken = nanoid(32);
@@ -2287,14 +2296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update claim status to claimed
       const updatedPerson = await storage.updateClaimStatus(personId, 'claimed');
       
-      // Update user role to enterprise_owner if not already
-      const user = await storage.getUser(userId);
-      if (user && (user.role === 'visitor' || user.role === 'member')) {
-        await storage.upsertUser({ 
-          ...user, 
-          role: 'enterprise_owner' 
-        });
-      }
+      // Note: Enterprise ownership is tracked in enterpriseTeamMembers table
+      // No need to change user's platform role
 
       res.json({
         message: "Enterprise claimed successfully",
