@@ -58,6 +58,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Users,
   Plus,
@@ -72,10 +73,11 @@ import {
   Lock,
   Info,
   Shield,
+  Link2,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspacePersonSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise } from "@shared/schema";
+import { insertCrmWorkspacePersonSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise, type CrmWorkspaceEnterprise, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
   { value: "invited", label: "Invited", color: "bg-blue-100 text-blue-800" },
@@ -97,6 +99,17 @@ const buildProStatuses = [
   { value: "cancelled", label: "Cancelled", color: "bg-red-100 text-red-800" },
 ];
 
+const relationshipTypes = [
+  { value: "employee", label: "Employee" },
+  { value: "consultant", label: "Consultant" },
+  { value: "contractor", label: "Contractor" },
+  { value: "board_member", label: "Board Member" },
+  { value: "advisor", label: "Advisor" },
+  { value: "partner", label: "Partner" },
+  { value: "vendor", label: "Vendor" },
+  { value: "other", label: "Other" },
+];
+
 export default function People() {
   const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
@@ -109,6 +122,14 @@ export default function People() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<CrmWorkspacePerson | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<CrmWorkspacePerson | null>(null);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [connectionsDialogOpen, setConnectionsDialogOpen] = useState(false);
+  const [selectedPersonForConnections, setSelectedPersonForConnections] = useState<CrmWorkspacePerson | null>(null);
+  const [newConnectionEnterpriseId, setNewConnectionEnterpriseId] = useState<string>("");
+  const [newConnectionRelationshipType, setNewConnectionRelationshipType] = useState<string>("employee");
 
   const form = useForm<InsertCrmWorkspacePerson>({
     resolver: zodResolver(insertCrmWorkspacePersonSchema),
@@ -162,6 +183,30 @@ export default function People() {
       return response.json();
     },
     enabled: isAuthenticated,
+    retry: false,
+  });
+
+  const { data: workspaceEnterprises = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"],
+    queryFn: async (): Promise<CrmWorkspaceEnterprise[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprises`);
+      if (!response.ok) throw new Error("Failed to fetch workspace enterprises");
+      return response.json();
+    },
+    enabled: isAuthenticated && !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: personConnections = [], isLoading: connectionsLoading } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections", "person", selectedPersonForConnections?.id],
+    queryFn: async (): Promise<CrmWorkspaceEnterprisePerson[]> => {
+      if (!selectedPersonForConnections) return [];
+      const params = new URLSearchParams({ personId: selectedPersonForConnections.id });
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprise-people-connections?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch connections");
+      return response.json();
+    },
+    enabled: !!selectedPersonForConnections && !!enterpriseId,
     retry: false,
   });
 
@@ -265,6 +310,93 @@ export default function People() {
     },
   });
 
+  const sendEmailMutation = useMutation({
+    mutationFn: async (data: { personId: string; subject: string; body: string }) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/communications/email`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Email sent successfully",
+      });
+      setEmailDialogOpen(false);
+      setEmailSubject("");
+      setEmailBody("");
+      setSelectedPerson(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createConnectionMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceEnterprisePerson) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Connection created successfully",
+      });
+      setNewConnectionEnterpriseId("");
+      setNewConnectionRelationshipType("employee");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create connection",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteConnectionMutation = useMutation({
+    mutationFn: async (connectionId: string) => {
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections/${connectionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Connection removed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove connection",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const setPrimaryMutation = useMutation({
+    mutationFn: async (connectionId: string) => {
+      return apiRequest("PATCH", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections/${connectionId}`, {
+        isPrimary: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Primary connection updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update primary connection",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -318,6 +450,25 @@ export default function People() {
     setEditingPerson(null);
     form.reset();
     setIsDialogOpen(true);
+  };
+
+  const handleCreateConnection = () => {
+    if (!selectedPersonForConnections || !newConnectionEnterpriseId) {
+      toast({
+        title: "Error",
+        description: "Please select an enterprise",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createConnectionMutation.mutate({
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: newConnectionEnterpriseId,
+      workspacePersonId: selectedPersonForConnections.id,
+      relationshipType: newConnectionRelationshipType as any,
+      isPrimary: personConnections.length === 0,
+    });
   };
 
   const filteredPeople = people;
@@ -715,6 +866,31 @@ export default function People() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => {
+                              setSelectedPersonForConnections(person);
+                              setConnectionsDialogOpen(true);
+                            }}
+                            disabled={isFreeUser}
+                            data-testid={`button-connections-${person.id}`}
+                            title="Manage enterprise connections"
+                          >
+                            <Building className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPerson(person);
+                              setEmailDialogOpen(true);
+                            }}
+                            disabled={!person.email || isFreeUser}
+                            data-testid={`button-email-${person.id}`}
+                          >
+                            <Mail className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="flex-1"
                             onClick={() => handleEdit(person)}
                             disabled={isFreeUser}
@@ -819,6 +995,32 @@ export default function People() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => {
+                                setSelectedPersonForConnections(person);
+                                setConnectionsDialogOpen(true);
+                              }}
+                              disabled={isFreeUser}
+                              data-testid={`button-connections-${person.id}`}
+                              title={isFreeUser ? "Upgrade to CRM Pro to manage connections" : "Manage enterprise connections"}
+                            >
+                              <Building className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPerson(person);
+                                setEmailDialogOpen(true);
+                              }}
+                              disabled={!person.email || isFreeUser}
+                              data-testid={`button-email-${person.id}`}
+                              title={!person.email ? "No email address" : isFreeUser ? "Upgrade to CRM Pro to send email" : undefined}
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleEdit(person)}
                               disabled={isFreeUser}
                               data-testid={`button-edit-${person.id}`}
@@ -847,6 +1049,204 @@ export default function People() {
             </div>
           </>
         )}
+
+        {/* Email Dialog */}
+        <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Email to {selectedPerson?.firstName} {selectedPerson?.lastName}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">To:</label>
+                <p className="text-sm text-muted-foreground">{selectedPerson?.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Subject</label>
+                <Input
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Email subject"
+                  data-testid="input-email-subject"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Message</label>
+                <Textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Type your message..."
+                  className="min-h-[200px]"
+                  data-testid="input-email-body"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setEmailDialogOpen(false)}
+                  data-testid="button-cancel-email"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedPerson) {
+                      sendEmailMutation.mutate({
+                        personId: selectedPerson.id,
+                        subject: emailSubject,
+                        body: emailBody,
+                      });
+                    }
+                  }}
+                  disabled={!emailSubject || !emailBody || sendEmailMutation.isPending}
+                  data-testid="button-send-email"
+                >
+                  {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Enterprise Connections Dialog */}
+        <Dialog open={connectionsDialogOpen} onOpenChange={setConnectionsDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Enterprise Connections for {selectedPersonForConnections?.firstName} {selectedPersonForConnections?.lastName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* List of current connections */}
+              <ScrollArea className="h-[300px]">
+                {connectionsLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-muted-foreground">Loading connections...</p>
+                  </div>
+                ) : personConnections.length === 0 ? (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-muted-foreground">No enterprise connections yet</p>
+                  </div>
+                ) : (
+                  personConnections.map((connection) => {
+                    const enterprise = workspaceEnterprises.find(e => e.id === connection.workspaceEnterpriseId);
+                    const relationshipLabel = relationshipTypes.find(r => r.value === connection.relationshipType)?.label;
+                    
+                    return (
+                      <Card key={connection.id} className="mb-2">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{enterprise?.name || "Unknown Enterprise"}</p>
+                                {connection.isPrimary && (
+                                  <Badge variant="default" data-testid={`badge-primary-${connection.id}`}>
+                                    <Link2 className="w-3 h-3 mr-1" />
+                                    Primary
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{relationshipLabel || connection.relationshipType}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              {!connection.isPrimary && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setPrimaryMutation.mutate(connection.id)}
+                                  disabled={setPrimaryMutation.isPending || isFreeUser}
+                                  data-testid={`button-set-primary-${connection.id}`}
+                                >
+                                  Set as Primary
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteConnectionMutation.mutate(connection.id)}
+                                disabled={deleteConnectionMutation.isPending || isFreeUser}
+                                data-testid={`button-remove-connection-${connection.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </ScrollArea>
+
+              {/* Add new connection form */}
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3">Add Connection</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Enterprise</label>
+                    <Select 
+                      value={newConnectionEnterpriseId} 
+                      onValueChange={setNewConnectionEnterpriseId}
+                      disabled={isFreeUser}
+                    >
+                      <SelectTrigger data-testid="select-enterprise">
+                        <SelectValue placeholder="Select enterprise" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workspaceEnterprises
+                          .filter(e => !personConnections.some(c => c.workspaceEnterpriseId === e.id))
+                          .map((enterprise) => (
+                            <SelectItem key={enterprise.id} value={enterprise.id}>
+                              {enterprise.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Relationship Type</label>
+                    <Select 
+                      value={newConnectionRelationshipType} 
+                      onValueChange={setNewConnectionRelationshipType}
+                      disabled={isFreeUser}
+                    >
+                      <SelectTrigger data-testid="select-relationship-type">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {relationshipTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setConnectionsDialogOpen(false);
+                      setNewConnectionEnterpriseId("");
+                      setNewConnectionRelationshipType("employee");
+                    }}
+                    data-testid="button-cancel-connection"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateConnection}
+                    disabled={!newConnectionEnterpriseId || createConnectionMutation.isPending || isFreeUser}
+                    data-testid="button-add-connection"
+                  >
+                    {createConnectionMutation.isPending ? "Adding..." : "Add Connection"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
     </>
   );
 }

@@ -69,6 +69,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Building,
   Plus,
@@ -83,10 +84,13 @@ import {
   Database,
   Unlink,
   Info,
+  MessageSquare,
+  Users,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspaceEnterpriseSchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise } from "@shared/schema";
+import { insertCrmWorkspaceEnterpriseSchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
+import { format } from "date-fns";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -118,6 +122,17 @@ const relationshipStageColors = {
   inactive: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
+const relationshipTypes = [
+  { value: "employee", label: "Employee" },
+  { value: "consultant", label: "Consultant" },
+  { value: "contractor", label: "Contractor" },
+  { value: "board_member", label: "Board Member" },
+  { value: "advisor", label: "Advisor" },
+  { value: "partner", label: "Partner" },
+  { value: "vendor", label: "Vendor" },
+  { value: "other", label: "Other" },
+];
+
 export default function CRMEnterprises() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -134,6 +149,12 @@ export default function CRMEnterprises() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEnterprise, setEditingEnterprise] = useState<CrmWorkspaceEnterprise | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [notesEnterpriseId, setNotesEnterpriseId] = useState<string | null>(null);
+  const [newNoteBody, setNewNoteBody] = useState("");
+  const [connectionsDialogOpen, setConnectionsDialogOpen] = useState(false);
+  const [selectedEnterpriseForConnections, setSelectedEnterpriseForConnections] = useState<CrmWorkspaceEnterprise | null>(null);
+  const [newConnectionPersonId, setNewConnectionPersonId] = useState<string>("");
+  const [newConnectionRelationshipType, setNewConnectionRelationshipType] = useState<string>("employee");
 
   const form = useForm<InsertCrmWorkspaceEnterprise>({
     resolver: zodResolver(insertCrmWorkspaceEnterpriseSchema),
@@ -161,6 +182,20 @@ export default function CRMEnterprises() {
     enabled: !!enterpriseId,
     retry: false,
   });
+
+  // Get user's team memberships to check workspace role
+  const { data: userMemberships = [] } = useQuery({
+    queryKey: ["/api/my-enterprises"],
+    queryFn: async () => {
+      const response = await fetch("/api/my-enterprises");
+      if (!response.ok) throw new Error("Failed to fetch user memberships");
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+
+  // Get user's role in current workspace
+  const userRole = userMemberships.find((m: any) => m.enterprise?.id === enterpriseId)?.role;
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: InsertCrmWorkspaceEnterprise }) => {
@@ -208,6 +243,146 @@ export default function CRMEnterprises() {
     },
   });
 
+  const { data: notes = [], isLoading: notesLoading } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises", notesEnterpriseId, "notes"],
+    queryFn: async () => {
+      if (!notesEnterpriseId) return [];
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprises/${notesEnterpriseId}/notes`);
+      if (!response.ok) throw new Error("Failed to fetch notes");
+      return response.json();
+    },
+    enabled: !!notesEnterpriseId,
+  });
+
+  const createNoteMutation = useMutation({
+    mutationFn: async (body: string) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprises/${notesEnterpriseId}/notes`, { body });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises", notesEnterpriseId, "notes"] });
+      setNewNoteBody("");
+      toast({
+        title: "Success",
+        description: "Note created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create note",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/enterprises/${notesEnterpriseId}/notes/${noteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises", notesEnterpriseId, "notes"] });
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { data: workspacePeople = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "people"],
+    queryFn: async (): Promise<CrmWorkspacePerson[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?limit=200`);
+      if (!response.ok) throw new Error("Failed to fetch workspace people");
+      return response.json();
+    },
+    enabled: !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: enterpriseConnections = [], isLoading: connectionsLoading } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections", "enterprise", selectedEnterpriseForConnections?.id],
+    queryFn: async (): Promise<CrmWorkspaceEnterprisePerson[]> => {
+      if (!selectedEnterpriseForConnections) return [];
+      const params = new URLSearchParams({ enterpriseId: selectedEnterpriseForConnections.id });
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprise-people-connections?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch connections");
+      return response.json();
+    },
+    enabled: !!selectedEnterpriseForConnections && !!enterpriseId,
+    retry: false,
+  });
+
+  const createConnectionMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceEnterprisePerson) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Connection created successfully",
+      });
+      setNewConnectionPersonId("");
+      setNewConnectionRelationshipType("employee");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create connection",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteConnectionMutation = useMutation({
+    mutationFn: async (connectionId: string) => {
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections/${connectionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Connection removed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove connection",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const setPrimaryMutation = useMutation({
+    mutationFn: async (connectionId: string) => {
+      return apiRequest("PATCH", `/api/crm/${enterpriseId}/workspace/enterprise-people-connections/${connectionId}`, {
+        isPrimary: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprise-people-connections"] });
+      toast({
+        title: "Success",
+        description: "Primary connection updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update primary connection",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddEnterprise = () => {
     navigate(`/crm/${enterpriseId}/add-enterprise`);
   };
@@ -232,6 +407,25 @@ export default function CRMEnterprises() {
 
   const handleDelete = (id: string) => {
     setDeleteConfirmId(id);
+  };
+
+  const handleCreateConnection = () => {
+    if (!selectedEnterpriseForConnections || !newConnectionPersonId) {
+      toast({
+        title: "Error",
+        description: "Please select a person",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createConnectionMutation.mutate({
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: selectedEnterpriseForConnections.id,
+      workspacePersonId: newConnectionPersonId,
+      relationshipType: newConnectionRelationshipType as any,
+      isPrimary: enterpriseConnections.length === 0,
+    });
   };
 
   const onSubmit = (data: InsertCrmWorkspaceEnterprise) => {
@@ -512,6 +706,28 @@ export default function CRMEnterprises() {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => {
+                                setSelectedEnterpriseForConnections(enterprise);
+                                setConnectionsDialogOpen(true);
+                              }}
+                              disabled={isFreeUser}
+                              data-testid={`button-connections-${enterprise.id}`}
+                              title="Manage people connections"
+                            >
+                              <Users className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setNotesEnterpriseId(enterprise.id)}
+                              disabled={isFreeUser}
+                              data-testid={`button-notes-${enterprise.id}`}
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="flex-1"
                               onClick={() => handleEdit(enterprise)}
                               disabled={isFreeUser}
@@ -670,6 +886,29 @@ export default function CRMEnterprises() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEnterpriseForConnections(enterprise);
+                                  setConnectionsDialogOpen(true);
+                                }}
+                                disabled={isFreeUser}
+                                data-testid={`button-connections-${enterprise.id}`}
+                                title={isFreeUser ? "Upgrade to CRM Pro to manage connections" : "Manage people connections"}
+                              >
+                                <Users className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setNotesEnterpriseId(enterprise.id)}
+                                disabled={isFreeUser}
+                                data-testid={`button-notes-${enterprise.id}`}
+                                title={isFreeUser ? "Upgrade to CRM Pro to view notes" : "View notes"}
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -968,6 +1207,233 @@ export default function CRMEnterprises() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Notes Dialog */}
+      <Dialog open={!!notesEnterpriseId} onOpenChange={() => setNotesEnterpriseId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Enterprise Notes</DialogTitle>
+            <DialogDescription>
+              {workspaceEnterprises.find(e => e.id === notesEnterpriseId)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Create Note Form */}
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Write a note..."
+                value={newNoteBody}
+                onChange={(e) => setNewNoteBody(e.target.value)}
+                className="min-h-[100px]"
+                data-testid="input-new-note"
+              />
+              <Button
+                onClick={() => {
+                  if (newNoteBody.trim()) {
+                    createNoteMutation.mutate(newNoteBody);
+                  }
+                }}
+                disabled={!newNoteBody.trim() || createNoteMutation.isPending}
+                data-testid="button-create-note"
+              >
+                {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+              </Button>
+            </div>
+
+            {/* Notes List */}
+            <ScrollArea className="h-[400px] pr-4">
+              {notesLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : notes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No notes yet. Add your first note above.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notes.map((note: any) => (
+                    <Card key={note.id} data-testid={`note-${note.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm text-foreground whitespace-pre-wrap">{note.body}</p>
+                            <div className="text-xs text-muted-foreground">
+                              {note.author && (
+                                <span>
+                                  {note.author.firstName} {note.author.lastName}
+                                </span>
+                              )}
+                              {note.createdAt && (
+                                <span> • {format(new Date(note.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                              )}
+                            </div>
+                          </div>
+                          {(note.authorId === user?.id || userRole === 'admin' || userRole === 'owner') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteNoteMutation.mutate(note.id)}
+                              disabled={deleteNoteMutation.isPending}
+                              data-testid={`button-delete-note-${note.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* People Connections Dialog */}
+      <Dialog open={connectionsDialogOpen} onOpenChange={setConnectionsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              People Connected to {selectedEnterpriseForConnections?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* List of current connections */}
+            <ScrollArea className="h-[300px]">
+              {connectionsLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">Loading connections...</p>
+                </div>
+              ) : enterpriseConnections.length === 0 ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No people connections yet</p>
+                </div>
+              ) : (
+                enterpriseConnections.map((connection) => {
+                  const person = workspacePeople.find(p => p.id === connection.workspacePersonId);
+                  const relationshipLabel = relationshipTypes.find(r => r.value === connection.relationshipType)?.label;
+                  
+                  return (
+                    <Card key={connection.id} className="mb-2">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{person ? `${person.firstName} ${person.lastName}` : "Unknown Person"}</p>
+                              {connection.isPrimary && (
+                                <Badge variant="default" data-testid={`badge-primary-${connection.id}`}>
+                                  <Link2 className="w-3 h-3 mr-1" />
+                                  Primary
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{relationshipLabel || connection.relationshipType}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            {!connection.isPrimary && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPrimaryMutation.mutate(connection.id)}
+                                disabled={setPrimaryMutation.isPending || isFreeUser}
+                                data-testid={`button-set-primary-${connection.id}`}
+                              >
+                                Set as Primary
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteConnectionMutation.mutate(connection.id)}
+                              disabled={deleteConnectionMutation.isPending || isFreeUser}
+                              data-testid={`button-remove-connection-${connection.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </ScrollArea>
+
+            {/* Add new connection form */}
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-3">Add Connection</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Person</label>
+                  <Select 
+                    value={newConnectionPersonId} 
+                    onValueChange={setNewConnectionPersonId}
+                    disabled={isFreeUser}
+                  >
+                    <SelectTrigger data-testid="select-person">
+                      <SelectValue placeholder="Select person" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workspacePeople
+                        .filter(p => !enterpriseConnections.some(c => c.workspacePersonId === p.id))
+                        .map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.firstName} {person.lastName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Relationship Type</label>
+                  <Select 
+                    value={newConnectionRelationshipType} 
+                    onValueChange={setNewConnectionRelationshipType}
+                    disabled={isFreeUser}
+                  >
+                    <SelectTrigger data-testid="select-relationship-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {relationshipTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setConnectionsDialogOpen(false);
+                    setNewConnectionPersonId("");
+                    setNewConnectionRelationshipType("employee");
+                  }}
+                  data-testid="button-cancel-connection"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateConnection}
+                  disabled={!newConnectionPersonId || createConnectionMutation.isPending || isFreeUser}
+                  data-testid="button-add-connection"
+                >
+                  {createConnectionMutation.isPending ? "Adding..." : "Add Connection"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

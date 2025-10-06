@@ -5,6 +5,9 @@ import {
   crmWorkspacePeople,
   crmWorkspaceOpportunities,
   crmWorkspaceTasks,
+  crmWorkspaceEnterpriseNotes,
+  crmWorkspaceEnterprisePeople,
+  crmWorkspaceEmailLogs,
   copilotContext,
   businessContext,
   conversations,
@@ -44,6 +47,12 @@ import {
   type InsertCrmWorkspaceOpportunity,
   type CrmWorkspaceTask,
   type InsertCrmWorkspaceTask,
+  type CrmWorkspaceEnterpriseNote,
+  type InsertCrmWorkspaceEnterpriseNote,
+  type CrmWorkspaceEnterprisePerson,
+  type InsertCrmWorkspaceEnterprisePerson,
+  type CrmWorkspaceEmailLog,
+  type InsertCrmWorkspaceEmailLog,
   type CopilotContext,
   type InsertCopilotContext,
   type BusinessContext,
@@ -92,7 +101,7 @@ import {
   type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
+import { eq, desc, like, and, or, count, sql, inArray, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -147,6 +156,22 @@ export interface IStorage {
   createWorkspaceTask(task: InsertCrmWorkspaceTask): Promise<CrmWorkspaceTask>;
   updateWorkspaceTask(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceTask>): Promise<CrmWorkspaceTask>;
   deleteWorkspaceTask(workspaceId: string, id: string): Promise<void>;
+
+  // CRM Workspace Enterprise Notes
+  getEnterpriseNotes(workspaceId: string, workspaceEnterpriseId: string): Promise<CrmWorkspaceEnterpriseNote[]>;
+  createEnterpriseNote(note: InsertCrmWorkspaceEnterpriseNote): Promise<CrmWorkspaceEnterpriseNote>;
+  deleteEnterpriseNote(workspaceId: string, noteId: string): Promise<void>;
+
+  // CRM Workspace Enterprise-People Connections
+  getEnterprisePersonConnections(workspaceId: string, enterpriseId?: string, personId?: string): Promise<CrmWorkspaceEnterprisePerson[]>;
+  createEnterprisePersonConnection(connection: InsertCrmWorkspaceEnterprisePerson): Promise<CrmWorkspaceEnterprisePerson>;
+  updateEnterprisePersonConnection(workspaceId: string, connectionId: string, isPrimary: boolean): Promise<CrmWorkspaceEnterprisePerson>;
+  deleteEnterprisePersonConnection(workspaceId: string, connectionId: string): Promise<void>;
+
+  // CRM Workspace Email Logs
+  getEmailLogs(workspaceId: string, personId?: string): Promise<CrmWorkspaceEmailLog[]>;
+  createEmailLog(log: InsertCrmWorkspaceEmailLog): Promise<CrmWorkspaceEmailLog>;
+  updateEmailLogStatus(workspaceId: string, logId: string, status: string, sentAt?: Date, errorMessage?: string): Promise<CrmWorkspaceEmailLog>;
 
   // Workspace Stats (lightweight aggregates)
   getWorkspaceStats(workspaceId: string): Promise<{
@@ -671,8 +696,10 @@ export class DatabaseStorage implements IStorage {
         directoryEnterpriseId,
         name: directoryEnterprise.name,
         description: directoryEnterprise.description,
+        category: directoryEnterprise.category,
         website: directoryEnterprise.website,
         location: directoryEnterprise.location,
+        contactEmail: directoryEnterprise.contactEmail,
         createdBy,
       })
       .returning();
@@ -865,6 +892,198 @@ export class DatabaseStorage implements IStorage {
         eq(crmWorkspaceTasks.workspaceId, workspaceId),
         eq(crmWorkspaceTasks.id, id)
       ));
+  }
+
+  // CRM Workspace Enterprise Notes
+  async getEnterpriseNotes(workspaceId: string, workspaceEnterpriseId: string): Promise<CrmWorkspaceEnterpriseNote[]> {
+    const enterprise = await db
+      .select()
+      .from(crmWorkspaceEnterprises)
+      .where(and(
+        eq(crmWorkspaceEnterprises.id, workspaceEnterpriseId),
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId)
+      ))
+      .limit(1);
+    
+    if (!enterprise.length) {
+      throw new Error('Enterprise not found in workspace');
+    }
+
+    return await db
+      .select()
+      .from(crmWorkspaceEnterpriseNotes)
+      .where(eq(crmWorkspaceEnterpriseNotes.workspaceEnterpriseId, workspaceEnterpriseId))
+      .orderBy(desc(crmWorkspaceEnterpriseNotes.createdAt));
+  }
+
+  async createEnterpriseNote(note: InsertCrmWorkspaceEnterpriseNote): Promise<CrmWorkspaceEnterpriseNote> {
+    const [created] = await db
+      .insert(crmWorkspaceEnterpriseNotes)
+      .values(note)
+      .returning();
+    return created;
+  }
+
+  async deleteEnterpriseNote(workspaceId: string, noteId: string): Promise<void> {
+    const note = await db
+      .select({ workspaceEnterpriseId: crmWorkspaceEnterpriseNotes.workspaceEnterpriseId })
+      .from(crmWorkspaceEnterpriseNotes)
+      .innerJoin(
+        crmWorkspaceEnterprises,
+        eq(crmWorkspaceEnterpriseNotes.workspaceEnterpriseId, crmWorkspaceEnterprises.id)
+      )
+      .where(and(
+        eq(crmWorkspaceEnterpriseNotes.id, noteId),
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId)
+      ))
+      .limit(1);
+
+    if (!note.length) {
+      throw new Error('Note not found in workspace');
+    }
+
+    await db
+      .delete(crmWorkspaceEnterpriseNotes)
+      .where(eq(crmWorkspaceEnterpriseNotes.id, noteId));
+  }
+
+  // CRM Workspace Enterprise-People Connections
+  async getEnterprisePersonConnections(workspaceId: string, enterpriseId?: string, personId?: string): Promise<CrmWorkspaceEnterprisePerson[]> {
+    const conditions = [eq(crmWorkspaceEnterprisePeople.workspaceId, workspaceId)];
+    
+    if (enterpriseId) {
+      conditions.push(eq(crmWorkspaceEnterprisePeople.workspaceEnterpriseId, enterpriseId));
+    }
+    
+    if (personId) {
+      conditions.push(eq(crmWorkspaceEnterprisePeople.workspacePersonId, personId));
+    }
+
+    return await db
+      .select()
+      .from(crmWorkspaceEnterprisePeople)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspaceEnterprisePeople.createdAt));
+  }
+
+  async createEnterprisePersonConnection(connection: InsertCrmWorkspaceEnterprisePerson): Promise<CrmWorkspaceEnterprisePerson> {
+    // Check for duplicate
+    const existing = await db
+      .select()
+      .from(crmWorkspaceEnterprisePeople)
+      .where(and(
+        eq(crmWorkspaceEnterprisePeople.workspaceEnterpriseId, connection.workspaceEnterpriseId),
+        eq(crmWorkspaceEnterprisePeople.workspacePersonId, connection.workspacePersonId)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('Connection already exists');
+    }
+
+    const [created] = await db
+      .insert(crmWorkspaceEnterprisePeople)
+      .values(connection)
+      .returning();
+    
+    return created;
+  }
+
+  async updateEnterprisePersonConnection(workspaceId: string, connectionId: string, isPrimary: boolean): Promise<CrmWorkspaceEnterprisePerson> {
+    // Verify workspace access
+    const connection = await db
+      .select()
+      .from(crmWorkspaceEnterprisePeople)
+      .where(and(
+        eq(crmWorkspaceEnterprisePeople.id, connectionId),
+        eq(crmWorkspaceEnterprisePeople.workspaceId, workspaceId)
+      ))
+      .limit(1);
+
+    if (!connection.length) {
+      throw new Error('Connection not found in workspace');
+    }
+
+    // If setting as primary, unset other primary flags for this person IN THIS WORKSPACE ONLY
+    if (isPrimary) {
+      await db
+        .update(crmWorkspaceEnterprisePeople)
+        .set({ isPrimary: false })
+        .where(and(
+          eq(crmWorkspaceEnterprisePeople.workspacePersonId, connection[0].workspacePersonId),
+          eq(crmWorkspaceEnterprisePeople.workspaceId, workspaceId),
+          ne(crmWorkspaceEnterprisePeople.id, connectionId)
+        ));
+    }
+
+    const [updated] = await db
+      .update(crmWorkspaceEnterprisePeople)
+      .set({ isPrimary })
+      .where(eq(crmWorkspaceEnterprisePeople.id, connectionId))
+      .returning();
+
+    return updated;
+  }
+
+  async deleteEnterprisePersonConnection(workspaceId: string, connectionId: string): Promise<void> {
+    // Verify workspace access
+    const connection = await db
+      .select()
+      .from(crmWorkspaceEnterprisePeople)
+      .where(and(
+        eq(crmWorkspaceEnterprisePeople.id, connectionId),
+        eq(crmWorkspaceEnterprisePeople.workspaceId, workspaceId)
+      ))
+      .limit(1);
+
+    if (!connection.length) {
+      throw new Error('Connection not found in workspace');
+    }
+
+    await db
+      .delete(crmWorkspaceEnterprisePeople)
+      .where(eq(crmWorkspaceEnterprisePeople.id, connectionId));
+  }
+
+  // CRM Workspace Email Logs
+  async getEmailLogs(workspaceId: string, personId?: string): Promise<CrmWorkspaceEmailLog[]> {
+    const conditions = [eq(crmWorkspaceEmailLogs.workspaceId, workspaceId)];
+    
+    if (personId) {
+      conditions.push(eq(crmWorkspaceEmailLogs.workspacePersonId, personId));
+    }
+
+    return await db
+      .select()
+      .from(crmWorkspaceEmailLogs)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspaceEmailLogs.createdAt));
+  }
+
+  async createEmailLog(log: InsertCrmWorkspaceEmailLog): Promise<CrmWorkspaceEmailLog> {
+    const [created] = await db
+      .insert(crmWorkspaceEmailLogs)
+      .values(log)
+      .returning();
+    
+    return created;
+  }
+
+  async updateEmailLogStatus(workspaceId: string, logId: string, status: string, sentAt?: Date, errorMessage?: string): Promise<CrmWorkspaceEmailLog> {
+    const [updated] = await db
+      .update(crmWorkspaceEmailLogs)
+      .set({
+        status: status as any,
+        sentAt: sentAt || null,
+        errorMessage: errorMessage || null,
+      })
+      .where(and(
+        eq(crmWorkspaceEmailLogs.id, logId),
+        eq(crmWorkspaceEmailLogs.workspaceId, workspaceId)
+      ))
+      .returning();
+
+    return updated;
   }
 
   // Workspace Stats

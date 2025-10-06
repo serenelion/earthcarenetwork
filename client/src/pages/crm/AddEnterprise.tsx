@@ -74,7 +74,7 @@ import {
   Info,
   ArrowLeft,
 } from "lucide-react";
-import { insertEnterpriseSchema, type Enterprise } from "@shared/schema";
+import { insertEnterpriseSchema, type Enterprise, type CrmWorkspaceEnterprise } from "@shared/schema";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -127,21 +127,26 @@ export default function AddEnterprise() {
     },
   });
 
-  const { data: enterprises = [], isLoading: searchLoading } = useQuery({
+  const { data: enterprises = [], isLoading: searchLoading } = useQuery<Enterprise[]>({
     queryKey: ["/api/enterprises", searchQuery],
-    queryFn: async (): Promise<Enterprise[]> => {
-      if (!searchQuery || searchQuery.length < 2) return [];
-      const params = new URLSearchParams();
-      params.append("search", searchQuery);
-      params.append("limit", "20");
-
-      const response = await fetch(`/api/enterprises?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch enterprises");
-      return response.json();
-    },
     enabled: searchQuery.length >= 2,
     retry: false,
   });
+
+  const { data: workspaceEnterprises = [] } = useQuery<CrmWorkspaceEnterprise[]>({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"],
+    enabled: !!enterpriseId,
+  });
+
+  const workspaceEnterpriseIds = new Set(
+    workspaceEnterprises
+      .map((we: CrmWorkspaceEnterprise) => we.directoryEnterpriseId)
+      .filter(Boolean)
+  );
+
+  const availableEnterprises = enterprises.filter(
+    (e: Enterprise) => !workspaceEnterpriseIds.has(e.id)
+  );
 
   const linkMutation = useMutation({
     mutationFn: async (directoryEnterpriseId: string) => {
@@ -320,7 +325,7 @@ export default function AddEnterprise() {
                             : "No enterprises found"}
                         </CommandEmpty>
                         <CommandGroup>
-                          {enterprises.map((enterprise) => (
+                          {availableEnterprises.map((enterprise: Enterprise) => (
                             <CommandItem
                               key={enterprise.id}
                               value={enterprise.name}

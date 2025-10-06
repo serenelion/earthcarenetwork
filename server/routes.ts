@@ -39,6 +39,8 @@ import {
   insertCrmWorkspacePersonSchema,
   insertCrmWorkspaceOpportunitySchema,
   insertCrmWorkspaceTaskSchema,
+  insertCrmWorkspaceEnterpriseNoteSchema,
+  insertCrmWorkspaceEnterprisePersonSchema,
   insertCopilotContextSchema,
   insertBusinessContextSchema,
   insertConversationSchema,
@@ -810,6 +812,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/crm/:enterpriseId/workspace/enterprises/:id/notes
+  app.get("/api/crm/:enterpriseId/workspace/enterprises/:id/notes",
+    isAuthenticated,
+    requireEnterpriseRole("viewer"),
+    async (req: any, res) => {
+      try {
+        const { enterpriseId, id } = req.params;
+        const notes = await storage.getEnterpriseNotes(enterpriseId, id);
+        
+        // Join with users to get author info
+        const notesWithAuthors = await Promise.all(
+          notes.map(async (note) => {
+            const user = await storage.getUser(note.authorId);
+            return {
+              ...note,
+              author: user ? {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+              } : null,
+            };
+          })
+        );
+        
+        res.json(notesWithAuthors);
+      } catch (error) {
+        console.error("Error fetching enterprise notes:", error);
+        res.status(500).json({ error: "Failed to fetch notes" });
+      }
+    }
+  );
+
+  // POST /api/crm/:enterpriseId/workspace/enterprises/:id/notes
+  app.post("/api/crm/:enterpriseId/workspace/enterprises/:id/notes",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const { enterpriseId, id } = req.params;
+        const userId = (req.user as any)?.claims?.sub;
+        
+        const validatedData = insertCrmWorkspaceEnterpriseNoteSchema.parse({
+          workspaceEnterpriseId: id,
+          authorId: userId,
+          body: req.body.body,
+        });
+        
+        const note = await storage.createEnterpriseNote(validatedData);
+        
+        // Get author info
+        const user = await storage.getUser(note.authorId);
+        
+        res.json({
+          ...note,
+          author: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          } : null,
+        });
+      } catch (error) {
+        console.error("Error creating enterprise note:", error);
+        res.status(500).json({ error: "Failed to create note" });
+      }
+    }
+  );
+
+  // DELETE /api/crm/:enterpriseId/workspace/enterprises/:id/notes/:noteId
+  app.delete("/api/crm/:enterpriseId/workspace/enterprises/:id/notes/:noteId",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const { enterpriseId, noteId } = req.params;
+        const userId = (req.user as any)?.claims?.sub;
+        
+        // Get note to verify author
+        const notes = await storage.getEnterpriseNotes(enterpriseId, req.params.id);
+        const note = notes.find(n => n.id === noteId);
+        
+        if (!note) {
+          return res.status(404).json({ error: "Note not found" });
+        }
+        
+        // Get user's role in this workspace
+        const userMemberships = await storage.getUserTeamMemberships(userId);
+        const userMembership = userMemberships.find(m => m.enterpriseId === enterpriseId);
+        
+        // Only author can delete, OR admin/owner can delete any note
+        const isAuthor = note.authorId === userId;
+        const isAdminOrOwner = userMembership?.role === 'admin' || userMembership?.role === 'owner';
+        
+        if (!isAuthor && !isAdminOrOwner) {
+          return res.status(403).json({ error: "Not authorized to delete this note" });
+        }
+        
+        await storage.deleteEnterpriseNote(enterpriseId, noteId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting enterprise note:", error);
+        res.status(500).json({ error: "Failed to delete note" });
+      }
+    }
+  );
+
   // Admin: Featured enterprises management
   app.get('/api/admin/featured-enterprises', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
     try {
@@ -1432,6 +1541,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete task" });
     }
   });
+
+  // Enterprise-People Connections (Junction table for many-to-many)
+  // GET /api/crm/:enterpriseId/workspace/enterprise-people-connections
+  // Query params: ?enterpriseId=xxx or ?personId=xxx
+  app.get("/api/crm/:enterpriseId/workspace/enterprise-people-connections",
+    isAuthenticated,
+    requireEnterpriseRole("viewer"),
+    async (req: any, res) => {
+      try {
+        const workspaceId = req.params.enterpriseId;
+        const { enterpriseId, personId } = req.query;
+        
+        const connections = await storage.getEnterprisePersonConnections(
+          workspaceId,
+          enterpriseId as string | undefined,
+          personId as string | undefined
+        );
+        
+        res.json(connections);
+      } catch (error) {
+        console.error("Error fetching enterprise-people connections:", error);
+        res.status(500).json({ error: "Failed to fetch connections" });
+      }
+    }
+  );
+
+  // POST /api/crm/:enterpriseId/workspace/enterprise-people-connections
+  app.post("/api/crm/:enterpriseId/workspace/enterprise-people-connections",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const workspaceId = req.params.enterpriseId;
+        
+        const validatedData = insertCrmWorkspaceEnterprisePersonSchema.parse({
+          workspaceId,
+          workspaceEnterpriseId: req.body.workspaceEnterpriseId,
+          workspacePersonId: req.body.workspacePersonId,
+          relationshipType: req.body.relationshipType || 'employee',
+          isPrimary: req.body.isPrimary || false,
+        });
+        
+        const connection = await storage.createEnterprisePersonConnection(validatedData);
+        res.json(connection);
+      } catch (error) {
+        console.error("Error creating enterprise-person connection:", error);
+        if (error instanceof Error && error.message === 'Connection already exists') {
+          return res.status(409).json({ error: "Connection already exists" });
+        }
+        res.status(500).json({ error: "Failed to create connection" });
+      }
+    }
+  );
+
+  // PATCH /api/crm/:enterpriseId/workspace/enterprise-people-connections/:id
+  app.patch("/api/crm/:enterpriseId/workspace/enterprise-people-connections/:id",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const { enterpriseId, id } = req.params;
+        const { isPrimary } = req.body;
+        
+        const connection = await storage.updateEnterprisePersonConnection(enterpriseId, id, isPrimary);
+        res.json(connection);
+      } catch (error) {
+        console.error("Error updating enterprise-person connection:", error);
+        res.status(500).json({ error: "Failed to update connection" });
+      }
+    }
+  );
+
+  // DELETE /api/crm/:enterpriseId/workspace/enterprise-people-connections/:id
+  app.delete("/api/crm/:enterpriseId/workspace/enterprise-people-connections/:id",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const { enterpriseId, id } = req.params;
+        await storage.deleteEnterprisePersonConnection(enterpriseId, id);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting enterprise-person connection:", error);
+        res.status(500).json({ error: "Failed to delete connection" });
+      }
+    }
+  );
+
+  // Email Communications
+  // POST /api/crm/:enterpriseId/communications/email
+  app.post("/api/crm/:enterpriseId/communications/email",
+    isAuthenticated,
+    requireEnterpriseRole("editor"),
+    async (req: any, res) => {
+      try {
+        const workspaceId = req.params.enterpriseId;
+        const userId = (req.user as any)?.claims?.sub;
+        if (!userId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+        
+        const { personId, subject, body } = req.body;
+
+        // Get person details
+        const person = await storage.getWorkspacePerson(workspaceId, personId);
+        if (!person || !person.email) {
+          return res.status(400).json({ error: "Person not found or has no email" });
+        }
+
+        // Create email log
+        const emailLog = await storage.createEmailLog({
+          workspaceId,
+          senderId: userId,
+          workspacePersonId: personId,
+          workspaceEnterpriseId: person.workspaceEnterpriseId || null,
+          recipientEmail: person.email,
+          subject,
+          body,
+          status: 'pending',
+          sentAt: null,
+          errorMessage: null,
+        });
+
+        // Try to send via SendGrid if available
+        // For now, just mark as sent (SendGrid integration can be added later)
+        const sentAt = new Date();
+        const updatedLog = await storage.updateEmailLogStatus(
+          workspaceId,
+          emailLog.id,
+          'sent',
+          sentAt,
+          null
+        );
+
+        res.json(updatedLog);
+      } catch (error) {
+        console.error("Error sending email:", error);
+        res.status(500).json({ error: "Failed to send email" });
+      }
+    }
+  );
+
+  // GET /api/crm/:enterpriseId/communications/email-logs
+  // Query params: ?personId=xxx
+  app.get("/api/crm/:enterpriseId/communications/email-logs",
+    isAuthenticated,
+    requireEnterpriseRole("viewer"),
+    async (req: any, res) => {
+      try {
+        const workspaceId = req.params.enterpriseId;
+        const { personId } = req.query;
+        
+        const logs = await storage.getEmailLogs(workspaceId, personId as string | undefined);
+        res.json(logs);
+      } catch (error) {
+        console.error("Error fetching email logs:", error);
+        res.status(500).json({ error: "Failed to fetch email logs" });
+      }
+    }
+  );
 
   // AI Copilot routes
   app.post('/api/crm/:enterpriseId/ai/lead-score', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
