@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Card,
   CardContent,
@@ -61,7 +62,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -74,20 +74,19 @@ import {
   Plus,
   Edit,
   Trash2,
-  CheckCircle,
   MapPin,
-  Users,
   Filter,
   X,
-  Sprout,
   Lock,
-  Info,
   Shield,
+  Link2,
+  Database,
+  Unlink,
+  Info,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
-import PledgeAffirmationModal from "@/components/PledgeAffirmationModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertEnterpriseSchema, type Enterprise, type InsertEnterprise, type EarthCarePledge } from "@shared/schema";
+import { insertCrmWorkspaceEnterpriseSchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise } from "@shared/schema";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -103,102 +102,73 @@ const categoryColors = {
   network_organizers: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
 };
 
-function PledgeIndicator({ enterpriseId }: { enterpriseId: string }) {
-  const { data: pledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
-    queryKey: ["/api/enterprises", enterpriseId, "pledge"],
-    queryFn: async () => {
-      const response = await fetch(`/api/enterprises/${enterpriseId}/pledge`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-  });
+const relationshipStages = [
+  { value: "cold", label: "Cold" },
+  { value: "warm", label: "Warm" },
+  { value: "hot", label: "Hot" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
 
-  if (pledgeData?.pledge?.status === 'affirmed') {
-    return (
-      <Sprout className="w-4 h-4 text-green-600 flex-shrink-0" data-testid="indicator-pledge-affirmed" />
-    );
-  }
-
-  return null;
-}
+const relationshipStageColors = {
+  cold: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  warm: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  hot: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  inactive: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+};
 
 export default function CRMEnterprises() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const params = useParams<{ enterpriseId: string }>();
+  const { currentEnterprise } = useWorkspace();
+  const enterpriseId = params.enterpriseId || currentEnterprise?.id || '';
+  const [, navigate] = useLocation();
   const { userSubscription } = useSubscription();
   const isFreeUser = userSubscription?.currentPlanType === 'free';
-  const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro';
   const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [relationshipFilter, setRelationshipFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEnterprise, setEditingEnterprise] = useState<Enterprise | null>(null);
+  const [editingEnterprise, setEditingEnterprise] = useState<CrmWorkspaceEnterprise | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [pledgeModalOpen, setPledgeModalOpen] = useState(false);
-  const [selectedEnterpriseForPledge, setSelectedEnterpriseForPledge] = useState<Enterprise | null>(null);
 
-  const form = useForm<InsertEnterprise>({
-    resolver: zodResolver(insertEnterpriseSchema),
+  const form = useForm<InsertCrmWorkspaceEnterprise>({
+    resolver: zodResolver(insertCrmWorkspaceEnterpriseSchema),
     defaultValues: {
+      workspaceId: enterpriseId,
       name: "",
       category: "land_projects",
       description: "",
       website: "",
       location: "",
-      isVerified: false,
-      tags: [],
-      imageUrl: "",
-      followerCount: 0,
       contactEmail: "",
-      sourceUrl: "",
+      tags: [],
+      relationshipStage: undefined,
+      ownerNotes: "",
     },
   });
 
-  const { data: enterprises = [], isLoading } = useQuery({
-    queryKey: ["/api/enterprises", categoryFilter, searchQuery],
-    queryFn: async (): Promise<Enterprise[]> => {
-      const params = new URLSearchParams();
-      if (categoryFilter) params.append("category", categoryFilter);
-      if (searchQuery) params.append("search", searchQuery);
-      params.append("limit", "100");
-
-      const response = await fetch(`/api/enterprises?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch enterprises");
+  const { data: workspaceEnterprises = [], isLoading } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"],
+    queryFn: async (): Promise<CrmWorkspaceEnterprise[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprises`);
+      if (!response.ok) throw new Error("Failed to fetch workspace enterprises");
       return response.json();
     },
+    enabled: !!enterpriseId,
     retry: false,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertEnterprise) => {
-      return apiRequest("POST", "/api/crm/enterprises", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
-      toast({
-        title: "Success",
-        description: "Enterprise created successfully",
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create enterprise",
-        variant: "destructive",
-      });
-    },
-  });
-
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: InsertEnterprise }) => {
-      return apiRequest("PUT", `/api/crm/enterprises/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: InsertCrmWorkspaceEnterprise }) => {
+      return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/enterprises/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Enterprise updated successfully",
@@ -218,58 +188,44 @@ export default function CRMEnterprises() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/crm/enterprises/${id}`);
+      return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/enterprises/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
-        description: "Enterprise deleted successfully",
+        description: "Enterprise removed from workspace",
       });
       setDeleteConfirmId(null);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to delete enterprise",
+        description: "Failed to remove enterprise",
         variant: "destructive",
       });
     },
   });
 
-  const handleCreate = () => {
-    setEditingEnterprise(null);
-    form.reset({
-      name: "",
-      category: "land_projects",
-      description: "",
-      website: "",
-      location: "",
-      isVerified: false,
-      tags: [],
-      imageUrl: "",
-      followerCount: 0,
-      contactEmail: "",
-      sourceUrl: "",
-    });
-    setIsDialogOpen(true);
+  const handleAddEnterprise = () => {
+    navigate(`/crm/${enterpriseId}/add-enterprise`);
   };
 
-  const handleEdit = (enterprise: Enterprise) => {
+  const handleEdit = (enterprise: CrmWorkspaceEnterprise) => {
     setEditingEnterprise(enterprise);
     form.reset({
+      workspaceId: enterprise.workspaceId,
+      directoryEnterpriseId: enterprise.directoryEnterpriseId || undefined,
       name: enterprise.name,
       category: enterprise.category,
       description: enterprise.description || "",
       website: enterprise.website || "",
       location: enterprise.location || "",
-      isVerified: enterprise.isVerified || false,
-      tags: enterprise.tags || [],
-      imageUrl: enterprise.imageUrl || "",
-      followerCount: enterprise.followerCount || 0,
       contactEmail: enterprise.contactEmail || "",
-      sourceUrl: enterprise.sourceUrl || "",
+      tags: enterprise.tags || [],
+      relationshipStage: enterprise.relationshipStage || undefined,
+      ownerNotes: enterprise.ownerNotes || "",
     });
     setIsDialogOpen(true);
   };
@@ -278,12 +234,7 @@ export default function CRMEnterprises() {
     setDeleteConfirmId(id);
   };
 
-  const handleManagePledge = (enterprise: Enterprise) => {
-    setSelectedEnterpriseForPledge(enterprise);
-    setPledgeModalOpen(true);
-  };
-
-  const onSubmit = (data: InsertEnterprise) => {
+  const onSubmit = (data: InsertCrmWorkspaceEnterprise) => {
     const processedData = {
       ...data,
       tags: typeof data.tags === 'string' 
@@ -293,29 +244,26 @@ export default function CRMEnterprises() {
 
     if (editingEnterprise) {
       updateMutation.mutate({ id: editingEnterprise.id, data: processedData });
-    } else {
-      createMutation.mutate(processedData);
     }
   };
 
-  const filteredEnterprises = enterprises.filter(enterprise => {
+  const filteredEnterprises = workspaceEnterprises.filter(enterprise => {
     const matchesSearch = !searchQuery || 
       enterprise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (enterprise.description?.toLowerCase() || "").includes(searchQuery.toLowerCase());
     const matchesCategory = !categoryFilter || enterprise.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesRelationship = !relationshipFilter || enterprise.relationshipStage === relationshipFilter;
+    return matchesSearch && matchesCategory && matchesRelationship;
   });
 
-  const { data: selectedPledgeData } = useQuery<{ pledge: EarthCarePledge } | null>({
-    queryKey: ["/api/enterprises", selectedEnterpriseForPledge?.id, "pledge"],
-    queryFn: async () => {
-      if (!selectedEnterpriseForPledge) return null;
-      const response = await fetch(`/api/enterprises/${selectedEnterpriseForPledge.id}/pledge`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-    enabled: !!selectedEnterpriseForPledge,
-  });
+  const getCategoryLabel = (value: string) => {
+    return categories.find(c => c.value === value)?.label || value;
+  };
+
+  const getRelationshipLabel = (value: string | null | undefined) => {
+    if (!value) return null;
+    return relationshipStages.find(r => r.value === value)?.label || value;
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -325,37 +273,30 @@ export default function CRMEnterprises() {
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Building className="w-8 h-8 text-primary" />
-              Enterprise Management
+              Workspace Enterprises
             </h1>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  {isAdmin ? (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700" data-testid="badge-admin-mode">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Admin Mode
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" data-testid="badge-team-member">
-                      <Users className="h-3 w-3 mr-1" />
-                      Team Member
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700" data-testid="badge-workspace-mode">
+                    <Database className="h-3 w-3 mr-1" />
+                    Workspace View
+                  </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{isAdmin ? "You have global access to edit any enterprise" : "You can edit enterprises where you're a member"}</p>
+                  <p>Viewing enterprises tracked in your CRM workspace</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <p className="text-muted-foreground mt-1">
-            Manage enterprises in the CRM system
+            Track and manage enterprise relationships in your CRM
           </p>
         </div>
-        <Button onClick={handleCreate} disabled={isFreeUser} data-testid="button-create-enterprise">
+        <Button onClick={handleAddEnterprise} disabled={isFreeUser} data-testid="button-add-enterprise">
           {isFreeUser && <Lock className="w-4 h-4 mr-2" />}
           <Plus className="w-4 h-4 mr-2" />
-          Create Enterprise
+          Add Enterprise
         </Button>
       </div>
 
@@ -366,11 +307,11 @@ export default function CRMEnterprises() {
             feature="enterprise management"
             title="Unlock Full Enterprise Management"
             benefits={[
-              "Create and manage unlimited enterprises",
-              "Advanced enterprise categorization",
-              "EarthCare Pledge tracking",
+              "Track unlimited enterprises in your workspace",
+              "Link enterprises to directory profiles",
+              "Advanced relationship stage tracking",
+              "Custom notes and CRM fields",
               "Bulk enterprise operations",
-              "Enterprise verification tools",
             ]}
           />
         </div>
@@ -387,7 +328,7 @@ export default function CRMEnterprises() {
                 data-testid="search-enterprises"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select 
                 value={categoryFilter || "all"} 
                 onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
@@ -405,12 +346,32 @@ export default function CRMEnterprises() {
                   ))}
                 </SelectContent>
               </Select>
-              {categoryFilter && (
+              <Select 
+                value={relationshipFilter || "all"} 
+                onValueChange={(value) => setRelationshipFilter(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="w-full md:w-56" data-testid="filter-relationship">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="All Stages" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  {relationshipStages.map((stage) => (
+                    <SelectItem key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(categoryFilter || relationshipFilter) && (
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCategoryFilter(null)}
-                  data-testid="button-clear-filter"
+                  onClick={() => {
+                    setCategoryFilter(null);
+                    setRelationshipFilter(null);
+                  }}
+                  data-testid="button-clear-filters"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -439,14 +400,14 @@ export default function CRMEnterprises() {
               <Building className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No enterprises found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchQuery || categoryFilter
+                {searchQuery || categoryFilter || relationshipFilter
                   ? "Try adjusting your search or filters"
-                  : "Create your first enterprise to get started"}
+                  : "Add your first enterprise to start tracking relationships"}
               </p>
-              {!searchQuery && !categoryFilter && (
-                <Button onClick={handleCreate}>
+              {!searchQuery && !categoryFilter && !relationshipFilter && (
+                <Button onClick={handleAddEnterprise} disabled={isFreeUser}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Enterprise
+                  Add Enterprise
                 </Button>
               )}
             </div>
@@ -456,7 +417,10 @@ export default function CRMEnterprises() {
               <div className="block lg:hidden space-y-3">
                 {filteredEnterprises.map((enterprise) => {
                   const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors];
-                  const categoryLabel = categories.find(c => c.value === enterprise.category)?.label;
+                  const categoryLabel = getCategoryLabel(enterprise.category);
+                  const relationshipLabel = getRelationshipLabel(enterprise.relationshipStage);
+                  const relationshipClass = enterprise.relationshipStage ? relationshipStageColors[enterprise.relationshipStage as keyof typeof relationshipStageColors] : "";
+                  const isLinked = !!enterprise.directoryEnterpriseId;
                   
                   return (
                     <Card key={enterprise.id} className="touch-manipulation" data-testid={`card-enterprise-${enterprise.id}`}>
@@ -470,21 +434,37 @@ export default function CRMEnterprises() {
                               <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
                                   <span className="truncate">{enterprise.name}</span>
-                                  {enterprise.isVerified && (
-                                    <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                  )}
-                                  <PledgeIndicator enterpriseId={enterprise.id} />
+                                  {isLinked ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Link2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Linked to directory enterprise</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : null}
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                                   <Badge className={categoryClass}>
                                     {categoryLabel}
                                   </Badge>
-                                  {enterprise.isVerified ? (
-                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                      Verified
+                                  {isLinked ? (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300">
+                                      <Link2 className="w-3 h-3 mr-1" />
+                                      Linked
                                     </Badge>
                                   ) : (
-                                    <Badge variant="secondary">Unverified</Badge>
+                                    <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300">
+                                      Workspace Only
+                                    </Badge>
+                                  )}
+                                  {relationshipLabel && (
+                                    <Badge className={relationshipClass}>
+                                      {relationshipLabel}
+                                    </Badge>
                                   )}
                                 </div>
                               </div>
@@ -497,17 +477,18 @@ export default function CRMEnterprises() {
                             </p>
                           )}
                           
+                          {enterprise.ownerNotes && (
+                            <div className="text-sm bg-muted/50 p-2 rounded">
+                              <span className="font-medium">Notes: </span>
+                              <span className="text-muted-foreground">{enterprise.ownerNotes}</span>
+                            </div>
+                          )}
+                          
                           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
                             {enterprise.location && (
                               <div className="flex items-center gap-1">
                                 <MapPin className="w-3.5 h-3.5" />
                                 <span>{enterprise.location}</span>
-                              </div>
-                            )}
-                            {enterprise.followerCount != null && enterprise.followerCount > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Users className="w-3.5 h-3.5" />
-                                <span>{enterprise.followerCount.toLocaleString()}</span>
                               </div>
                             )}
                           </div>
@@ -528,17 +509,6 @@ export default function CRMEnterprises() {
                           )}
                           
                           <div className="flex gap-2 pt-2 border-t">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleManagePledge(enterprise)}
-                              disabled={isFreeUser}
-                              data-testid={`button-pledge-${enterprise.id}`}
-                            >
-                              <Sprout className="w-4 h-4 mr-1.5" />
-                              Pledge
-                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -574,17 +544,20 @@ export default function CRMEnterprises() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Link Status</TableHead>
+                      <TableHead>Relationship</TableHead>
                       <TableHead>Location</TableHead>
-                      <TableHead>Followers</TableHead>
                       <TableHead>Tags</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredEnterprises.map((enterprise) => {
                       const categoryClass = categoryColors[enterprise.category as keyof typeof categoryColors];
-                      const categoryLabel = categories.find(c => c.value === enterprise.category)?.label;
+                      const categoryLabel = getCategoryLabel(enterprise.category);
+                      const relationshipLabel = getRelationshipLabel(enterprise.relationshipStage);
+                      const relationshipClass = enterprise.relationshipStage ? relationshipStageColors[enterprise.relationshipStage as keyof typeof relationshipStageColors] : "";
+                      const isLinked = !!enterprise.directoryEnterpriseId;
                       
                       return (
                         <TableRow key={enterprise.id} data-testid={`row-enterprise-${enterprise.id}`}>
@@ -596,15 +569,32 @@ export default function CRMEnterprises() {
                               <div className="min-w-0">
                                 <div className="font-semibold text-foreground truncate flex items-center gap-1">
                                   {enterprise.name}
-                                  {enterprise.isVerified && (
-                                    <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                  {isLinked && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Link2 className="w-4 h-4 text-blue-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Linked to directory enterprise</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
-                                  <PledgeIndicator enterpriseId={enterprise.id} />
                                 </div>
-                                {enterprise.description && (
-                                  <div className="text-xs text-muted-foreground truncate max-w-xs">
-                                    {enterprise.description}
-                                  </div>
+                                {enterprise.ownerNotes && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="text-xs text-muted-foreground truncate max-w-[200px] cursor-help">
+                                          {enterprise.ownerNotes}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p>{enterprise.ownerNotes}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                               </div>
                             </div>
@@ -615,9 +605,30 @@ export default function CRMEnterprises() {
                             </Badge>
                           </TableCell>
                           <TableCell>
+                            {isLinked ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300">
+                                <Link2 className="w-3 h-3 mr-1" />
+                                Linked
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300">
+                                Workspace Only
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {relationshipLabel ? (
+                              <Badge className={relationshipClass}>
+                                {relationshipLabel}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             {enterprise.location ? (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <MapPin className="w-3 h-3" />
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                                 <span className="truncate max-w-[150px]">{enterprise.location}</span>
                               </div>
                             ) : (
@@ -625,54 +636,40 @@ export default function CRMEnterprises() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {enterprise.followerCount != null && enterprise.followerCount > 0 ? (
-                              <div className="flex items-center gap-1 text-sm">
-                                <Users className="w-3 h-3 text-muted-foreground" />
-                                <span>{enterprise.followerCount.toLocaleString()}</span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
                             {enterprise.tags && enterprise.tags.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 max-w-xs">
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
                                 {enterprise.tags.slice(0, 2).map((tag, index) => (
                                   <Badge key={index} variant="secondary" className="text-xs">
                                     {tag}
                                   </Badge>
                                 ))}
                                 {enterprise.tags.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{enterprise.tags.length - 2}
-                                  </Badge>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="secondary" className="text-xs cursor-help">
+                                          +{enterprise.tags.length - 2}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="flex flex-wrap gap-1 max-w-xs">
+                                          {enterprise.tags.slice(2).map((tag, index) => (
+                                            <Badge key={index} variant="secondary" className="text-xs">
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                               </div>
                             ) : (
                               <span className="text-muted-foreground text-sm">-</span>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {enterprise.isVerified ? (
-                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                Verified
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">Unverified</Badge>
-                            )}
-                          </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleManagePledge(enterprise)}
-                                disabled={isFreeUser}
-                                data-testid="button-manage-pledge"
-                                title={isFreeUser ? "Upgrade to CRM Pro to edit" : "Manage Earth Care Pledge"}
-                              >
-                                <Sprout className="w-4 h-4" />
-                              </Button>
+                            <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -706,17 +703,13 @@ export default function CRMEnterprises() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
+      {/* Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingEnterprise ? "Edit Enterprise" : "Create Enterprise"}
-            </DialogTitle>
+            <DialogTitle>Edit Workspace Enterprise</DialogTitle>
             <DialogDescription>
-              {editingEnterprise 
-                ? "Update the enterprise information below"
-                : "Fill in the details to create a new enterprise"}
+              Update the enterprise information and relationship details
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -766,6 +759,32 @@ export default function CRMEnterprises() {
 
               <FormField
                 control={form.control}
+                name="relationshipStage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Relationship Stage</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-relationship-stage">
+                          <SelectValue placeholder="Select a relationship stage" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {relationshipStages.map((stage) => (
+                          <SelectItem key={stage.value} value={stage.value}>
+                            {stage.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -777,6 +796,26 @@ export default function CRMEnterprises() {
                         {...field}
                         value={field.value || ""}
                         data-testid="textarea-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="ownerNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Private Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your private notes about this enterprise relationship"
+                        className="min-h-[80px]"
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="textarea-owner-notes"
                       />
                     </FormControl>
                     <FormMessage />
@@ -842,65 +881,6 @@ export default function CRMEnterprises() {
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="followerCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Follower Count</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0"
-                          {...field}
-                          value={field.value || 0}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          data-testid="input-follower-count"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Logo URL</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="https://example.com/logo.png"
-                          {...field}
-                          value={field.value || ""}
-                          data-testid="input-logo-url"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="sourceUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Source URL</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Original source URL"
-                          {...field}
-                          value={field.value || ""}
-                          data-testid="input-source-url"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <FormField
@@ -923,27 +903,14 @@ export default function CRMEnterprises() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="isVerified"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Verified Status</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Mark this enterprise as verified
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value || false}
-                        onCheckedChange={field.onChange}
-                        data-testid="switch-verified"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {editingEnterprise?.directoryEnterpriseId && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    This enterprise is linked to a directory profile. Some fields are synced from the directory.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button
@@ -960,14 +927,10 @@ export default function CRMEnterprises() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={updateMutation.isPending}
                   data-testid="button-submit"
                 >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? "Saving..."
-                    : editingEnterprise
-                    ? "Update Enterprise"
-                    : "Create Enterprise"}
+                  {updateMutation.isPending ? "Saving..." : "Update Enterprise"}
                 </Button>
               </div>
             </form>
@@ -981,8 +944,12 @@ export default function CRMEnterprises() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the enterprise
-              and all associated data.
+              This will remove the enterprise from your workspace. This action cannot be undone.
+              {workspaceEnterprises.find(e => e.id === deleteConfirmId)?.directoryEnterpriseId && (
+                <span className="block mt-2 text-muted-foreground">
+                  Note: The enterprise will still exist in the public directory.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -996,27 +963,11 @@ export default function CRMEnterprises() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-delete-confirm"
             >
-              Delete
+              Remove from Workspace
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Pledge Affirmation Modal */}
-      {selectedEnterpriseForPledge && (
-        <PledgeAffirmationModal
-          enterpriseId={selectedEnterpriseForPledge.id}
-          enterpriseName={selectedEnterpriseForPledge.name}
-          existingPledge={selectedPledgeData?.pledge}
-          open={pledgeModalOpen}
-          onOpenChange={setPledgeModalOpen}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["/api/enterprises", selectedEnterpriseForPledge.id, "pledge"] });
-            setPledgeModalOpen(false);
-            setSelectedEnterpriseForPledge(null);
-          }}
-        />
-      )}
     </div>
   );
 }
