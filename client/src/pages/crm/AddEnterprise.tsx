@@ -135,12 +135,13 @@ export default function AddEnterprise() {
 
   const linkMutation = useMutation({
     mutationFn: async (directoryEnterpriseId: string) => {
-      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace-enterprises/link`, {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprises`, {
+        mode: "link",
         directoryEnterpriseId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace-enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
       toast({
         title: "Success",
         description: "Enterprise linked to your workspace successfully",
@@ -166,10 +167,13 @@ export default function AddEnterprise() {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateEnterpriseForm) => {
-      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace-enterprises/create`, data);
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprises`, {
+        mode: "create",
+        ...data,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace-enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",

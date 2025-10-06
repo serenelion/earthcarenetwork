@@ -178,89 +178,6 @@ const requireAdmin: RequestHandler = async (req: any, res, next) => {
   }
 };
 
-// Middleware for person/opportunity editing: allows admin OR team member with appropriate role
-const requireAdminOrEnterpriseAccess = (minRole: TeamMemberRole = 'editor'): RequestHandler => {
-  return async (req: any, res, next) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      // Admins can access anything
-      if (user.role === 'admin') {
-        return next();
-      }
-
-      // For non-admins, check enterprise membership
-      // Get the enterprise ID from the related entity (person or opportunity)
-      const entityId = req.params.id;
-      if (!entityId) {
-        return res.status(400).json({ message: "Entity ID is required" });
-      }
-
-      let enterpriseId: string | null = null;
-
-      // Determine if this is a person or opportunity based on the route
-      if (req.path.includes('/people/')) {
-        const person = await storage.getPerson(entityId);
-        if (!person) {
-          return res.status(404).json({ message: "Person not found" });
-        }
-        enterpriseId = person.enterpriseId;
-      } else if (req.path.includes('/opportunities/')) {
-        const opportunity = await storage.getOpportunity(entityId);
-        if (!opportunity) {
-          return res.status(404).json({ message: "Opportunity not found" });
-        }
-        enterpriseId = opportunity.enterpriseId;
-      }
-
-      if (!enterpriseId) {
-        return res.status(403).json({ 
-          message: "Forbidden - no enterprise association found" 
-        });
-      }
-
-      // Check if user has appropriate role in the enterprise
-      const roleHierarchy: Record<TeamMemberRole, number> = {
-        'viewer': 1,
-        'editor': 2,
-        'admin': 3,
-        'owner': 4
-      };
-
-      const userRole = await getUserEnterpriseRole(userId, enterpriseId);
-      
-      if (!userRole) {
-        return res.status(403).json({ 
-          message: "Forbidden - not a member of the associated enterprise" 
-        });
-      }
-
-      const userRoleLevel = roleHierarchy[userRole];
-      const requiredRoleLevel = roleHierarchy[minRole];
-
-      if (userRoleLevel < requiredRoleLevel) {
-        return res.status(403).json({ 
-          message: "Forbidden - insufficient permissions on the associated enterprise",
-          requiredRole: minRole,
-          currentRole: userRole
-        });
-      }
-
-      next();
-    } catch (error) {
-      console.error("Error checking admin or enterprise access:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  };
-};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -314,16 +231,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get contacts for a specific enterprise (needed for claiming system)
+  // Get contacts for a specific enterprise (deprecated - workspace-scoped contacts only)
   app.get('/api/enterprises/:id/contacts', async (req, res) => {
-    try {
-      const contacts = await storage.getPeopleByEnterpriseId(req.params.id);
-      res.json(contacts);
-    } catch (error) {
-      console.error("Error fetching enterprise contacts:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch enterprise contacts", error: errorMessage });
-    }
+    res.json([]);
   });
 
   // Public endpoint to check if enterprise is claimed
@@ -717,60 +627,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Global search route
+  // Global search route (deprecated - use workspace-specific search)
   app.get('/api/search', async (req, res) => {
-    try {
-      const { q: query, type: entityTypes, limit = 20, offset = 0 } = req.query;
-      
-      if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: "Query parameter 'q' is required" });
-      }
-
-      if (query.trim().length < 2) {
-        return res.status(400).json({ message: "Query must be at least 2 characters long" });
-      }
-
-      // Parse entity types filter
-      let entityTypesArray: string[] | undefined;
-      if (entityTypes) {
-        if (typeof entityTypes === 'string') {
-          entityTypesArray = entityTypes.split(',').map(t => t.trim()).filter(Boolean);
-        } else if (Array.isArray(entityTypes)) {
-          entityTypesArray = entityTypes as string[];
-        }
-      }
-
-      const searchResults = await storage.globalSearch(
-        query.trim(),
-        entityTypesArray,
-        parseInt(limit as string) || 20,
-        parseInt(offset as string) || 0
-      );
-
-      res.json(searchResults);
-    } catch (error) {
-      console.error("Error performing global search:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Search failed", error: errorMessage });
-    }
+    res.status(501).json({ 
+      message: "Global search has been deprecated. Use workspace-specific search endpoints instead." 
+    });
   });
 
   // Protected CRM Routes
   app.get('/api/crm/:enterpriseId/stats', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const [enterpriseStats, peopleStats, opportunityStats, taskStats] = await Promise.all([
+      const [enterpriseStats, workspaceStats] = await Promise.all([
         storage.getEnterpriseStats(),
-        storage.getPeopleStats(enterpriseId),
-        storage.getOpportunityStats(enterpriseId),
-        storage.getTaskStats(enterpriseId),
+        storage.getWorkspaceStats(enterpriseId),
       ]);
 
       res.json({
         enterprises: enterpriseStats,
-        people: peopleStats,
-        opportunities: opportunityStats,
-        tasks: taskStats,
+        people: { total: workspaceStats.peopleCount },
+        opportunities: { 
+          total: workspaceStats.opportunitiesCount,
+          totalValue: workspaceStats.totalOpportunityValue 
+        },
+        tasks: { total: workspaceStats.tasksCount },
       });
     } catch (error) {
       console.error("Error fetching CRM stats:", error);
@@ -1247,11 +1127,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId } = req.params;
       const { search, limit = 50, offset = 0 } = req.query;
-      const people = await storage.getPeople(
+      const people = await storage.getWorkspacePeople(
         enterpriseId,
-        search as string,
-        parseInt(limit as string),
-        parseInt(offset as string)
+        {
+          search: search as string,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
       );
       res.json(people);
     } catch (error) {
@@ -1301,12 +1183,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/crm/:enterpriseId/opportunities', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const { search, limit = 50, offset = 0 } = req.query;
-      const opportunities = await storage.getOpportunities(
+      const { status, limit = 50, offset = 0 } = req.query;
+      const opportunities = await storage.getWorkspaceOpportunities(
         enterpriseId,
-        search as string,
-        parseInt(limit as string),
-        parseInt(offset as string)
+        {
+          status: status as string,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
       );
       res.json(opportunities);
     } catch (error) {
@@ -1476,12 +1360,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/crm/:enterpriseId/tasks', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const { search, limit = 50, offset = 0 } = req.query;
-      const tasks = await storage.getTasks(
+      const { status, assignedToId, limit = 50, offset = 0 } = req.query;
+      const tasks = await storage.getWorkspaceTasks(
         enterpriseId,
-        search as string,
-        parseInt(limit as string),
-        parseInt(offset as string)
+        {
+          status: status as string,
+          assignedToId: assignedToId as string,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
       );
       res.json(tasks);
     } catch (error) {
@@ -1533,7 +1420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { personId } = req.body;
       
       const enterprise = await storage.getEnterprise(enterpriseId);
-      const person = personId ? await storage.getPerson(personId, enterpriseId) : null;
+      const person = personId ? await storage.getWorkspacePerson(enterpriseId, personId) : null;
       
       if (!enterprise) {
         return res.status(404).json({ message: "Enterprise not found" });
@@ -1572,7 +1459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get recent activity and stats for context
       const [recentEnterprises, recentOpportunities, stats] = await Promise.all([
         storage.getEnterprises(undefined, undefined, 10, 0),
-        storage.getOpportunities(enterpriseId, undefined, 10, 0),
+        storage.getWorkspaceOpportunities(enterpriseId, { limit: 10, offset: 0 }),
         storage.getEnterpriseStats(),
       ]);
 
@@ -1965,55 +1852,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enterprise claiming and invitation routes (Admin only)
+  // Enterprise claiming routes (deprecated - use team management instead)
   app.get('/api/admin/enterprises/claiming', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const { search, claimStatus, limit = 50, offset = 0 } = req.query;
-      const enterprises = await storage.getEnterprisesWithClaimInfo(
-        search as string,
-        claimStatus as 'unclaimed' | 'claimed' | 'verified',
-        parseInt(limit as string),
-        parseInt(offset as string)
-      );
-      res.json(enterprises);
-    } catch (error) {
-      console.error("Error fetching enterprises for claiming:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch enterprises", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use team management endpoints instead." });
   });
 
   app.get('/api/admin/claim-stats', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const stats = await storage.getEnterpriseClaimStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching claim stats:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch claim stats", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use team management endpoints instead." });
   });
 
   app.get('/api/admin/pledge-stats', isAuthenticated, async (req: any, res) => {
@@ -2038,98 +1883,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invitation routes (deprecated - use team invitations instead)
   app.post('/api/admin/invitations', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const { personId, enterpriseId } = req.body;
-      if (!personId || !enterpriseId) {
-        return res.status(400).json({ message: "Person ID and Enterprise ID are required" });
-      }
-
-      const updatedPerson = await storage.sendInvitation(personId, enterpriseId);
-      
-      // Here you would typically send an email invitation
-      // For now, we'll just log it
-      console.log(`Invitation sent to ${updatedPerson.email} for enterprise ${enterpriseId}`);
-      
-      res.status(201).json({
-        message: "Invitation sent successfully",
-        person: updatedPerson
-      });
-    } catch (error) {
-      console.error("Error sending invitation:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to send invitation", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use team invitation endpoints instead." });
   });
 
   app.get('/api/admin/invitations', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const { limit = 50, offset = 0 } = req.query;
-      const invitations = await storage.getInvitationHistory(
-        parseInt(limit as string),
-        parseInt(offset as string)
-      );
-      res.json(invitations);
-    } catch (error) {
-      console.error("Error fetching invitations:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch invitations", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use team invitation endpoints instead." });
   });
 
   app.patch('/api/admin/invitations/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const { invitationStatus, claimStatus } = req.body;
-      const personId = req.params.id;
-
-      let updatedPerson;
-      if (invitationStatus) {
-        updatedPerson = await storage.updateInvitationStatus(personId, invitationStatus);
-      } else if (claimStatus) {
-        updatedPerson = await storage.updateClaimStatus(personId, claimStatus);
-      } else {
-        return res.status(400).json({ message: "Either invitationStatus or claimStatus must be provided" });
-      }
-
-      res.json(updatedPerson);
-    } catch (error) {
-      console.error("Error updating invitation:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to update invitation", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use team invitation endpoints instead." });
   });
 
   // Bulk Enterprise Seeding Routes (Admin only)
@@ -2382,221 +2146,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Opportunity Transfer Routes
+  // Opportunity Transfer Routes (deprecated - feature removed)
   app.post('/api/admin/opportunity-transfers', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const validatedData = insertOpportunityTransferSchema.parse({
-        ...req.body,
-        transferredBy: userId
-      });
-      
-      const transfer = await storage.createOpportunityTransfer(validatedData);
-      res.status(201).json(transfer);
-    } catch (error) {
-      console.error("Error creating opportunity transfer:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(400).json({ message: "Failed to create opportunity transfer", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
   app.get('/api/admin/opportunity-transfers', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const { search, status, limit = 50, offset = 0 } = req.query;
-      const transfers = await storage.getOpportunityTransfers(
-        search as string,
-        status as 'pending' | 'accepted' | 'declined' | 'completed',
-        parseInt(limit as string),
-        parseInt(offset as string)
-      );
-      res.json(transfers);
-    } catch (error) {
-      console.error("Error fetching opportunity transfers:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch opportunity transfers", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
   app.get('/api/admin/transfer-stats', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is admin
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      const stats = await storage.getTransferStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching transfer stats:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch transfer stats", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
-  // Enterprise Owner Transfer Routes
   app.get('/api/my-transferred-opportunities', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      // Check if user is enterprise owner or admin
-      const user = await storage.getUser(userId);
-      if (!user || !user.role || !['enterprise_owner', 'admin'].includes(user.role)) {
-        return res.status(403).json({ message: "Enterprise owner or admin access required" });
-      }
-
-      const { limit = 50, offset = 0 } = req.query;
-      const transfers = await storage.getTransfersByUserId(
-        userId,
-        parseInt(limit as string),
-        parseInt(offset as string)
-      );
-      res.json(transfers);
-    } catch (error) {
-      console.error("Error fetching user transfers:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch transferred opportunities", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
   app.patch('/api/opportunity-transfers/:id/accept', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const transferId = req.params.id;
-      const transfer = await storage.acceptOpportunityTransfer(transferId, userId);
-      res.json(transfer);
-    } catch (error) {
-      console.error("Error accepting transfer:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(400).json({ message: "Failed to accept transfer", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
   app.patch('/api/opportunity-transfers/:id/decline', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const transferId = req.params.id;
-      const { reason } = req.body;
-      const transfer = await storage.declineOpportunityTransfer(transferId, userId, reason);
-      res.json(transfer);
-    } catch (error) {
-      console.error("Error declining transfer:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(400).json({ message: "Failed to decline transfer", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
   app.get('/api/opportunity-transfers/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const transferId = req.params.id;
-      const transfer = await storage.getOpportunityTransfer(transferId);
-      
-      if (!transfer) {
-        return res.status(404).json({ message: "Transfer not found" });
-      }
-
-      // Check if user has access to this transfer (admin, transferredBy, or transferredTo)
-      const user = await storage.getUser(userId);
-      if (!user || (user.role !== 'admin' && transfer.transferredBy !== userId && transfer.transferredTo !== userId)) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      res.json(transfer);
-    } catch (error) {
-      console.error("Error fetching transfer:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch transfer", error: errorMessage });
-    }
+    res.status(410).json({ message: "Opportunity transfer feature has been deprecated and removed." });
   });
 
-  // Public claiming routes
-  app.get('/api/enterprises/:id/contacts', async (req, res) => {
-    try {
-      const enterpriseId = req.params.id;
-      const contacts = await storage.getPeopleByEnterpriseId(enterpriseId);
-      res.json(contacts);
-    } catch (error) {
-      console.error("Error fetching enterprise contacts:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to fetch contacts", error: errorMessage });
-    }
-  });
-
+  // Public claiming routes (deprecated - use direct claim endpoint)
   app.post('/api/claim-enterprise', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const { personId, enterpriseId } = req.body;
-      if (!personId || !enterpriseId) {
-        return res.status(400).json({ message: "Person ID and Enterprise ID are required" });
-      }
-
-      // Verify the person is associated with this enterprise
-      const person = await storage.getPerson(personId, enterpriseId);
-      if (!person || person.enterpriseId !== enterpriseId) {
-        return res.status(400).json({ message: "Invalid person or enterprise association" });
-      }
-
-      // Update claim status to claimed
-      const updatedPerson = await storage.updateClaimStatus(personId, 'claimed');
-      
-      // Note: Enterprise ownership is tracked in enterpriseTeamMembers table
-      // No need to change user's platform role
-
-      res.json({
-        message: "Enterprise claimed successfully",
-        person: updatedPerson
-      });
-    } catch (error) {
-      console.error("Error claiming enterprise:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ message: "Failed to claim enterprise", error: errorMessage });
-    }
+    res.status(410).json({ message: "This endpoint has been deprecated. Use /api/enterprises/:id/claim-direct instead." });
   });
 
   // Schema information routes
