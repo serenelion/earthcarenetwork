@@ -35,6 +35,7 @@ import {
   editorEnterpriseUpdateSchema,
   adminEnterpriseUpdateSchema,
   ownerEnterpriseUpdateSchema,
+  insertCrmWorkspaceEnterpriseSchema,
   insertCrmWorkspacePersonSchema,
   insertCrmWorkspaceOpportunitySchema,
   insertCrmWorkspaceTaskSchema,
@@ -833,6 +834,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting enterprise:", error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Workspace Enterprise Management (CRM workspace-specific)
+  app.post('/api/crm/:enterpriseId/workspace/enterprises', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
+      const { mode, directoryEnterpriseId, ...enterpriseData } = req.body;
+
+      if (mode === 'link' && directoryEnterpriseId) {
+        const workspaceEnterprise = await storage.linkDirectoryEnterprise(
+          enterpriseId,
+          directoryEnterpriseId,
+          userId
+        );
+        return res.status(201).json(workspaceEnterprise);
+      } else if (mode === 'create') {
+        const validatedData = insertCrmWorkspaceEnterpriseSchema.parse({
+          ...enterpriseData,
+          workspaceId: enterpriseId,
+          createdBy: userId
+        });
+        const workspaceEnterprise = await storage.createWorkspaceEnterprise(validatedData);
+        return res.status(201).json(workspaceEnterprise);
+      } else {
+        return res.status(400).json({ error: 'Invalid mode. Must be "link" or "create"' });
+      }
+    } catch (error) {
+      console.error('Error creating workspace enterprise:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      return res.status(500).json({ error: 'Failed to create workspace enterprise' });
+    }
+  });
+
+  app.get('/api/crm/:enterpriseId/workspace/enterprises', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const enterprises = await storage.getWorkspaceEnterprises(enterpriseId, {
+        includeDeleted: req.query.includeDeleted === 'true'
+      });
+      res.json(enterprises);
+    } catch (error) {
+      console.error('Error fetching workspace enterprises:', error);
+      return res.status(500).json({ error: 'Failed to fetch workspace enterprises' });
+    }
+  });
+
+  app.put('/api/crm/:enterpriseId/workspace/enterprises/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const validatedData = insertCrmWorkspaceEnterpriseSchema.partial().parse(req.body);
+      const workspaceEnterprise = await storage.updateWorkspaceEnterprise(enterpriseId, id, validatedData);
+      res.json(workspaceEnterprise);
+    } catch (error) {
+      console.error('Error updating workspace enterprise:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      return res.status(500).json({ error: 'Failed to update workspace enterprise' });
+    }
+  });
+
+  app.delete('/api/crm/:enterpriseId/workspace/enterprises/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      await storage.unlinkWorkspaceEnterprise(enterpriseId, id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting workspace enterprise:', error);
+      return res.status(500).json({ error: 'Failed to delete workspace enterprise' });
     }
   });
 
