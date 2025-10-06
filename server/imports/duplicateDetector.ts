@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { enterprises, people, opportunities } from '@shared/schema';
+import { enterprises, crmWorkspacePeople, crmWorkspaceOpportunities } from '@shared/schema';
 import { eq, and, or, sql, like } from 'drizzle-orm';
 
 function normalizeString(str: string | null | undefined): string {
@@ -47,7 +47,8 @@ export async function findDuplicateEnterprise(
 
 export async function findDuplicatePerson(
   data: any, 
-  strategy: string
+  strategy: string,
+  workspaceId: string
 ): Promise<any | null> {
   if (strategy === 'create_new') {
     return null;
@@ -60,8 +61,11 @@ export async function findDuplicatePerson(
   if (normalizedEmail) {
     const [existingByEmail] = await db
       .select()
-      .from(people)
-      .where(sql`LOWER(TRIM(${people.email})) = ${normalizedEmail}`)
+      .from(crmWorkspacePeople)
+      .where(and(
+        eq(crmWorkspacePeople.workspaceId, workspaceId),
+        sql`LOWER(TRIM(${crmWorkspacePeople.email})) = ${normalizedEmail}`
+      ))
       .limit(1);
     
     if (existingByEmail) {
@@ -69,20 +73,23 @@ export async function findDuplicatePerson(
     }
   }
 
-  if ((normalizedFirstName || normalizedLastName) && data.enterpriseId) {
-    const conditions = [sql`${people.enterpriseId} = ${data.enterpriseId}`];
+  if ((normalizedFirstName || normalizedLastName) && data.workspaceEnterpriseId) {
+    const conditions = [
+      eq(crmWorkspacePeople.workspaceId, workspaceId),
+      eq(crmWorkspacePeople.workspaceEnterpriseId, data.workspaceEnterpriseId)
+    ];
     
     if (normalizedFirstName) {
-      conditions.push(sql`LOWER(TRIM(${people.firstName})) = ${normalizedFirstName}`);
+      conditions.push(sql`LOWER(TRIM(${crmWorkspacePeople.firstName})) = ${normalizedFirstName}`);
     }
     
     if (normalizedLastName) {
-      conditions.push(sql`LOWER(TRIM(${people.lastName})) = ${normalizedLastName}`);
+      conditions.push(sql`LOWER(TRIM(${crmWorkspacePeople.lastName})) = ${normalizedLastName}`);
     }
     
     const [existingByNameAndEnterprise] = await db
       .select()
-      .from(people)
+      .from(crmWorkspacePeople)
       .where(and(...conditions))
       .limit(1);
     
@@ -96,7 +103,8 @@ export async function findDuplicatePerson(
 
 export async function findDuplicateOpportunity(
   data: any, 
-  strategy: string
+  strategy: string,
+  workspaceId: string
 ): Promise<any | null> {
   if (strategy === 'create_new') {
     return null;
@@ -109,16 +117,17 @@ export async function findDuplicateOpportunity(
   }
 
   const conditions = [
-    sql`LOWER(TRIM(${opportunities.title})) = ${normalizedTitle}`
+    eq(crmWorkspaceOpportunities.workspaceId, workspaceId),
+    sql`LOWER(TRIM(${crmWorkspaceOpportunities.title})) = ${normalizedTitle}`
   ];
 
-  if (data.enterpriseId) {
-    conditions.push(sql`${opportunities.enterpriseId} = ${data.enterpriseId}`);
+  if (data.workspaceEnterpriseId) {
+    conditions.push(eq(crmWorkspaceOpportunities.workspaceEnterpriseId, data.workspaceEnterpriseId));
   }
 
   const [existing] = await db
     .select()
-    .from(opportunities)
+    .from(crmWorkspaceOpportunities)
     .where(and(...conditions))
     .limit(1);
 

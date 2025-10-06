@@ -3,8 +3,8 @@ import { Readable } from 'stream';
 import { z } from 'zod';
 import { 
   insertEnterpriseSchema,
-  insertPersonSchema,
-  insertOpportunitySchema,
+  insertCrmWorkspacePersonSchema,
+  insertCrmWorkspaceOpportunitySchema,
 } from '@shared/schema';
 
 export async function parseCSVStream(fileBuffer: Buffer): Promise<any[]> {
@@ -61,10 +61,10 @@ export function validateRow(
         schema = insertEnterpriseSchema.partial();
         break;
       case 'person':
-        schema = insertPersonSchema.partial();
+        schema = insertCrmWorkspacePersonSchema.partial();
         break;
       case 'opportunity':
-        schema = insertOpportunitySchema.partial();
+        schema = insertCrmWorkspaceOpportunitySchema.partial();
         break;
       default:
         return { valid: false, errors: [`Unknown entity type: ${entityType}`] };

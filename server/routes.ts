@@ -35,16 +35,15 @@ import {
   editorEnterpriseUpdateSchema,
   adminEnterpriseUpdateSchema,
   ownerEnterpriseUpdateSchema,
-  insertPersonSchema,
-  insertOpportunitySchema,
-  insertTaskSchema,
+  insertCrmWorkspacePersonSchema,
+  insertCrmWorkspaceOpportunitySchema,
+  insertCrmWorkspaceTaskSchema,
   insertCopilotContextSchema,
   insertBusinessContextSchema,
   insertConversationSchema,
   insertChatMessageSchema,
   insertCustomFieldSchema,
   insertPartnerApplicationSchema,
-  insertOpportunityTransferSchema,
   insertSubscriptionPlanSchema,
   insertSubscriptionSchema,
   insertAiUsageLogSchema,
@@ -52,9 +51,9 @@ import {
   insertProfileClaimSchema,
   insertEarthCarePledgeSchema,
   insertIntegrationConfigSchema,
-  opportunities,
+  crmWorkspaceOpportunities,
+  crmWorkspacePeople,
   enterprises,
-  people,
   enterpriseOwners,
   users
 } from "@shared/schema";
@@ -1191,8 +1190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const validatedData = insertPersonSchema.parse(req.body);
-      const person = await storage.createPerson(validatedData, enterpriseId);
+      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const person = await storage.createWorkspacePerson(validatedData);
       res.status(201).json(person);
     } catch (error) {
       console.error("Error creating person:", error);
@@ -1204,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      const person = await storage.updatePerson(id, req.body, enterpriseId);
+      const person = await storage.updateWorkspacePerson(enterpriseId, id, req.body);
       res.json(person);
     } catch (error) {
       console.error("Error updating person:", error);
@@ -1216,7 +1215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/crm/:enterpriseId/people/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      await storage.deletePerson(id, enterpriseId);
+      await storage.deleteWorkspacePerson(enterpriseId, id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting person:", error);
@@ -1251,8 +1250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
-      const validatedData = insertOpportunitySchema.parse(body);
-      const opportunity = await storage.createOpportunity(validatedData, enterpriseId);
+      const validatedData = insertCrmWorkspaceOpportunitySchema.parse({ ...body, workspaceId: enterpriseId });
+      const opportunity = await storage.createWorkspaceOpportunity(validatedData);
       res.status(201).json(opportunity);
     } catch (error) {
       console.error("Error creating opportunity:", error);
@@ -1270,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
-      const opportunity = await storage.updateOpportunity(id, body, enterpriseId);
+      const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, body);
       res.json(opportunity);
     } catch (error) {
       console.error("Error updating opportunity:", error);
@@ -1282,7 +1281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/crm/:enterpriseId/opportunities/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      await storage.deleteOpportunity(id, enterpriseId);
+      await storage.deleteWorkspaceOpportunity(enterpriseId, id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting opportunity:", error);
@@ -1294,28 +1293,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/crm/:enterpriseId/opportunities/export', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      // Query opportunities with related enterprises and people using left joins
+      // Query workspace opportunities with related enterprises and people using left joins
       const opportunitiesData = await db
         .select({
-          id: opportunities.id,
-          title: opportunities.title,
-          status: opportunities.status,
-          value: opportunities.value,
-          probability: opportunities.probability,
-          expectedCloseDate: opportunities.expectedCloseDate,
-          description: opportunities.description,
-          notes: opportunities.notes,
+          id: crmWorkspaceOpportunities.id,
+          title: crmWorkspaceOpportunities.title,
+          status: crmWorkspaceOpportunities.status,
+          value: crmWorkspaceOpportunities.value,
+          probability: crmWorkspaceOpportunities.probability,
+          expectedCloseDate: crmWorkspaceOpportunities.expectedCloseDate,
+          description: crmWorkspaceOpportunities.description,
+          notes: crmWorkspaceOpportunities.notes,
           enterpriseName: enterprises.name,
           enterpriseCategory: enterprises.category,
-          primaryContactFirstName: people.firstName,
-          primaryContactLastName: people.lastName,
-          primaryContactEmail: people.email,
+          primaryContactFirstName: crmWorkspacePeople.firstName,
+          primaryContactLastName: crmWorkspacePeople.lastName,
+          primaryContactEmail: crmWorkspacePeople.email,
         })
-        .from(opportunities)
-        .leftJoin(enterprises, eq(opportunities.enterpriseId, enterprises.id))
-        .leftJoin(people, eq(opportunities.primaryContactId, people.id))
-        .where(eq(opportunities.enterpriseId, enterpriseId))
-        .orderBy(desc(opportunities.createdAt));
+        .from(crmWorkspaceOpportunities)
+        .leftJoin(enterprises, eq(crmWorkspaceOpportunities.workspaceEnterpriseId, enterprises.id))
+        .leftJoin(crmWorkspacePeople, eq(crmWorkspaceOpportunities.workspacePersonId, crmWorkspacePeople.id))
+        .where(eq(crmWorkspaceOpportunities.workspaceId, enterpriseId))
+        .orderBy(desc(crmWorkspaceOpportunities.createdAt));
 
       // CSV helper function to escape special characters
       const escapeCSV = (value: any): string => {
@@ -1420,8 +1419,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const validatedData = insertTaskSchema.parse(req.body);
-      const task = await storage.createTask(validatedData, enterpriseId);
+      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const task = await storage.createWorkspaceTask(validatedData);
       res.status(201).json(task);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1433,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      const task = await storage.updateTask(id, req.body, enterpriseId);
+      const task = await storage.updateWorkspaceTask(enterpriseId, id, req.body);
       res.json(task);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -1445,7 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/crm/:enterpriseId/tasks/:id', isAuthenticated, requireEnterpriseRole('admin'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      await storage.deleteTask(id, enterpriseId);
+      await storage.deleteWorkspaceTask(enterpriseId, id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -1476,10 +1475,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update opportunity with AI score if it exists
       if (req.body.opportunityId) {
-        await storage.updateOpportunity(req.body.opportunityId, {
+        await storage.updateWorkspaceOpportunity(enterpriseId, req.body.opportunityId, {
           aiScore: leadScore.score,
           aiInsights: leadScore.insights,
-        }, enterpriseId);
+        });
       }
       
       res.json(leadScore);

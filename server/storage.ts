@@ -1,16 +1,16 @@
 import {
   users,
   enterprises,
-  people,
-  opportunities,
-  tasks,
+  crmWorkspaceEnterprises,
+  crmWorkspacePeople,
+  crmWorkspaceOpportunities,
+  crmWorkspaceTasks,
   copilotContext,
   businessContext,
   conversations,
   chatMessages,
   customFields,
   partnerApplications,
-  opportunityTransfers,
   subscriptionPlans,
   subscriptions,
   aiUsageLogs,
@@ -36,12 +36,14 @@ import {
   type UpsertUser,
   type Enterprise,
   type InsertEnterprise,
-  type Person,
-  type InsertPerson,
-  type Opportunity,
-  type InsertOpportunity,
-  type Task,
-  type InsertTask,
+  type CrmWorkspaceEnterprise,
+  type InsertCrmWorkspaceEnterprise,
+  type CrmWorkspacePerson,
+  type InsertCrmWorkspacePerson,
+  type CrmWorkspaceOpportunity,
+  type InsertCrmWorkspaceOpportunity,
+  type CrmWorkspaceTask,
+  type InsertCrmWorkspaceTask,
   type CopilotContext,
   type InsertCopilotContext,
   type BusinessContext,
@@ -54,8 +56,6 @@ import {
   type InsertCustomField,
   type PartnerApplication,
   type InsertPartnerApplication,
-  type OpportunityTransfer,
-  type InsertOpportunityTransfer,
   type SubscriptionPlan,
   type InsertSubscriptionPlan,
   type Subscription,
@@ -99,7 +99,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  getUsersByRole(role: 'visitor' | 'member' | 'enterprise_owner' | 'admin'): Promise<User[]>;
+  getUsersByRole(role: 'free' | 'crm_pro' | 'admin'): Promise<User[]>;
   getUsersByMembershipStatus(status: 'free' | 'trial' | 'paid_member' | 'spatial_network_subscriber' | 'cancelled'): Promise<User[]>;
   
   // Enterprise operations
@@ -119,29 +119,43 @@ export interface IStorage {
   getUserFavoritesCount(userId: string): Promise<number>;
   getFavoritesByCategory(userId: string): Promise<Record<string, number>>;
   
-  // People operations
-  getPeople(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Person[]>;
-  getPerson(id: string, enterpriseId?: string): Promise<Person | undefined>;
-  createPerson(person: InsertPerson, enterpriseId: string): Promise<Person>;
-  updatePerson(id: string, person: Partial<InsertPerson>, enterpriseId: string): Promise<Person>;
-  deletePerson(id: string, enterpriseId: string): Promise<void>;
-  getPeopleStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }>;
-  
-  // Opportunity operations
-  getOpportunities(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Opportunity[]>;
-  getOpportunity(id: string, enterpriseId?: string): Promise<Opportunity | undefined>;
-  createOpportunity(opportunity: InsertOpportunity, enterpriseId: string): Promise<Opportunity>;
-  updateOpportunity(id: string, opportunity: Partial<InsertOpportunity>, enterpriseId: string): Promise<Opportunity>;
-  deleteOpportunity(id: string, enterpriseId: string): Promise<void>;
-  getOpportunityStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number>; totalValue: number }>;
-  
-  // Task operations
-  getTasks(enterpriseId: string, search?: string, limit?: number, offset?: number): Promise<Task[]>;
-  getTask(id: string, enterpriseId: string): Promise<Task | undefined>;
-  createTask(task: InsertTask, enterpriseId: string): Promise<Task>;
-  updateTask(id: string, task: Partial<InsertTask>, enterpriseId: string): Promise<Task>;
-  deleteTask(id: string, enterpriseId: string): Promise<void>;
-  getTaskStats(enterpriseId: string): Promise<{ total: number; byStatus: Record<string, number> }>;
+  // Workspace Enterprises (link/unlink directory entries, create standalone)
+  getWorkspaceEnterprises(workspaceId: string, options?: { includeDeleted?: boolean }): Promise<CrmWorkspaceEnterprise[]>;
+  getWorkspaceEnterprise(workspaceId: string, id: string): Promise<CrmWorkspaceEnterprise | undefined>;
+  createWorkspaceEnterprise(enterprise: InsertCrmWorkspaceEnterprise): Promise<CrmWorkspaceEnterprise>;
+  linkDirectoryEnterprise(workspaceId: string, directoryEnterpriseId: string, createdBy: string): Promise<CrmWorkspaceEnterprise>;
+  unlinkWorkspaceEnterprise(workspaceId: string, id: string): Promise<void>;
+  updateWorkspaceEnterprise(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceEnterprise>): Promise<CrmWorkspaceEnterprise>;
+
+  // Workspace People
+  getWorkspacePeople(workspaceId: string, options?: { search?: string; limit?: number; offset?: number }): Promise<CrmWorkspacePerson[]>;
+  getWorkspacePerson(workspaceId: string, id: string): Promise<CrmWorkspacePerson | undefined>;
+  createWorkspacePerson(person: InsertCrmWorkspacePerson): Promise<CrmWorkspacePerson>;
+  updateWorkspacePerson(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspacePerson>): Promise<CrmWorkspacePerson>;
+  deleteWorkspacePerson(workspaceId: string, id: string): Promise<void>;
+
+  // Workspace Opportunities
+  getWorkspaceOpportunities(workspaceId: string, options?: { status?: string; limit?: number; offset?: number }): Promise<CrmWorkspaceOpportunity[]>;
+  getWorkspaceOpportunity(workspaceId: string, id: string): Promise<CrmWorkspaceOpportunity | undefined>;
+  createWorkspaceOpportunity(opportunity: InsertCrmWorkspaceOpportunity): Promise<CrmWorkspaceOpportunity>;
+  updateWorkspaceOpportunity(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceOpportunity>): Promise<CrmWorkspaceOpportunity>;
+  deleteWorkspaceOpportunity(workspaceId: string, id: string): Promise<void>;
+
+  // Workspace Tasks
+  getWorkspaceTasks(workspaceId: string, options?: { status?: string; assignedToId?: string; limit?: number; offset?: number }): Promise<CrmWorkspaceTask[]>;
+  getWorkspaceTask(workspaceId: string, id: string): Promise<CrmWorkspaceTask | undefined>;
+  createWorkspaceTask(task: InsertCrmWorkspaceTask): Promise<CrmWorkspaceTask>;
+  updateWorkspaceTask(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceTask>): Promise<CrmWorkspaceTask>;
+  deleteWorkspaceTask(workspaceId: string, id: string): Promise<void>;
+
+  // Workspace Stats (lightweight aggregates)
+  getWorkspaceStats(workspaceId: string): Promise<{
+    enterprisesCount: number;
+    peopleCount: number;
+    opportunitiesCount: number;
+    tasksCount: number;
+    totalOpportunityValue: number;
+  }>;
   
   // Copilot context operations
   getCopilotContext(userId: string, enterpriseId: string): Promise<CopilotContext | undefined>;
@@ -176,43 +190,6 @@ export interface IStorage {
   updatePartnerApplication(id: string, application: Partial<InsertPartnerApplication>): Promise<PartnerApplication>;
   deletePartnerApplication(id: string): Promise<void>;
   
-  // Enterprise claiming and invitation operations
-  getEnterprisesWithClaimInfo(search?: string, claimStatus?: 'unclaimed' | 'claimed' | 'verified', limit?: number, offset?: number): Promise<Array<Enterprise & { contacts: Person[] }>>;
-  getEnterpriseClaimStats(): Promise<{ 
-    total: number; 
-    byClaim: Record<string, number>; 
-    byInvitation: Record<string, number>;
-    pendingClaims: number;
-  }>;
-  sendInvitation(personId: string, enterpriseId: string): Promise<Person>;
-  updateInvitationStatus(personId: string, status: 'not_invited' | 'invited' | 'signed_up' | 'active'): Promise<Person>;
-  updateClaimStatus(personId: string, status: 'unclaimed' | 'claimed' | 'verified'): Promise<Person>;
-  getInvitationHistory(limit?: number, offset?: number): Promise<Person[]>;
-  getPeopleByEnterpriseId(enterpriseId: string): Promise<Person[]>;
-  
-  // Opportunity transfer operations
-  getOpportunityTransfers(search?: string, status?: 'pending' | 'accepted' | 'declined' | 'completed', limit?: number, offset?: number): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User; transferredToUser: User }>>;
-  getOpportunityTransfer(id: string): Promise<OpportunityTransfer | undefined>;
-  createOpportunityTransfer(transfer: InsertOpportunityTransfer): Promise<OpportunityTransfer>;
-  updateOpportunityTransfer(id: string, transfer: Partial<InsertOpportunityTransfer>): Promise<OpportunityTransfer>;
-  deleteOpportunityTransfer(id: string): Promise<void>;
-  getTransfersByUserId(userId: string, limit?: number, offset?: number): Promise<Array<OpportunityTransfer & { opportunity: Opportunity; transferredByUser: User }>>;
-  getTransferStats(): Promise<{ 
-    total: number; 
-    byStatus: Record<string, number>; 
-    pendingTransfers: number 
-  }>;
-  acceptOpportunityTransfer(transferId: string, userId: string): Promise<OpportunityTransfer>;
-  declineOpportunityTransfer(transferId: string, userId: string, reason?: string): Promise<OpportunityTransfer>;
-
-  // Global search operations
-  globalSearch(query: string, entityTypes?: string[], limit?: number, offset?: number): Promise<{
-    enterprises: Array<Enterprise & { entityType: 'enterprise'; matchContext?: string }>;
-    people: Array<Person & { entityType: 'person'; matchContext?: string }>;
-    opportunities: Array<Opportunity & { entityType: 'opportunity'; matchContext?: string }>;
-    tasks: Array<Task & { entityType: 'task'; matchContext?: string }>;
-    totalResults: number;
-  }>;
 
   // Subscription plan operations
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
@@ -460,7 +437,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUsersByRole(role: 'visitor' | 'member' | 'enterprise_owner' | 'admin'): Promise<User[]> {
+  async getUsersByRole(role: 'free' | 'crm_pro' | 'admin'): Promise<User[]> {
     return await db.select().from(users).where(eq(users.role, role)).orderBy(desc(users.createdAt));
   }
 
@@ -651,6 +628,285 @@ export class DatabaseStorage implements IStorage {
     return byCategory;
   }
 
+  // Workspace Enterprises
+  async getWorkspaceEnterprises(workspaceId: string, options?: { includeDeleted?: boolean }): Promise<CrmWorkspaceEnterprise[]> {
+    const conditions = [eq(crmWorkspaceEnterprises.workspaceId, workspaceId)];
+    
+    if (!options?.includeDeleted) {
+      conditions.push(eq(crmWorkspaceEnterprises.isDeleted, false));
+    }
+    
+    return await db.select().from(crmWorkspaceEnterprises)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspaceEnterprises.createdAt));
+  }
+
+  async getWorkspaceEnterprise(workspaceId: string, id: string): Promise<CrmWorkspaceEnterprise | undefined> {
+    const [enterprise] = await db.select().from(crmWorkspaceEnterprises)
+      .where(and(
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId),
+        eq(crmWorkspaceEnterprises.id, id)
+      ));
+    return enterprise;
+  }
+
+  async createWorkspaceEnterprise(enterprise: InsertCrmWorkspaceEnterprise): Promise<CrmWorkspaceEnterprise> {
+    const [created] = await db.insert(crmWorkspaceEnterprises)
+      .values(enterprise)
+      .returning();
+    return created;
+  }
+
+  async linkDirectoryEnterprise(workspaceId: string, directoryEnterpriseId: string, createdBy: string): Promise<CrmWorkspaceEnterprise> {
+    const [directoryEnterprise] = await db.select().from(enterprises)
+      .where(eq(enterprises.id, directoryEnterpriseId));
+    
+    if (!directoryEnterprise) {
+      throw new Error('Directory enterprise not found');
+    }
+
+    const [linked] = await db.insert(crmWorkspaceEnterprises)
+      .values({
+        workspaceId,
+        directoryEnterpriseId,
+        name: directoryEnterprise.name,
+        description: directoryEnterprise.description,
+        website: directoryEnterprise.website,
+        location: directoryEnterprise.location,
+        createdBy,
+      })
+      .returning();
+    
+    return linked;
+  }
+
+  async unlinkWorkspaceEnterprise(workspaceId: string, id: string): Promise<void> {
+    await db.update(crmWorkspaceEnterprises)
+      .set({ isDeleted: true, updatedAt: new Date() })
+      .where(and(
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId),
+        eq(crmWorkspaceEnterprises.id, id)
+      ));
+  }
+
+  async updateWorkspaceEnterprise(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceEnterprise>): Promise<CrmWorkspaceEnterprise> {
+    const [updated] = await db.update(crmWorkspaceEnterprises)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId),
+        eq(crmWorkspaceEnterprises.id, id)
+      ))
+      .returning();
+    return updated;
+  }
+
+  // Workspace People
+  async getWorkspacePeople(workspaceId: string, options?: { search?: string; limit?: number; offset?: number }): Promise<CrmWorkspacePerson[]> {
+    const conditions = [eq(crmWorkspacePeople.workspaceId, workspaceId)];
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+    
+    if (options?.search) {
+      conditions.push(
+        or(
+          like(crmWorkspacePeople.firstName, `%${options.search}%`),
+          like(crmWorkspacePeople.lastName, `%${options.search}%`),
+          like(crmWorkspacePeople.email, `%${options.search}%`),
+          like(crmWorkspacePeople.title, `%${options.search}%`)
+        )!
+      );
+    }
+    
+    return await db.select().from(crmWorkspacePeople)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspacePeople.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getWorkspacePerson(workspaceId: string, id: string): Promise<CrmWorkspacePerson | undefined> {
+    const [person] = await db.select().from(crmWorkspacePeople)
+      .where(and(
+        eq(crmWorkspacePeople.workspaceId, workspaceId),
+        eq(crmWorkspacePeople.id, id)
+      ));
+    return person;
+  }
+
+  async createWorkspacePerson(person: InsertCrmWorkspacePerson): Promise<CrmWorkspacePerson> {
+    const [created] = await db.insert(crmWorkspacePeople)
+      .values(person)
+      .returning();
+    return created;
+  }
+
+  async updateWorkspacePerson(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspacePerson>): Promise<CrmWorkspacePerson> {
+    const [updated] = await db.update(crmWorkspacePeople)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(crmWorkspacePeople.workspaceId, workspaceId),
+        eq(crmWorkspacePeople.id, id)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteWorkspacePerson(workspaceId: string, id: string): Promise<void> {
+    await db.delete(crmWorkspacePeople)
+      .where(and(
+        eq(crmWorkspacePeople.workspaceId, workspaceId),
+        eq(crmWorkspacePeople.id, id)
+      ));
+  }
+
+  // Workspace Opportunities
+  async getWorkspaceOpportunities(workspaceId: string, options?: { status?: string; limit?: number; offset?: number }): Promise<CrmWorkspaceOpportunity[]> {
+    const conditions = [eq(crmWorkspaceOpportunities.workspaceId, workspaceId)];
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+    
+    if (options?.status) {
+      conditions.push(eq(crmWorkspaceOpportunities.status, options.status as any));
+    }
+    
+    return await db.select().from(crmWorkspaceOpportunities)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspaceOpportunities.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getWorkspaceOpportunity(workspaceId: string, id: string): Promise<CrmWorkspaceOpportunity | undefined> {
+    const [opportunity] = await db.select().from(crmWorkspaceOpportunities)
+      .where(and(
+        eq(crmWorkspaceOpportunities.workspaceId, workspaceId),
+        eq(crmWorkspaceOpportunities.id, id)
+      ));
+    return opportunity;
+  }
+
+  async createWorkspaceOpportunity(opportunity: InsertCrmWorkspaceOpportunity): Promise<CrmWorkspaceOpportunity> {
+    const [created] = await db.insert(crmWorkspaceOpportunities)
+      .values(opportunity)
+      .returning();
+    return created;
+  }
+
+  async updateWorkspaceOpportunity(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceOpportunity>): Promise<CrmWorkspaceOpportunity> {
+    const [updated] = await db.update(crmWorkspaceOpportunities)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(crmWorkspaceOpportunities.workspaceId, workspaceId),
+        eq(crmWorkspaceOpportunities.id, id)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteWorkspaceOpportunity(workspaceId: string, id: string): Promise<void> {
+    await db.delete(crmWorkspaceOpportunities)
+      .where(and(
+        eq(crmWorkspaceOpportunities.workspaceId, workspaceId),
+        eq(crmWorkspaceOpportunities.id, id)
+      ));
+  }
+
+  // Workspace Tasks
+  async getWorkspaceTasks(workspaceId: string, options?: { status?: string; assignedToId?: string; limit?: number; offset?: number }): Promise<CrmWorkspaceTask[]> {
+    const conditions = [eq(crmWorkspaceTasks.workspaceId, workspaceId)];
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+    
+    if (options?.status) {
+      conditions.push(eq(crmWorkspaceTasks.status, options.status as any));
+    }
+    
+    if (options?.assignedToId) {
+      conditions.push(eq(crmWorkspaceTasks.assignedToId, options.assignedToId));
+    }
+    
+    return await db.select().from(crmWorkspaceTasks)
+      .where(and(...conditions))
+      .orderBy(desc(crmWorkspaceTasks.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getWorkspaceTask(workspaceId: string, id: string): Promise<CrmWorkspaceTask | undefined> {
+    const [task] = await db.select().from(crmWorkspaceTasks)
+      .where(and(
+        eq(crmWorkspaceTasks.workspaceId, workspaceId),
+        eq(crmWorkspaceTasks.id, id)
+      ));
+    return task;
+  }
+
+  async createWorkspaceTask(task: InsertCrmWorkspaceTask): Promise<CrmWorkspaceTask> {
+    const [created] = await db.insert(crmWorkspaceTasks)
+      .values(task)
+      .returning();
+    return created;
+  }
+
+  async updateWorkspaceTask(workspaceId: string, id: string, updates: Partial<InsertCrmWorkspaceTask>): Promise<CrmWorkspaceTask> {
+    const [updated] = await db.update(crmWorkspaceTasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(crmWorkspaceTasks.workspaceId, workspaceId),
+        eq(crmWorkspaceTasks.id, id)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteWorkspaceTask(workspaceId: string, id: string): Promise<void> {
+    await db.delete(crmWorkspaceTasks)
+      .where(and(
+        eq(crmWorkspaceTasks.workspaceId, workspaceId),
+        eq(crmWorkspaceTasks.id, id)
+      ));
+  }
+
+  // Workspace Stats
+  async getWorkspaceStats(workspaceId: string): Promise<{
+    enterprisesCount: number;
+    peopleCount: number;
+    opportunitiesCount: number;
+    tasksCount: number;
+    totalOpportunityValue: number;
+  }> {
+    const [enterprisesCount] = await db.select({ count: count() })
+      .from(crmWorkspaceEnterprises)
+      .where(and(
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId),
+        eq(crmWorkspaceEnterprises.isDeleted, false)
+      ));
+
+    const [peopleCount] = await db.select({ count: count() })
+      .from(crmWorkspacePeople)
+      .where(eq(crmWorkspacePeople.workspaceId, workspaceId));
+
+    const [opportunitiesData] = await db.select({ 
+      count: count(),
+      totalValue: sql<number>`COALESCE(SUM(${crmWorkspaceOpportunities.value}), 0)`
+    })
+      .from(crmWorkspaceOpportunities)
+      .where(eq(crmWorkspaceOpportunities.workspaceId, workspaceId));
+
+    const [tasksCount] = await db.select({ count: count() })
+      .from(crmWorkspaceTasks)
+      .where(eq(crmWorkspaceTasks.workspaceId, workspaceId));
+
+    return {
+      enterprisesCount: enterprisesCount.count,
+      peopleCount: peopleCount.count,
+      opportunitiesCount: opportunitiesData.count,
+      tasksCount: tasksCount.count,
+      totalOpportunityValue: Number(opportunitiesData.totalValue) || 0,
+    };
+  }
+
+  // OLD METHODS REMOVED - These have been replaced with workspace-scoped methods above
   // People operations
   async getPeople(enterpriseId: string, search?: string, limit = 50, offset = 0): Promise<Person[]> {
     const conditions = [eq(people.enterpriseId, enterpriseId)];

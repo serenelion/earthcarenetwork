@@ -76,10 +76,10 @@ export async function processImportJob(jobId: string): Promise<void> {
             duplicate = await findDuplicateEnterprise(data, job.duplicateStrategy);
             break;
           case 'person':
-            duplicate = await findDuplicatePerson(data, job.duplicateStrategy);
+            duplicate = await findDuplicatePerson(data, job.duplicateStrategy, job.enterpriseId);
             break;
           case 'opportunity':
-            duplicate = await findDuplicateOpportunity(data, job.duplicateStrategy);
+            duplicate = await findDuplicateOpportunity(data, job.duplicateStrategy, job.enterpriseId);
             break;
         }
 
@@ -101,10 +101,10 @@ export async function processImportJob(jobId: string): Promise<void> {
                 await storage.updateEnterprise(duplicate.id, data);
                 break;
               case 'person':
-                await storage.updatePerson(duplicate.id, data);
+                await storage.updateWorkspacePerson(job.enterpriseId, duplicate.id, data);
                 break;
               case 'opportunity':
-                await storage.updateOpportunity(duplicate.id, data);
+                await storage.updateWorkspaceOpportunity(job.enterpriseId, duplicate.id, data);
                 break;
             }
             successfulRows++;
@@ -118,10 +118,10 @@ export async function processImportJob(jobId: string): Promise<void> {
             await storage.createEnterprise(data);
             break;
           case 'person':
-            await storage.createPerson(data);
+            await storage.createWorkspacePerson({ ...data, workspaceId: job.enterpriseId });
             break;
           case 'opportunity':
-            await storage.createOpportunity(data);
+            await storage.createWorkspaceOpportunity({ ...data, workspaceId: job.enterpriseId });
             break;
         }
 
