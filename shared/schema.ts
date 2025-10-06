@@ -170,8 +170,8 @@ export const enterprises = pgTable("enterprises", {
   website: varchar("website"),
   imageUrl: varchar("image_url"),
   isVerified: boolean("is_verified").default(false),
-  isFeatured: boolean("is_featured").default(false),
-  featuredOrder: integer("featured_order"),
+  isFeatured: boolean("is_featured").default(false).notNull(),
+  featuredOrder: integer("featured_order").default(999999).notNull(),
   featuredAt: timestamp("featured_at"),
   followerCount: integer("follower_count").default(0),
   tags: text("tags").array(),
@@ -180,7 +180,9 @@ export const enterprises = pgTable("enterprises", {
   externalSourceRef: jsonb("external_source_ref"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("enterprises_featured_idx").on(table.isFeatured, table.featuredOrder)
+]);
 
 // User favorites table - linking users to their favorite enterprises
 export const userFavorites = pgTable("user_favorites", {
@@ -791,6 +793,98 @@ export const enterpriseInvitations = pgTable("enterprise_invitations", {
   index("enterprise_invitations_unique_pending_idx").on(table.enterpriseId, table.email).where(sql`status = 'pending'`)
 ]);
 
+// Integration Configs table - Store API keys and tool configurations
+export const integrationConfigStatusEnum = pgEnum('integration_config_status', [
+  'active',
+  'inactive',
+  'error'
+]);
+
+export const integrationConfigs = pgTable("integration_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  apiKey: text("api_key"),
+  apiSecret: text("api_secret"),
+  isEncrypted: boolean("is_encrypted").default(false).notNull(),
+  config: jsonb("config").default(sql`'{}'::jsonb`),
+  status: integrationConfigStatusEnum("status").default('inactive').notNull(),
+  lastTestedAt: timestamp("last_tested_at"),
+  testResult: text("test_result"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("integration_configs_status_idx").on(table.status)
+]);
+
+// Audit Logs table - Track all admin actions
+export const auditActionTypeEnum = pgEnum('audit_action_type', [
+  'create',
+  'update',
+  'delete',
+  'feature',
+  'unfeature',
+  'export',
+  'import',
+  'configure_tool',
+  'test_integration',
+  'bulk_operation'
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  enterpriseId: varchar("enterprise_id").references(() => enterprises.id),
+  actionType: auditActionTypeEnum("action_type").notNull(),
+  tableName: varchar("table_name"),
+  recordId: varchar("record_id"),
+  changes: jsonb("changes"),
+  metadata: jsonb("metadata"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  success: boolean("success").default(true).notNull(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("audit_logs_user_id_idx").on(table.userId),
+  index("audit_logs_enterprise_id_idx").on(table.enterpriseId),
+  index("audit_logs_action_type_idx").on(table.actionType),
+  index("audit_logs_table_name_idx").on(table.tableName),
+  index("audit_logs_created_at_idx").on(table.createdAt),
+  index("audit_logs_composite_idx").on(table.actionType, table.tableName, table.createdAt)
+]);
+
+// Agent Tools table - AI agent tool metadata and configurations
+export const agentToolStatusEnum = pgEnum('agent_tool_status', [
+  'enabled',
+  'disabled',
+  'testing'
+]);
+
+export const agentTools = pgTable("agent_tools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  displayName: varchar("display_name").notNull(),
+  description: text("description").notNull(),
+  category: varchar("category").notNull(),
+  functionDefinition: jsonb("function_definition").notNull(),
+  integrationConfigId: varchar("integration_config_id").references(() => integrationConfigs.id),
+  status: agentToolStatusEnum("status").default('enabled').notNull(),
+  usageCount: integer("usage_count").default(0).notNull(),
+  successCount: integer("success_count").default(0).notNull(),
+  errorCount: integer("error_count").default(0).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  lastError: text("last_error"),
+  averageExecutionTimeMs: integer("average_execution_time_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("agent_tools_status_idx").on(table.status),
+  index("agent_tools_category_idx").on(table.category)
+]);
+
 // Insert schemas
 export const insertEnterpriseSchema = createInsertSchema(enterprises).omit({
   id: true,
@@ -1055,3 +1149,29 @@ export const insertMemberProfileSchema = createInsertSchema(memberProfiles).omit
 
 export type InsertMemberProfile = z.infer<typeof insertMemberProfileSchema>;
 export type MemberProfile = typeof memberProfiles.$inferSelect;
+
+export const insertIntegrationConfigSchema = createInsertSchema(integrationConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIntegrationConfig = z.infer<typeof insertIntegrationConfigSchema>;
+export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+export const insertAgentToolSchema = createInsertSchema(agentTools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAgentTool = z.infer<typeof insertAgentToolSchema>;
+export type AgentTool = typeof agentTools.$inferSelect;
