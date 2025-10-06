@@ -364,7 +364,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <Button
             className="bg-primary text-primary-foreground p-4 md:p-6 h-auto hover:bg-primary/90 justify-start touch-manipulation"
-            onClick={() => window.location.href = "/enterprises"}
+            onClick={() => window.location.href = `/crm/${currentEnterprise?.id}/add-enterprise`}
             data-testid="button-add-enterprise"
           >
             <div className="text-left">

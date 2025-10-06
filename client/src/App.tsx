@@ -365,6 +365,13 @@ function Router() {
           </Route>
           
           {/* CRM Routes */}
+          <Route path="/crm/:enterpriseId/add-enterprise">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
           <Route path="/crm/:enterpriseId/enterprises">
             <AuthenticatedRoute>
               <WorkspaceProvider>

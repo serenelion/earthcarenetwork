@@ -10,6 +10,7 @@ import BulkImport from "@/pages/crm/BulkImport";
 import CRMEnterprises from "@/pages/crm/CRMEnterprises";
 import EnterpriseSeeding from "@/pages/crm/EnterpriseSeeding";
 import PledgeDashboard from "@/pages/crm/PledgeDashboard";
+import AddEnterprise from "@/pages/crm/AddEnterprise";
 
 const Reports = () => (
   <div className="p-6">
@@ -24,7 +25,9 @@ export default function CrmShell() {
   // Determine which component to render based on the current route
   let PageComponent = Dashboard; // default
   
-  if (location.includes('/enterprises')) {
+  if (location.includes('/add-enterprise')) {
+    PageComponent = AddEnterprise;
+  } else if (location.includes('/enterprises')) {
     PageComponent = CRMEnterprises;
   } else if (location.includes('/people')) {
     PageComponent = People;
