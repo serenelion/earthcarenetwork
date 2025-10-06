@@ -15,15 +15,15 @@ import { MobileMenu } from "@/components/navigation/MobileMenu";
  * 
  * Provides consistent navigation across the entire application with:
  * - Responsive design (desktop and mobile)
- * - Role-based navigation (visitor, member, enterprise_owner, admin)
+ * - Role-based navigation (free, crm_pro, admin)
  * - Global search functionality (Cmd/Ctrl+K shortcut)
  * - User authentication status and role indicators
  * - Context-aware CTAs
  * 
  * The navigation adapts based on user role:
- * - Visitors: Public links + auth buttons
- * - Members: Public links + member menu + profile
- * - Enterprise Owners: Public links + CRM + member menu
+ * - Unauthenticated: Public links + auth buttons
+ * - Free: Public links + CRM + member menu + profile
+ * - CRM Pro: Public links + CRM + member menu + profile
  * - Admins: Public links + CRM + member menu + admin menu
  */
 export default function Navigation() {
@@ -73,7 +73,7 @@ export default function Navigation() {
               {/* Authenticated user navigation */}
               {isAuthenticated && !isLoading && (
                 <>
-                  {/* CRM Link (enterprise_owner and admin only) */}
+                  {/* CRM Link (all authenticated users) */}
                   {navigation.crmLink && (
                     <NavigationLink 
                       item={navigation.crmLink} 
@@ -82,7 +82,7 @@ export default function Navigation() {
                     />
                   )}
                   
-                  {/* Member Menu (member, enterprise_owner, admin) */}
+                  {/* Member Menu (all authenticated users) */}
                   {navigation.memberMenu && (
                     <NavigationDropdown
                       label="Member"
@@ -144,13 +144,15 @@ export default function Navigation() {
                     )}
                     
                     {/* Role indicator badge */}
-                    <Badge 
-                      variant={userRole === "admin" ? "destructive" : userRole === "enterprise_owner" ? "default" : "secondary"}
-                      className="hidden sm:inline-flex"
-                      data-testid="user-role-badge"
-                    >
-                      {userRole === "enterprise_owner" ? "Enterprise Owner" : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-                    </Badge>
+                    {userRole && (
+                      <Badge 
+                        variant={userRole === "admin" ? "destructive" : userRole === "crm_pro" ? "default" : "secondary"}
+                        className="hidden sm:inline-flex"
+                        data-testid="user-role-badge"
+                      >
+                        {userRole === "crm_pro" ? "CRM Pro" : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                      </Badge>
+                    )}
                     
                     {/* User menu */}
                     <DropdownMenu>
@@ -186,17 +188,14 @@ export default function Navigation() {
                     {/* CTA Button based on role */}
                     <Button 
                       className="bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:inline-flex"
-                      data-testid={`button-${userRole}-cta`}
+                      data-testid={`button-${userRole || 'user'}-cta`}
                       asChild
                     >
                       <Link href={
                         userRole === "admin" ? "/admin/partner-applications" :
-                        userRole === "enterprise_owner" ? "/crm" :
-                        "/enterprises"
+                        "/crm"
                       }>
-                        {userRole === "admin" ? "Review Applications" :
-                         userRole === "enterprise_owner" ? "Open CRM" :
-                         "Explore Directory"}
+                        {userRole === "admin" ? "Review Applications" : "Open CRM"}
                       </Link>
                     </Button>
                   </div>

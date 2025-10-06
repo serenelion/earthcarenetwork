@@ -10,7 +10,7 @@ import EnterpriseCard from "@/components/directory/EnterpriseCard";
 import CategorySection from "@/components/directory/CategorySection";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import CreateEnterpriseDialog from "@/components/crm/CreateEnterpriseDialog";
-import { visitorFlow, freeMemberFlow } from "@/lib/onboardingFlows";
+import { freeMemberFlow } from "@/lib/onboardingFlows";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import type { Enterprise } from "@shared/schema";
@@ -18,7 +18,6 @@ import type { Enterprise } from "@shared/schema";
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showFreeMemberOnboarding, setShowFreeMemberOnboarding] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   
@@ -26,27 +25,10 @@ export default function Landing() {
   const { isFlowComplete } = useOnboarding();
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('visitor_onboarding_shown');
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && user && user.role === 'member' && !isFlowComplete('free_member')) {
+    if (isAuthenticated && user && user.role === 'free' && !isFlowComplete('free_member')) {
       setShowFreeMemberOnboarding(true);
     }
   }, [isAuthenticated, user, isFlowComplete]);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('visitor_onboarding_shown', 'true');
-    setShowOnboarding(false);
-  };
-
-  const handleOnboardingDismiss = () => {
-    localStorage.setItem('visitor_onboarding_shown', 'true');
-    setShowOnboarding(false);
-  };
 
   const handleAddEnterpriseClick = () => {
     if (isAuthenticated) {
@@ -327,15 +309,6 @@ export default function Landing() {
           </p>
         </div>
       </section>
-
-      {/* Visitor Onboarding Modal */}
-      <OnboardingModal
-        flowKey="visitor"
-        steps={visitorFlow.steps}
-        isOpen={showOnboarding}
-        onComplete={handleOnboardingComplete}
-        onDismiss={handleOnboardingDismiss}
-      />
 
       {/* Free Member Onboarding Modal */}
       <OnboardingModal
