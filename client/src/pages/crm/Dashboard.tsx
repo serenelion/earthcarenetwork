@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,9 @@ import { crmProFlow } from "@/lib/onboardingFlows";
 import type { Enterprise } from "@shared/schema";
 
 export default function Dashboard() {
-  const { enterpriseId } = useParams<{ enterpriseId: string }>();
+  const params = useParams<{ enterpriseId?: string }>();
+  const { currentEnterprise } = useWorkspace();
+  const enterpriseId = params.enterpriseId || currentEnterprise?.id || '';
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { userSubscription } = useSubscription();

@@ -23,17 +23,18 @@ export default function CrmShell() {
     <EnterpriseAccessGuard>
       <CrmLayout>
         <Switch>
-          <Route path="/:enterpriseId/enterprises" component={CRMEnterprises} />
-          <Route path="/:enterpriseId/people" component={People} />
-          <Route path="/:enterpriseId/opportunities" component={Opportunities} />
-          <Route path="/:enterpriseId/tasks" component={Tasks} />
-          <Route path="/:enterpriseId/reports" component={Reports} />
-          <Route path="/:enterpriseId/pledge-dashboard" component={PledgeDashboard} />
-          <Route path="/:enterpriseId/copilot" component={Copilot} />
-          <Route path="/:enterpriseId/bulk-import" component={BulkImport} />
-          <Route path="/:enterpriseId/seeding" component={EnterpriseSeeding} />
-          <Route path="/:enterpriseId/dashboard" component={Dashboard} />
-          <Route path="/:enterpriseId" component={Dashboard} />
+          <Route path="/crm/:enterpriseId/enterprises" component={CRMEnterprises} />
+          <Route path="/crm/:enterpriseId/people" component={People} />
+          <Route path="/crm/:enterpriseId/opportunities" component={Opportunities} />
+          <Route path="/crm/:enterpriseId/tasks" component={Tasks} />
+          <Route path="/crm/:enterpriseId/reports" component={Reports} />
+          <Route path="/crm/:enterpriseId/pledge-dashboard" component={PledgeDashboard} />
+          <Route path="/crm/:enterpriseId/copilot" component={Copilot} />
+          <Route path="/crm/:enterpriseId/bulk-import" component={BulkImport} />
+          <Route path="/crm/:enterpriseId/seeding" component={EnterpriseSeeding} />
+          <Route path="/crm/:enterpriseId/dashboard" component={Dashboard} />
+          <Route path="/crm/:enterpriseId" component={Dashboard} />
+          <Route path="/crm" component={Dashboard} />
         </Switch>
       </CrmLayout>
     </EnterpriseAccessGuard>
