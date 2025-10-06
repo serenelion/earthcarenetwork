@@ -3506,6 +3506,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verify and manually process Stripe checkout session (fallback for when webhooks don't fire)
+  app.get('/api/subscription/verify-session/:sessionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      if (!stripe) {
+        return res.status(503).json({ message: 'Stripe not configured' });
+      }
+
+      const { sessionId } = req.params;
+
+      // Fetch the complete session from Stripe including metadata and line items
+      let session: Stripe.Checkout.Session;
+      try {
+        session = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['line_items', 'customer', 'subscription']
+        });
+      } catch (error) {
+        console.error('Error fetching Stripe session:', error);
+        return res.status(404).json({ 
+          message: 'Invalid session ID or session not found',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+
+      // Check if the session is complete and paid
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ 
+          message: 'Session payment not complete',
+          paymentStatus: session.payment_status,
+          session: {
+            id: session.id,
+            status: session.status,
+            paymentStatus: session.payment_status
+          }
+        });
+      }
+
+      const { userId: sessionUserId, planId, planType, isYearly, type, creditPurchaseId, creditAmount } = session.metadata || {};
+
+      // Verify the session belongs to the authenticated user
+      if (sessionUserId !== userId) {
+        return res.status(403).json({ 
+          message: 'This session does not belong to you',
+          sessionUserId,
+          authenticatedUserId: userId
+        });
+      }
+
+      // Get current user data
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let processed = false;
+      let alreadyProcessed = false;
+      let result: any = {
+        session: {
+          id: session.id,
+          paymentStatus: session.payment_status,
+          status: session.status,
+          metadata: session.metadata
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+          currentPlanType: user.currentPlanType,
+          subscriptionStatus: user.subscriptionStatus
+        }
+      };
+
+      // Handle credit purchase
+      if (type === 'credit_purchase' && creditPurchaseId && creditAmount) {
+        const creditPurchase = await storage.getCreditPurchase(creditPurchaseId);
+        
+        if (creditPurchase?.status === 'completed') {
+          console.log(`[VERIFY SESSION] Credit purchase already processed: ${creditPurchaseId}`);
+          alreadyProcessed = true;
+          result.creditPurchase = creditPurchase;
+        } else {
+          try {
+            await storage.updateCreditPurchaseStatus(creditPurchaseId, 'completed');
+            const amount = parseInt(creditAmount);
+            await storage.addCredits(userId, amount);
+            
+            console.log(`[MANUAL SYNC] Credit purchase processed: ${amount} credits added to user ${userId}`);
+            processed = true;
+            
+            const updatedCreditPurchase = await storage.getCreditPurchase(creditPurchaseId);
+            const updatedCredits = await storage.getUserCredits(userId);
+            
+            result.creditPurchase = updatedCreditPurchase;
+            result.credits = updatedCredits;
+          } catch (error) {
+            console.error('[VERIFY SESSION] Error processing credit purchase:', error);
+            await storage.updateCreditPurchaseStatus(creditPurchaseId, 'failed');
+            return res.status(500).json({ 
+              message: 'Failed to process credit purchase',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      }
+      // Handle subscription checkout
+      else if (planId && planType) {
+        // Check if user is already on the target plan
+        const currentPlanType = user.currentPlanType || 'free';
+        const targetPlanType = planType as 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle';
+        
+        // Check if subscription already exists for this Stripe subscription
+        const stripeSubscriptionId = session.subscription as string;
+        let existingSubscription = null;
+        
+        if (stripeSubscriptionId) {
+          existingSubscription = await storage.getSubscriptionByStripeId(stripeSubscriptionId);
+        }
+
+        if (existingSubscription) {
+          console.log(`[VERIFY SESSION] Subscription already processed for Stripe subscription: ${stripeSubscriptionId}`);
+          alreadyProcessed = true;
+          result.subscription = existingSubscription;
+          result.plan = await storage.getSubscriptionPlan(existingSubscription.planId);
+        } else if (currentPlanType === targetPlanType && user.subscriptionStatus === 'active') {
+          console.log(`[VERIFY SESSION] User already on target plan: ${targetPlanType}`);
+          alreadyProcessed = true;
+          const currentSubscription = await storage.getUserSubscription(userId);
+          result.subscription = currentSubscription;
+          if (currentSubscription) {
+            result.plan = await storage.getSubscriptionPlan(currentSubscription.planId);
+          }
+        } else {
+          // Manually process the subscription
+          try {
+            const plan = await storage.getSubscriptionPlan(planId);
+            
+            if (!plan) {
+              return res.status(404).json({ 
+                message: 'Subscription plan not found',
+                planId 
+              });
+            }
+
+            // Create subscription record
+            const newSubscription = await storage.createSubscription({
+              userId,
+              planId,
+              stripeSubscriptionId: stripeSubscriptionId || '',
+              stripeCustomerId: session.customer as string,
+              stripePriceId: session.line_items?.data[0]?.price?.id || '',
+              status: 'active',
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + (isYearly === 'true' ? 365 : 30) * 24 * 60 * 60 * 1000),
+              isYearly: isYearly === 'true'
+            });
+
+            // Update user subscription status
+            await storage.updateUserSubscriptionStatus(userId, 'active');
+            
+            // Update user plan type and allocate credits
+            await storage.updateUserPlanAndCredits(
+              userId, 
+              targetPlanType,
+              plan.creditAllocation || 0,
+              isYearly === 'true'
+            );
+            
+            console.log(`[MANUAL SYNC] Subscription created for user ${userId}: plan=${planType}, credits=${plan.creditAllocation}`);
+            processed = true;
+            
+            result.subscription = newSubscription;
+            result.plan = plan;
+            result.credits = await storage.getUserCredits(userId);
+          } catch (error) {
+            console.error('[VERIFY SESSION] Error processing subscription:', error);
+            return res.status(500).json({ 
+              message: 'Failed to process subscription',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      } else {
+        return res.status(400).json({ 
+          message: 'Invalid session metadata - missing required fields',
+          metadata: session.metadata
+        });
+      }
+
+      // Get updated user data
+      const updatedUser = await storage.getUser(userId);
+      result.user = {
+        id: updatedUser!.id,
+        email: updatedUser!.email,
+        currentPlanType: updatedUser!.currentPlanType,
+        subscriptionStatus: updatedUser!.subscriptionStatus,
+        creditBalance: updatedUser!.creditBalance,
+        creditLimit: updatedUser!.creditLimit,
+        monthlyAllocation: updatedUser!.monthlyAllocation
+      };
+
+      res.json({
+        ...result,
+        processed,
+        alreadyProcessed,
+        message: processed 
+          ? 'Session processed successfully - subscription activated' 
+          : alreadyProcessed 
+            ? 'Session already processed by webhook or previous verification'
+            : 'Session verified'
+      });
+
+    } catch (error) {
+      console.error('[VERIFY SESSION] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ 
+        message: 'Failed to verify session', 
+        error: errorMessage 
+      });
+    }
+  });
+
   // Admin subscription management routes
   app.get('/api/admin/subscriptions', isAuthenticated, async (req: any, res) => {
     try {
