@@ -10,23 +10,18 @@ import TableOfContents from '@/components/docs/TableOfContents';
 export default function AuthenticationAPI() {
   const roleDescriptions = [
     {
-      role: 'visitor',
-      description: 'Default role for unauthenticated or new users. Read-only access to public enterprise listings.',
+      role: 'free',
+      description: 'Default role for authenticated users. Full CRM access with empty state guidance for creating enterprises.',
       color: 'secondary',
     },
     {
-      role: 'member',
-      description: 'Authenticated users with basic access. Can view enterprises, manage favorites, and use search.',
-      color: 'default',
-    },
-    {
-      role: 'enterprise_owner',
-      description: 'Can manage their own enterprises, contacts, opportunities, and tasks. Full CRM access.',
+      role: 'crm_pro',
+      description: 'Premium CRM users with enhanced features. Full CRM access to manage enterprises, contacts, opportunities, and tasks.',
       color: 'default',
     },
     {
       role: 'admin',
-      description: 'Full system access including user management, all CRM features, and administrative tools.',
+      description: 'Full system access including user management, all CRM features, and administrative tools. Auto-assigned to @thestialnetwork.net domain emails.',
       color: 'destructive',
     },
   ];
@@ -128,7 +123,7 @@ session = requests.Session()`,
     email: "user@earthcare.network",
     firstName: "Jane",
     lastName: "Doe",
-    role: "enterprise_owner",
+    role: "crm_pro",
     membershipStatus: "paid_member",
     currentPlanType: "crm_pro",
     creditUsageThisMonth: 2500,
