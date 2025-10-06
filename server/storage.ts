@@ -26,6 +26,7 @@ import {
   importJobErrors,
   enterpriseTeamMembers,
   enterpriseInvitations,
+  auditLogs,
   userRoleEnum,
   membershipStatusEnum,
   subscriptionStatusEnum,
@@ -84,6 +85,8 @@ import {
   type InsertEnterpriseTeamMember,
   type EnterpriseInvitation,
   type InsertEnterpriseInvitation,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, and, or, count, sql, inArray } from "drizzle-orm";
@@ -357,6 +360,23 @@ export interface IStorage {
   updateOnboardingProgress(userId: string, flowKey: string, progress: { completed: boolean; steps: Record<string, boolean>; completedAt?: string }): Promise<void>;
   markOnboardingStepComplete(userId: string, flowKey: string, stepId: string): Promise<void>;
   markOnboardingComplete(userId: string, flowKey: string): Promise<void>;
+
+  // Featured enterprises operations
+  getFeaturedEnterprises(): Promise<Enterprise[]>;
+  featureEnterprise(id: string): Promise<Enterprise>;
+  unfeatureEnterprise(id: string): Promise<Enterprise>;
+  reorderFeaturedEnterprises(reorderData: Array<{ id: string; featuredOrder: number }>): Promise<void>;
+
+  // Audit log operations
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(filters?: {
+    userId?: string;
+    enterpriseId?: string;
+    actionType?: 'create' | 'update' | 'delete' | 'feature' | 'unfeature' | 'export' | 'import' | 'configure_tool' | 'test_integration' | 'bulk_operation';
+    tableName?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2798,6 +2818,142 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(users.id, userId));
+  }
+
+  async getFeaturedEnterprises(): Promise<Enterprise[]> {
+    return await db
+      .select()
+      .from(enterprises)
+      .where(eq(enterprises.isFeatured, true))
+      .orderBy(enterprises.featuredOrder, enterprises.name);
+  }
+
+  async featureEnterprise(id: string): Promise<Enterprise> {
+    const enterprise = await this.getEnterprise(id);
+    if (!enterprise) {
+      throw new Error("Enterprise not found");
+    }
+
+    if (enterprise.isFeatured) {
+      return enterprise;
+    }
+
+    const maxOrderResult = await db
+      .select({ maxOrder: sql<number>`COALESCE(MAX(${enterprises.featuredOrder}), 0)` })
+      .from(enterprises)
+      .where(eq(enterprises.isFeatured, true));
+
+    const nextOrder = (maxOrderResult[0]?.maxOrder || 0) + 1;
+
+    const [updated] = await db
+      .update(enterprises)
+      .set({
+        isFeatured: true,
+        featuredAt: new Date(),
+        featuredOrder: nextOrder,
+        updatedAt: new Date(),
+      })
+      .where(eq(enterprises.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  async unfeatureEnterprise(id: string): Promise<Enterprise> {
+    const enterprise = await this.getEnterprise(id);
+    if (!enterprise) {
+      throw new Error("Enterprise not found");
+    }
+
+    const [updated] = await db
+      .update(enterprises)
+      .set({
+        isFeatured: false,
+        featuredAt: null,
+        featuredOrder: 999999,
+        updatedAt: new Date(),
+      })
+      .where(eq(enterprises.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  async reorderFeaturedEnterprises(reorderData: Array<{ id: string; featuredOrder: number }>): Promise<void> {
+    const enterpriseIds = reorderData.map(item => item.id);
+
+    const existingEnterprises = await db
+      .select()
+      .from(enterprises)
+      .where(inArray(enterprises.id, enterpriseIds));
+
+    if (existingEnterprises.length !== enterpriseIds.length) {
+      throw new Error("One or more enterprises not found");
+    }
+
+    const nonFeaturedEnterprises = existingEnterprises.filter(e => !e.isFeatured);
+    if (nonFeaturedEnterprises.length > 0) {
+      throw new Error("Cannot reorder non-featured enterprises");
+    }
+
+    for (const item of reorderData) {
+      await db
+        .update(enterprises)
+        .set({
+          featuredOrder: item.featuredOrder,
+          updatedAt: new Date(),
+        })
+        .where(eq(enterprises.id, item.id));
+    }
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db.insert(auditLogs).values(log).returning();
+    return auditLog;
+  }
+
+  async getAuditLogs(filters?: {
+    userId?: string;
+    enterpriseId?: string;
+    actionType?: 'create' | 'update' | 'delete' | 'feature' | 'unfeature' | 'export' | 'import' | 'configure_tool' | 'test_integration' | 'bulk_operation';
+    tableName?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]> {
+    const conditions = [];
+    
+    if (filters?.userId) {
+      conditions.push(eq(auditLogs.userId, filters.userId));
+    }
+    if (filters?.enterpriseId) {
+      conditions.push(eq(auditLogs.enterpriseId, filters.enterpriseId));
+    }
+    if (filters?.actionType) {
+      conditions.push(eq(auditLogs.actionType, filters.actionType));
+    }
+    if (filters?.tableName) {
+      conditions.push(eq(auditLogs.tableName, filters.tableName));
+    }
+
+    const limit = filters?.limit || 100;
+    const offset = filters?.offset || 0;
+
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(auditLogs)
+        .where(and(...conditions))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+    }
+
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 }
 

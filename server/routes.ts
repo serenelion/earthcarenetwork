@@ -27,6 +27,7 @@ import {
   startBatchInvitations, 
   getInvitationJobStatus 
 } from "./invitationBatch";
+import { createAuditLog } from "./utils/audit";
 import { 
   insertEnterpriseSchema,
   editorEnterpriseUpdateSchema,
@@ -819,6 +820,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting enterprise:", error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin: Featured enterprises management
+  app.get('/api/admin/featured-enterprises', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const enterprises = await storage.getFeaturedEnterprises();
+      res.json(enterprises);
+    } catch (error) {
+      console.error("Error fetching featured enterprises:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch featured enterprises", message: errorMessage });
+    }
+  });
+
+  app.post('/api/admin/featured-enterprises/:id/feature', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      
+      if (!enterprise) {
+        return res.status(404).json({ error: "Enterprise not found" });
+      }
+
+      const oldState = {
+        isFeatured: enterprise.isFeatured,
+        featuredOrder: enterprise.featuredOrder,
+        featuredAt: enterprise.featuredAt
+      };
+
+      const updatedEnterprise = await storage.featureEnterprise(enterpriseId);
+
+      const newState = {
+        isFeatured: updatedEnterprise.isFeatured,
+        featuredOrder: updatedEnterprise.featuredOrder,
+        featuredAt: updatedEnterprise.featuredAt
+      };
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'enterprises',
+        recordId: enterpriseId,
+        enterpriseId,
+        changes: {
+          before: oldState,
+          after: newState
+        },
+        metadata: {
+          enterpriseName: enterprise.name,
+          action: 'feature_enterprise'
+        }
+      });
+
+      res.json(updatedEnterprise);
+    } catch (error) {
+      console.error("Error featuring enterprise:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      const userId = (req.user as any)?.claims?.sub;
+      if (userId) {
+        await createAuditLog(req, {
+          userId,
+          actionType: 'feature',
+          tableName: 'enterprises',
+          recordId: req.params.id,
+          success: false,
+          errorMessage: errorMessage
+        });
+      }
+      
+      res.status(500).json({ error: "Failed to feature enterprise", message: errorMessage });
+    }
+  });
+
+  app.delete('/api/admin/featured-enterprises/:id/unfeature', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const enterpriseId = req.params.id;
+      const enterprise = await storage.getEnterprise(enterpriseId);
+      
+      if (!enterprise) {
+        return res.status(404).json({ error: "Enterprise not found" });
+      }
+
+      const oldState = {
+        isFeatured: enterprise.isFeatured,
+        featuredOrder: enterprise.featuredOrder,
+        featuredAt: enterprise.featuredAt
+      };
+
+      const updatedEnterprise = await storage.unfeatureEnterprise(enterpriseId);
+
+      const newState = {
+        isFeatured: updatedEnterprise.isFeatured,
+        featuredOrder: updatedEnterprise.featuredOrder,
+        featuredAt: updatedEnterprise.featuredAt
+      };
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'unfeature',
+        tableName: 'enterprises',
+        recordId: enterpriseId,
+        enterpriseId,
+        changes: {
+          before: oldState,
+          after: newState
+        },
+        metadata: {
+          enterpriseName: enterprise.name,
+          action: 'unfeature_enterprise'
+        }
+      });
+
+      res.json(updatedEnterprise);
+    } catch (error) {
+      console.error("Error unfeaturing enterprise:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      const userId = (req.user as any)?.claims?.sub;
+      if (userId) {
+        await createAuditLog(req, {
+          userId,
+          actionType: 'unfeature',
+          tableName: 'enterprises',
+          recordId: req.params.id,
+          success: false,
+          errorMessage: errorMessage
+        });
+      }
+      
+      res.status(500).json({ error: "Failed to unfeature enterprise", message: errorMessage });
+    }
+  });
+
+  app.patch('/api/admin/featured-enterprises/reorder', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const reorderSchema = z.object({
+        items: z.array(z.object({
+          id: z.string(),
+          featuredOrder: z.number().int().min(1)
+        }))
+      });
+
+      const validatedData = reorderSchema.parse(req.body);
+
+      await storage.reorderFeaturedEnterprises(validatedData.items);
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'bulk_operation',
+        tableName: 'enterprises',
+        changes: {
+          reorderData: validatedData.items
+        },
+        metadata: {
+          action: 'reorder_featured_enterprises',
+          itemCount: validatedData.items.length
+        }
+      });
+
+      res.json({ success: true, message: "Featured enterprises reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering featured enterprises:", error);
+      let errorMessage = "Unknown error";
+      let statusCode = 500;
+      
+      if (error instanceof z.ZodError) {
+        errorMessage = error.message;
+        statusCode = 400;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      const userId = (req.user as any)?.claims?.sub;
+      if (userId) {
+        await createAuditLog(req, {
+          userId,
+          actionType: 'bulk_operation',
+          tableName: 'enterprises',
+          success: false,
+          errorMessage: errorMessage
+        });
+      }
+      
+      res.status(statusCode).json({ error: "Failed to reorder featured enterprises", message: errorMessage });
     }
   });
 
