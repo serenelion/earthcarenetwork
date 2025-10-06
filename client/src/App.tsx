@@ -328,14 +328,85 @@ function Router() {
             </EnterpriseOrAdminRoute>
           </Route>
           
-          <Route path="/crm">
+          {/* CRM Routes */}
+          <Route path="/crm/:enterpriseId/enterprises">
             <AuthenticatedRoute>
               <WorkspaceProvider>
                 <CrmShell />
               </WorkspaceProvider>
             </AuthenticatedRoute>
           </Route>
-          <Route path="/crm/:rest*">
+          <Route path="/crm/:enterpriseId/people">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/opportunities">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/tasks">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/reports">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/pledge-dashboard">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/copilot">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/bulk-import">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/seeding">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId/dashboard">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm/:enterpriseId">
+            <AuthenticatedRoute>
+              <WorkspaceProvider>
+                <CrmShell />
+              </WorkspaceProvider>
+            </AuthenticatedRoute>
+          </Route>
+          <Route path="/crm">
             <AuthenticatedRoute>
               <WorkspaceProvider>
                 <CrmShell />
