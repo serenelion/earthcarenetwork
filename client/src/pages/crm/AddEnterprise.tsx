@@ -49,6 +49,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,6 +112,7 @@ export default function AddEnterprise() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
 
   const form = useForm<CreateEnterpriseForm>({
     resolver: zodResolver(createEnterpriseSchema),
@@ -172,14 +182,19 @@ export default function AddEnterprise() {
         ...data,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Enterprise created successfully",
       });
-      navigate(`/crm/${enterpriseId}/enterprises`);
+      
+      if (variables.addToDirectory) {
+        setShowClaimDialog(true);
+      } else {
+        navigate(`/crm/${enterpriseId}/enterprises`);
+      }
     },
     onError: (error: Error) => {
       if (error.message.includes('404')) {
@@ -628,6 +643,43 @@ export default function AddEnterprise() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={showClaimDialog} onOpenChange={setShowClaimDialog}>
+        <AlertDialogContent data-testid="dialog-claim-suggestion">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enterprise Added to Directory</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>The enterprise has been added to the public directory and your workspace.</p>
+              <p>Consider finding the owner and inviting them to claim their enterprise profile. This allows them to manage their own information and build credibility.</p>
+              <p className="text-sm text-muted-foreground">Unclaimed enterprises are visible in the directory but not managed by their owners.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowClaimDialog(false);
+                toast({
+                  title: "Coming Soon",
+                  description: "The invitation feature will be available soon.",
+                });
+              }}
+              data-testid="button-invite-owner"
+            >
+              Invite Owner
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                setShowClaimDialog(false);
+                navigate(`/crm/${enterpriseId}/enterprises`);
+              }}
+              data-testid="button-got-it"
+            >
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
