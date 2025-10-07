@@ -734,33 +734,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         return res.status(201).json(workspaceEnterprise);
       } else if (mode === 'create') {
-        const { addToDirectory, name, category, description, website, location, contactEmail } = enterpriseData;
+        const { name, category, description, website, location, contactEmail } = enterpriseData;
         
-        if (addToDirectory) {
-          const publicEnterprise = await storage.createEnterprise({
-            name, 
-            category, 
-            description, 
-            website, 
-            location, 
-            contactEmail
-          });
-          
-          const workspaceEnterprise = await storage.linkDirectoryEnterprise(
-            enterpriseId,
-            publicEnterprise.id,
-            userId
-          );
-          return res.status(201).json(workspaceEnterprise);
-        } else {
-          const validatedData = insertCrmWorkspaceEnterpriseSchema.parse({
-            ...enterpriseData,
-            workspaceId: enterpriseId,
-            createdBy: userId
-          });
-          const workspaceEnterprise = await storage.createWorkspaceEnterprise(validatedData);
-          return res.status(201).json(workspaceEnterprise);
-        }
+        const publicEnterprise = await storage.createEnterprise({
+          name, 
+          category, 
+          description, 
+          website, 
+          location, 
+          contactEmail
+        });
+        
+        const workspaceEnterprise = await storage.linkDirectoryEnterprise(
+          enterpriseId,
+          publicEnterprise.id,
+          userId
+        );
+        return res.status(201).json(workspaceEnterprise);
       } else {
         return res.status(400).json({ error: 'Invalid mode. Must be "link" or "create"' });
       }

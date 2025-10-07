@@ -675,7 +675,26 @@ export class DatabaseStorage implements IStorage {
     return enterprise;
   }
 
+  /**
+   * INTERNAL USE ONLY - DO NOT CALL DIRECTLY
+   * 
+   * This method should ONLY be used internally by the storage layer (e.g., by linkDirectoryEnterprise).
+   * ALL enterprise creation must go through the public directory first via createEnterprise(),
+   * then link to workspace via linkDirectoryEnterprise().
+   * 
+   * This ensures:
+   * - All enterprises exist in the public directory
+   * - No orphaned workspace-only records
+   * - Consistent data across directory and workspace
+   * 
+   * Validation enforces that critical fields (name, category) are provided to prevent
+   * incomplete workspace-only records.
+   */
   async createWorkspaceEnterprise(enterprise: InsertCrmWorkspaceEnterprise): Promise<CrmWorkspaceEnterprise> {
+    if (!enterprise.name || !enterprise.category) {
+      throw new Error('createWorkspaceEnterprise requires name and category. All enterprises must be created in the public directory first via createEnterprise(), then linked via linkDirectoryEnterprise().');
+    }
+
     const [created] = await db.insert(crmWorkspaceEnterprises)
       .values(enterprise)
       .returning();

@@ -96,8 +96,6 @@ const createEnterpriseSchema = insertEnterpriseSchema.omit({
   imageUrl: true, 
   followerCount: true, 
   sourceUrl: true 
-}).extend({
-  addToDirectory: z.boolean().default(true),
 });
 
 type CreateEnterpriseForm = z.infer<typeof createEnterpriseSchema>;
@@ -123,7 +121,6 @@ export default function AddEnterprise() {
       website: "",
       location: "",
       contactEmail: "",
-      addToDirectory: true,
     },
   });
 
@@ -187,26 +184,17 @@ export default function AddEnterprise() {
         ...data,
       });
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
-      
-      if (variables.addToDirectory) {
-        queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
       
       toast({
         title: "Success",
-        description: variables.addToDirectory 
-          ? "Enterprise added to the public directory and your workspace"
-          : "Enterprise added to your workspace (private)",
+        description: "Enterprise added to the public directory and linked to your workspace",
       });
       
-      if (variables.addToDirectory) {
-        setShowClaimDialog(true);
-      } else {
-        navigate(`/crm/${enterpriseId}/enterprises`);
-      }
+      setShowClaimDialog(true);
     },
     onError: (error: Error) => {
       if (error.message.includes('404')) {
@@ -455,7 +443,7 @@ export default function AddEnterprise() {
                 Create New Enterprise
               </CardTitle>
               <CardDescription>
-                Create a new enterprise to track in your CRM
+                Create a new enterprise in the public directory and link it to your workspace
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -588,37 +576,11 @@ export default function AddEnterprise() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="addToDirectory"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-4">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-add-to-directory"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Add to public directory
-                          </FormLabel>
-                          <FormDescription>
-                            {field.value 
-                              ? "This enterprise will be added to the public directory (unclaimed) and tracked in your CRM"
-                              : "This enterprise will only be tracked in your CRM workspace (private)"}
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
                   <div className="flex items-start gap-2 p-4 bg-muted/50 rounded-lg">
                     <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-muted-foreground">
-                      Creating a new enterprise adds it to your workspace for CRM tracking. 
-                      If you enable "Add to public directory", it will also appear in the public enterprise directory.
+                      This will create a new enterprise in the public directory and link it to your workspace. 
+                      All enterprises are public and can be discovered by others. Your CRM data (notes, tasks, opportunities) remains private to your workspace.
                     </p>
                   </div>
 
