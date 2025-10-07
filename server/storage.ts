@@ -114,6 +114,7 @@ export interface IStorage {
   // Enterprise operations
   getEnterprises(category?: string, search?: string, limit?: number, offset?: number): Promise<Enterprise[]>;
   getEnterprise(id: string): Promise<Enterprise | undefined>;
+  getEnterpriseByName(name: string): Promise<Enterprise | null>;
   createEnterprise(enterprise: InsertEnterprise): Promise<Enterprise>;
   updateEnterprise(id: string, enterprise: Partial<InsertEnterprise>): Promise<Enterprise>;
   deleteEnterprise(id: string): Promise<void>;
@@ -503,6 +504,15 @@ export class DatabaseStorage implements IStorage {
   async getEnterprise(id: string): Promise<Enterprise | undefined> {
     const [enterprise] = await db.select().from(enterprises).where(eq(enterprises.id, id));
     return enterprise;
+  }
+
+  async getEnterpriseByName(name: string): Promise<Enterprise | null> {
+    const results = await db
+      .select()
+      .from(enterprises)
+      .where(sql`LOWER(${enterprises.name}) = LOWER(${name})`)
+      .limit(1);
+    return results[0] || null;
   }
 
   async createEnterprise(enterprise: InsertEnterprise): Promise<Enterprise> {
