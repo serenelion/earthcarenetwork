@@ -3,9 +3,8 @@ import { db } from "./db";
 import { users, aiUsageLogs, subscriptions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export interface BillingResult {
@@ -159,7 +158,7 @@ export async function callAIWithBilling(
   }
 
   try {
-    console.log(`[AI Billing] Making OpenRouter API call for user ${userId}, operation: ${operationType}, model: ${model}`);
+    console.log(`[AI Billing] Making OpenAI API call for user ${userId}, operation: ${operationType}, model: ${model}`);
 
     const requestParams: any = {
       model,
@@ -185,7 +184,7 @@ export async function callAIWithBilling(
       requestParams.temperature = options.temperature;
     }
 
-    const response = await openrouter.chat.completions.create(requestParams);
+    const response = await openai.chat.completions.create(requestParams);
 
     const usage = response.usage;
     if (!usage) {
@@ -317,7 +316,7 @@ export async function callAIWithBillingStreaming(
   }
 
   try {
-    console.log(`[AI Billing] Making streaming OpenRouter API call for user ${userId}, operation: ${operationType}`);
+    console.log(`[AI Billing] Making streaming OpenAI API call for user ${userId}, operation: ${operationType}`);
 
     const requestParams: any = {
       model,
@@ -332,7 +331,7 @@ export async function callAIWithBillingStreaming(
       }
     }
 
-    const stream = await openrouter.chat.completions.create(requestParams) as any;
+    const stream = await openai.chat.completions.create(requestParams) as any;
 
     let fullContent = "";
     let functionCall: any = null;

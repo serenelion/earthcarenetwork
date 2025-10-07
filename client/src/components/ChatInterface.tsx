@@ -299,7 +299,7 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     ));
   };
 
-  const renderExternalSearchResults = (metadata: any): React.ReactNode => {
+  const renderExternalSearchResults = (metadata: any): React.ReactNode | null => {
     if (!metadata?.functionCall?.result?.data) return null;
     
     const { name: functionName, result } = metadata.functionCall;
@@ -310,19 +310,22 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
     const results = result.data || [];
     if (results.length === 0) return null;
 
-    const providerNames: Record<string, string> = {
-      'searchApollo': 'Apollo.io',
-      'searchGoogleMaps': 'Google Maps',
-      'searchFoursquare': 'Foursquare'
+    const providerInfo: Record<string, { name: string; icon: string; variant: "default" | "secondary" | "outline" }> = {
+      'searchApollo': { name: 'Apollo.io', icon: '🔍', variant: 'default' },
+      'searchGoogleMaps': { name: 'Google Maps', icon: '📍', variant: 'default' },
+      'searchFoursquare': { name: 'Foursquare', icon: '🗺️', variant: 'default' }
     };
+
+    const provider = providerInfo[functionName] || { name: result.source, icon: '📥', variant: 'outline' as const };
+    const isMockData = result.usingMockData;
 
     return (
       <div className="mt-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-xs">
-            {providerNames[functionName] || result.source}
+        <div className="flex items-center gap-2 text-xs">
+          <Badge variant={isMockData ? "outline" : provider.variant} className="text-xs">
+            {isMockData ? '🧪 Mock Data' : `${provider.icon} ${provider.name}`}
           </Badge>
-          <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
+          <span className="text-muted-foreground">{results.length} result{results.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {results.slice(0, 5).map((item: any, idx: number) => (

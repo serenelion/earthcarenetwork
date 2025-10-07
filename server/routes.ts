@@ -1964,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const validatedData = insertEnterpriseSchema.parse(args);
             const enterprise = await storage.createEnterprise(validatedData);
             functionResult = enterprise;
-            responseMessage = `✅ Successfully added enterprise "${enterprise.name}" to the directory!\n\nID: ${enterprise.id}\nCategory: ${enterprise.category}\nLocation: ${enterprise.location || 'Not specified'}\n\nYou can view it at: /enterprises/${enterprise.id}`;
+            responseMessage = `📂 Data from Earth Care Directory\n\n✅ Successfully added enterprise "${enterprise.name}" to the directory!\n\nID: ${enterprise.id}\nCategory: ${enterprise.category}\nLocation: ${enterprise.location || 'Not specified'}\n\nYou can view it at: /enterprises/${enterprise.id}`;
           } else if (name === 'send_invitation') {
             // Generate claim token and create invitation
             const claimToken = nanoid(32);
@@ -1984,7 +1984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             functionResult = claim;
             const claimUrl = `/claim-profile?token=${claimToken}`;
-            responseMessage = `✅ Profile claim invitation created successfully!\n\nInvitation Link: ${claimUrl}\n\nSent to: ${args.email}${args.name ? ` (${args.name})` : ''}\nExpires: ${expiresAt.toLocaleDateString()}\n\n📧 Note: Email sending is not yet implemented. Please share this link manually with the recipient.`;
+            responseMessage = `📂 Data from Earth Care Directory\n\n✅ Profile claim invitation created successfully!\n\nInvitation Link: ${claimUrl}\n\nSent to: ${args.email}${args.name ? ` (${args.name})` : ''}\nExpires: ${expiresAt.toLocaleDateString()}\n\n📧 Note: Email sending is not yet implemented. Please share this link manually with the recipient.`;
           } else if (name === 'searchApollo') {
             // Search Apollo.io for companies/contacts
             const searchResponse = await fetch(`${req.protocol}://${req.get('host')}/api/integrations/apollo/search`, {
@@ -2006,9 +2006,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
                 `${idx + 1}. ${item.name || item.company || 'Unknown'}${item.location ? ` - ${item.location}` : ''}${item.email ? ` (${item.email})` : ''}`
               ).join('\n');
-              responseMessage = `🔍 Found ${searchData.data.length} result(s) from Apollo.io:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Apollo API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '🔍 Data from Apollo.io';
+              responseMessage = `${dataSource}\n\nFound ${searchData.data.length} result(s):\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Apollo API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
             } else {
-              responseMessage = `No results found from Apollo.io for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '🔍 Data from Apollo.io';
+              responseMessage = `${dataSource}\n\nNo results found for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
             }
           } else if (name === 'searchGoogleMaps') {
             // Search Google Maps for places
@@ -2031,9 +2033,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
                 `${idx + 1}. ${item.name}${item.address ? ` - ${item.address}` : ''}${item.phone ? ` (${item.phone})` : ''}`
               ).join('\n');
-              responseMessage = `📍 Found ${searchData.data.length} place(s) from Google Maps:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Google Maps API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '📍 Data from Google Maps';
+              responseMessage = `${dataSource}\n\nFound ${searchData.data.length} place(s):\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Google Maps API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
             } else {
-              responseMessage = `No places found from Google Maps for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '📍 Data from Google Maps';
+              responseMessage = `${dataSource}\n\nNo places found for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
             }
           } else if (name === 'searchFoursquare') {
             // Search Foursquare for venues
@@ -2056,9 +2060,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const resultList = searchData.data.slice(0, 5).map((item: any, idx: number) => 
                 `${idx + 1}. ${item.name}${item.category ? ` (${item.category})` : ''}${item.address ? ` - ${item.address}` : ''}`
               ).join('\n');
-              responseMessage = `🏢 Found ${searchData.data.length} venue(s) from Foursquare:\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Foursquare API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '🗺️ Data from Foursquare';
+              responseMessage = `${dataSource}\n\nFound ${searchData.data.length} venue(s):\n\n${resultList}\n\n${searchData.usingMockData ? '⚠️ Using sample data. Configure Foursquare API credentials for real results.\n\n' : ''}Would you like me to import any of these into your CRM?`;
             } else {
-              responseMessage = `No venues found from Foursquare for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
+              const dataSource = searchData.usingMockData ? '🧪 Mock Data' : '🗺️ Data from Foursquare';
+              responseMessage = `${dataSource}\n\nNo venues found for "${args.query}".${searchData.usingMockData ? ' (Using sample data - configure API credentials for real results)' : ''}`;
             }
           } else if (name === 'importEntityToCRM') {
             // Import external entity into CRM
@@ -2081,7 +2087,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const entity = importData.data;
               const entityName = entity.name || 'Unknown';
               const entityType = args.entityType === 'enterprise' ? 'Enterprise' : 'Person';
-              responseMessage = `✅ Successfully imported ${entityType} "${entityName}" from ${args.entity.source}!\n\nID: ${entity.id}\n${entity.location ? `Location: ${entity.location}\n` : ''}${entity.email ? `Email: ${entity.email}\n` : ''}${entity.website ? `Website: ${entity.website}\n` : ''}\nYou can view it at: /${args.entityType === 'enterprise' ? 'enterprises' : 'crm/people'}/${entity.id}`;
+              const sourceIcons: Record<string, string> = {
+                'apollo': '🔍 Data from Apollo.io',
+                'google_maps': '📍 Data from Google Maps',
+                'foursquare': '🗺️ Data from Foursquare'
+              };
+              const dataSource = sourceIcons[args.entity.source] || `📥 Data from ${args.entity.source}`;
+              responseMessage = `${dataSource}\n\n✅ Successfully imported ${entityType} "${entityName}"!\n\nID: ${entity.id}\n${entity.location ? `Location: ${entity.location}\n` : ''}${entity.email ? `Email: ${entity.email}\n` : ''}${entity.website ? `Website: ${entity.website}\n` : ''}\nYou can view it at: /${args.entityType === 'enterprise' ? 'enterprises' : 'crm/people'}/${entity.id}`;
             } else {
               responseMessage = `❌ Failed to import entity: ${importData.message || importData.error || 'Unknown error'}`;
             }
