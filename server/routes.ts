@@ -2,7 +2,7 @@ import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count, sql } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireEnterpriseRole } from "./middleware/auth";
 import { 
@@ -3802,6 +3802,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching subscription stats:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to fetch subscription stats", error: errorMessage });
+    }
+  });
+
+  // Admin dashboard stats endpoint
+  app.get('/api/admin/stats', isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      // Get aggregated platform statistics
+      const [usersResult, enterprisesResult, aiUsageResult, subscriptionStats] = await Promise.all([
+        db.select({ count: count() }).from(users),
+        db.select({ count: count() }).from(enterprises),
+        db.execute<{ total_tokens: number }>(sql`
+          SELECT COALESCE(SUM(tokens_used), 0) as total_tokens 
+          FROM ai_usage_logs
+        `),
+        storage.getSubscriptionStats()
+      ]);
+
+      const totalUsers = usersResult[0]?.count || 0;
+      const totalEnterprises = enterprisesResult[0]?.count || 0;
+      const totalAiTokens = aiUsageResult.rows[0]?.total_tokens || 0;
+      const activeSubscriptions = subscriptionStats.byStatus?.active || 0;
+
+      res.json({
+        totalUsers,
+        totalEnterprises,
+        totalAiTokens,
+        activeSubscriptions,
+        subscriptionStats
+      });
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch admin stats", error: errorMessage });
+    }
+  });
+
+  // Admin activity logs endpoint
+  app.get('/api/admin/activity', isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { limit = 10 } = req.query;
+      
+      const activities = await storage.getAuditLogs({
+        limit: parseInt(limit as string)
+      });
+
+      res.json({ activities });
+    } catch (error) {
+      console.error("Error fetching admin activity:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Failed to fetch admin activity", error: errorMessage });
     }
   });
 

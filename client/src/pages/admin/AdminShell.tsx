@@ -5,14 +5,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { Menu, Star, Database, MessageSquare, Puzzle } from "lucide-react";
+import { Menu, Star, Database, MessageSquare, Puzzle, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
+import AdminDashboard from "./AdminDashboard";
 import FeaturedEnterprises from "./FeaturedEnterprises";
 import DatabaseAdmin from "./Database";
 import AIChat from "./AIChat";
 import Integrations from "./Integrations";
 
 const adminNavSections = [
+  {
+    title: "Overview",
+    links: [
+      {
+        href: "/admin",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+      },
+    ],
+  },
   {
     title: "Content Management",
     links: [
@@ -179,7 +190,7 @@ export default function AdminShell() {
               <Integrations />
             </Route>
             <Route path="/admin">
-              <FeaturedEnterprises />
+              <AdminDashboard />
             </Route>
           </Switch>
         </main>
