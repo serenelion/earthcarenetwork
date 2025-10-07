@@ -397,9 +397,9 @@ export function useDeleteIntegration() {
 }
 
 export function useTestIntegration() {
-  return useMutation({
+  return useMutation<IntegrationTestResult, Error, string>({
     mutationFn: async (id: string) => {
-      return await apiRequest<IntegrationTestResult>("POST", `/api/admin/integrations/${id}/test`);
+      return await apiRequest("POST", `/api/admin/integrations/${id}/test`);
     },
   });
 }
@@ -416,5 +416,109 @@ export function useIntegrationHealth(id: string | null, enabled: boolean = true)
     },
     enabled: !!id && enabled,
     refetchInterval: 30000,
+  });
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  role: 'free' | 'crm_pro' | 'admin';
+  membershipStatus: 'free' | 'trial' | 'paid_member' | 'spatial_network_subscriber' | 'cancelled';
+  subscriptionStatus: 'trial' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | null;
+  currentPlanType: 'free' | 'crm_basic' | 'crm_pro' | 'build_pro_bundle';
+  creditBalance: number;
+  creditLimit: number;
+  monthlyAllocation: number;
+  overageAllowed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UsersListResponse {
+  users: AdminUser[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserUsageLog {
+  id: string;
+  userId: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costInCents: number;
+  feature: string;
+  createdAt: string;
+}
+
+export interface UserUsageResponse {
+  usage: UserUsageLog[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export function useAdminUsers(options: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  role?: 'free' | 'crm_pro' | 'admin';
+  subscriptionStatus?: string;
+} = {}) {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", options.limit.toString());
+  if (options.offset) params.set("offset", options.offset.toString());
+  if (options.search) params.set("search", options.search);
+  if (options.role) params.set("role", options.role);
+  if (options.subscriptionStatus) params.set("subscriptionStatus", options.subscriptionStatus);
+
+  return useQuery<UsersListResponse>({
+    queryKey: ["/api/admin/users", options],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/users?${params.toString()}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch users");
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useUpdateUser() {
+  return useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: Partial<AdminUser> }) => {
+      return await apiRequest("PATCH", `/api/admin/users/${userId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+  });
+}
+
+export function useUserUsage(userId: string | null, options: {
+  limit?: number;
+  offset?: number;
+} = {}) {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", options.limit.toString());
+  if (options.offset) params.set("offset", options.offset.toString());
+
+  return useQuery<UserUsageResponse>({
+    queryKey: ["/api/admin/users", userId, "usage", options],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/users/${userId}/usage?${params.toString()}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch user usage");
+      }
+      return response.json();
+    },
+    enabled: !!userId,
   });
 }

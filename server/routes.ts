@@ -2,7 +2,7 @@ import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq, desc, and, count, sql } from "drizzle-orm";
+import { eq, desc, and, count, sql, or, like } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireEnterpriseRole } from "./middleware/auth";
 import { 
@@ -3852,6 +3852,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching admin activity:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Failed to fetch admin activity", error: errorMessage });
+    }
+  });
+
+  // User Management API Routes (Admin Only)
+  // GET /api/admin/users - List all users with pagination, search, and filters
+  app.get('/api/admin/users', isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const { 
+        limit = 50, 
+        offset = 0, 
+        search = '', 
+        role, 
+        subscriptionStatus 
+      } = req.query;
+
+      // Build filters
+      const conditions = [];
+      
+      if (search) {
+        conditions.push(
+          or(
+            like(users.email, `%${search}%`),
+            like(users.firstName, `%${search}%`),
+            like(users.lastName, `%${search}%`)
+          )
+        );
+      }
+      
+      if (role) {
+        conditions.push(eq(users.role, role as any));
+      }
+      
+      if (subscriptionStatus) {
+        conditions.push(eq(users.subscriptionStatus, subscriptionStatus as any));
+      }
+
+      // Get total count
+      const countResult = await db
+        .select({ count: count() })
+        .from(users)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      const total = countResult[0]?.count || 0;
+
+      // Get paginated users
+      const usersList = await db
+        .select()
+        .from(users)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(users.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(parseInt(offset as string));
+
+      await createAuditLog(req, {
+        userId,
+        actionType: 'feature',
+        tableName: 'users',
+        metadata: { 
+          action: 'list_users', 
+          userCount: usersList.length, 
+          filters: { search, role, subscriptionStatus } 
+        },
+      });
+
+      res.json({
+        users: usersList,
+        total,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch users", message: errorMessage });
+    }
+  });
+
+  // PATCH /api/admin/users/:userId - Update user (role, credits, etc.)
+  app.patch('/api/admin/users/:userId', isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const adminUserId = (req.user as any)?.claims?.sub;
+      const { userId } = req.params;
+      const updates = req.body;
+
+      // Validate allowed updates
+      const allowedFields = ['role', 'creditBalance', 'creditLimit', 'monthlyAllocation', 'overageAllowed', 'subscriptionStatus', 'currentPlanType'];
+      const updateData: any = {};
+
+      for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+          updateData[field] = updates[field];
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      updateData.updatedAt = new Date();
+
+      // Update user
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await createAuditLog(req, {
+        userId: adminUserId,
+        actionType: 'update',
+        tableName: 'users',
+        recordId: userId,
+        changes: updateData,
+        metadata: { action: 'update_user', targetUserId: userId },
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to update user", message: errorMessage });
+    }
+  });
+
+  // GET /api/admin/users/:userId/usage - Get user's AI usage logs
+  app.get('/api/admin/users/:userId/usage', isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+
+      const usageLogs = await db
+        .select()
+        .from(aiUsageLogs)
+        .where(eq(aiUsageLogs.userId, userId))
+        .orderBy(desc(aiUsageLogs.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(parseInt(offset as string));
+
+      const countResult = await db
+        .select({ count: count() })
+        .from(aiUsageLogs)
+        .where(eq(aiUsageLogs.userId, userId));
+
+      const total = countResult[0]?.count || 0;
+
+      res.json({
+        usage: usageLogs,
+        total,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      });
+    } catch (error) {
+      console.error("Error fetching user usage:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to fetch user usage", message: errorMessage });
     }
   });
 

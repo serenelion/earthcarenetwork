@@ -5,13 +5,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { Menu, Star, Database, MessageSquare, Puzzle, LayoutDashboard } from "lucide-react";
+import { Menu, Star, Database, MessageSquare, Puzzle, LayoutDashboard, Users } from "lucide-react";
 import { useState } from "react";
 import AdminDashboard from "./AdminDashboard";
 import FeaturedEnterprises from "./FeaturedEnterprises";
 import DatabaseAdmin from "./Database";
 import AIChat from "./AIChat";
 import Integrations from "./Integrations";
+import AdminUsers from "./AdminUsers";
 
 const adminNavSections = [
   {
@@ -21,6 +22,16 @@ const adminNavSections = [
         href: "/admin",
         label: "Dashboard",
         icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    title: "User & Access",
+    links: [
+      {
+        href: "/admin/users",
+        label: "User Management",
+        icon: Users,
       },
     ],
   },
@@ -177,6 +188,9 @@ export default function AdminShell() {
         {/* Content Area */}
         <main className="flex-1 overflow-auto" data-testid="admin-content">
           <Switch>
+            <Route path="/admin/users">
+              <AdminUsers />
+            </Route>
             <Route path="/admin/featured-enterprises">
               <FeaturedEnterprises />
             </Route>

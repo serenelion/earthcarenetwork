@@ -338,10 +338,7 @@ function Router() {
           
           <Route path="/admin/users">
             <AdminOnlyRoute>
-              <div className="p-8">
-                <h1 className="text-2xl font-bold">User Management</h1>
-                <p>Coming soon...</p>
-              </div>
+              <AdminShell />
             </AdminOnlyRoute>
           </Route>
           
