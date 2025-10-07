@@ -53,6 +53,7 @@ import { Link } from "wouter";
 
 interface ChatInterfaceProps {
   className?: string;
+  enterpriseId?: string;
 }
 
 const businessContextFormSchema = insertBusinessContextSchema.omit({
@@ -71,7 +72,7 @@ const businessContextFormSchema = insertBusinessContextSchema.omit({
 
 type BusinessContextFormData = z.infer<typeof businessContextFormSchema>;
 
-export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
+export default function ChatInterface({ className = "", enterpriseId }: ChatInterfaceProps) {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -95,19 +96,25 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
 
   // Fetch conversations
   const { data: conversations = [], refetch: refetchConversations } = useQuery<Conversation[]>({
-    queryKey: ["/api/crm/ai/conversations"],
+    queryKey: enterpriseId 
+      ? ["/api/crm", enterpriseId, "ai", "conversations"]
+      : ["/api/crm/ai/conversations"],
     enabled: !!user && !!(user as UserType)?.id,
   });
 
   // Fetch messages for selected conversation
   const { data: messages = [], refetch: refetchMessages } = useQuery<ChatMessage[]>({
-    queryKey: [`/api/crm/ai/conversations/${selectedConversation}/messages`],
+    queryKey: enterpriseId
+      ? ["/api/crm", enterpriseId, "ai", "conversations", selectedConversation, "messages"]
+      : ["/api/crm/ai/conversations", selectedConversation, "messages"],
     enabled: !!selectedConversation,
   });
 
   // Fetch business context
   const { data: businessContext } = useQuery<BusinessContext>({
-    queryKey: ["/api/crm/ai/business-context"],
+    queryKey: enterpriseId
+      ? ["/api/crm", enterpriseId, "ai", "business-context"]
+      : ["/api/crm/ai/business-context"],
     enabled: !!user && !!(user as UserType)?.id,
   });
 
@@ -142,7 +149,10 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { message: string; conversationId?: string }): Promise<ChatResponse> => {
-      const response = await apiRequest("POST", "/api/crm/ai/chat", data);
+      const url = enterpriseId 
+        ? `/api/crm/${enterpriseId}/ai/chat`
+        : "/api/crm/ai/chat";
+      const response = await apiRequest("POST", url, data);
       return await response.json();
     },
     onSuccess: (result: ChatResponse) => {
@@ -225,10 +235,16 @@ export default function ChatInterface({ className = "" }: ChatInterfaceProps) {
   // Update business context mutation
   const updateBusinessContextMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/crm/ai/business-context", data);
+      const url = enterpriseId
+        ? `/api/crm/${enterpriseId}/ai/business-context`
+        : "/api/crm/ai/business-context";
+      return apiRequest("POST", url, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/ai/business-context"] });
+      const queryKey = enterpriseId
+        ? ["/api/crm", enterpriseId, "ai", "business-context"]
+        : ["/api/crm/ai/business-context"];
+      queryClient.invalidateQueries({ queryKey });
       toast({
         title: "Success",
         description: "Business context updated successfully",

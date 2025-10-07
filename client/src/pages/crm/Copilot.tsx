@@ -461,7 +461,7 @@ export default function Copilot() {
         </div>
 
         {/* Main Content - Chat Interface */}
-        <ChatInterface className="mb-8" />
+        <ChatInterface className="mb-8" enterpriseId={enterpriseId} />
 
         {/* Additional AI Tools */}
         <Tabs defaultValue="insights" className="space-y-6">
