@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -33,9 +34,15 @@ export default function UpgradePrompt({
   benefits,
   title,
 }: UpgradePromptProps) {
+  const { user } = useAuth();
   const { createCheckoutSession } = useSubscription();
   const { toast } = useToast();
   const [isUpgrading, setIsUpgrading] = useState(false);
+
+  // Admins have unlimited access - never show upgrade prompts
+  if (user?.role === 'admin') {
+    return null;
+  }
 
   const handleUpgrade = async () => {
     try {
