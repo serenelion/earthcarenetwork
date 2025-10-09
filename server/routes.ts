@@ -1334,17 +1334,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: req.body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
         }
       }
       
@@ -1361,17 +1358,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: req.body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
         }
       }
       
@@ -1500,6 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/opportunities', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
@@ -1509,12 +1504,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
       }
       
@@ -1531,6 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/opportunities/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
@@ -1540,12 +1532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
       }
       
@@ -1773,17 +1761,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: req.body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
         }
       }
       
@@ -1800,17 +1785,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
+      const userId = (req.user as any)?.claims?.sub;
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
         const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
-          // Add the enterprise to the workspace first
-          await storage.createWorkspaceEnterprise({
-            workspaceId: enterpriseId,
-            enterpriseId: req.body.workspaceEnterpriseId,
-            relationshipStage: 'prospect'
-          });
+          // Link the directory enterprise to the workspace
+          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
         }
       }
       
