@@ -714,6 +714,7 @@ export default function Opportunities() {
                               value={field.value}
                               onChange={field.onChange}
                               workspaceEnterprises={workspaceEnterprises}
+                              enterpriseId={enterpriseId}
                             />
                           </FormControl>
                           <FormMessage />

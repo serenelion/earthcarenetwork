@@ -561,6 +561,7 @@ export default function Tasks() {
                               value={field.value}
                               onChange={field.onChange}
                               workspaceEnterprises={enterprises}
+                              enterpriseId={enterpriseId}
                             />
                           </FormControl>
                           <FormMessage />

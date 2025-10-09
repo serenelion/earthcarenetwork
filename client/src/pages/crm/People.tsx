@@ -848,6 +848,7 @@ export default function People() {
                               value={field.value}
                               onChange={field.onChange}
                               workspaceEnterprises={workspaceEnterprises}
+                              enterpriseId={enterpriseId}
                             />
                           </FormControl>
                           <FormMessage />
