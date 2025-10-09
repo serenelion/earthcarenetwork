@@ -91,6 +91,7 @@ import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceEnterpriseSchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
 import { format } from "date-fns";
+import EntityDrawer from "@/components/crm/EntityDrawer";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -155,6 +156,9 @@ export default function CRMEnterprises() {
   const [selectedEnterpriseForConnections, setSelectedEnterpriseForConnections] = useState<CrmWorkspaceEnterprise | null>(null);
   const [newConnectionPersonId, setNewConnectionPersonId] = useState<string>("");
   const [newConnectionRelationshipType, setNewConnectionRelationshipType] = useState<string>("employee");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("enterprise");
+  const [drawerEntityId, setDrawerEntityId] = useState<string>("");
 
   const form = useForm<InsertCrmWorkspaceEnterprise>({
     resolver: zodResolver(insertCrmWorkspaceEnterpriseSchema),
@@ -407,6 +411,17 @@ export default function CRMEnterprises() {
 
   const handleDelete = (id: string) => {
     setDeleteConfirmId(id);
+  };
+
+  const handleOpenDrawer = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerNavigate = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
   };
 
   const handleCreateConnection = () => {
@@ -706,6 +721,16 @@ export default function CRMEnterprises() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1"
+                              onClick={() => handleOpenDrawer("enterprise", enterprise.id)}
+                              data-testid={`button-view-${enterprise.id}`}
+                            >
+                              <Building className="w-4 h-4 mr-1.5" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 setSelectedEnterpriseForConnections(enterprise);
                                 setConnectionsDialogOpen(true);
@@ -728,13 +753,11 @@ export default function CRMEnterprises() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex-1"
                               onClick={() => handleEdit(enterprise)}
                               disabled={isFreeUser}
                               data-testid={`button-edit-${enterprise.id}`}
                             >
-                              <Edit className="w-4 h-4 mr-1.5" />
-                              Edit
+                              <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="outline"
@@ -886,6 +909,14 @@ export default function CRMEnterprises() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDrawer("enterprise", enterprise.id)}
+                                data-testid={`button-view-${enterprise.id}`}
+                              >
+                                <Building className="w-4 h-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1434,6 +1465,26 @@ export default function CRMEnterprises() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Entity Drawer */}
+      <EntityDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        entityType={drawerEntityType}
+        entityId={drawerEntityId}
+        onEdit={() => {
+          const enterprise = workspaceEnterprises.find(e => e.id === drawerEntityId);
+          if (enterprise) {
+            setDrawerOpen(false);
+            handleEdit(enterprise);
+          }
+        }}
+        onDelete={() => {
+          setDrawerOpen(false);
+          handleDelete(drawerEntityId);
+        }}
+        onNavigate={handleDrawerNavigate}
+      />
     </div>
   );
 }

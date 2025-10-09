@@ -102,6 +102,7 @@ import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson } from "@shared/schema";
+import EntityDrawer from "@/components/crm/EntityDrawer";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
   { value: "qualified", label: "Qualified", color: "bg-blue-100 text-blue-800" },
@@ -141,6 +142,9 @@ export default function Opportunities() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [enterprisePopoverOpen, setEnterprisePopoverOpen] = useState(false);
   const [contactPopoverOpen, setContactPopoverOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("opportunity");
+  const [drawerEntityId, setDrawerEntityId] = useState<string>("");
 
   const form = useForm<InsertCrmWorkspaceOpportunity>({
     resolver: zodResolver(insertCrmWorkspaceOpportunitySchema),
@@ -374,6 +378,17 @@ export default function Opportunities() {
     } else {
       createMutation.mutate(processedData);
     }
+  };
+
+  const handleOpenDrawer = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerNavigate = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
   };
 
   const handleEdit = (opportunity: CrmWorkspaceOpportunity) => {
@@ -1059,10 +1074,7 @@ export default function Opportunities() {
                                 variant="outline"
                                 size="sm"
                                 className="flex-1"
-                                onClick={() => {
-                                  setViewingOpportunity(opportunity);
-                                  setIsDetailDialogOpen(true);
-                                }}
+                                onClick={() => handleOpenDrawer("opportunity", opportunity.id)}
                                 data-testid={`button-view-${opportunity.id}`}
                               >
                                 <ExternalLink className="w-4 h-4 mr-1.5" />
@@ -1222,10 +1234,7 @@ export default function Opportunities() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    setViewingOpportunity(opportunity);
-                                    setIsDetailDialogOpen(true);
-                                  }}
+                                  onClick={() => handleOpenDrawer("opportunity", opportunity.id)}
                                   data-testid={`button-view-${opportunity.id}`}
                                 >
                                   <ExternalLink className="w-4 h-4" />
@@ -1514,6 +1523,26 @@ export default function Opportunities() {
             })()}
           </DialogContent>
         </Dialog>
+
+        {/* Entity Drawer */}
+        <EntityDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          entityType={drawerEntityType}
+          entityId={drawerEntityId}
+          onEdit={() => {
+            const opportunity = opportunities.find(o => o.id === drawerEntityId);
+            if (opportunity) {
+              setDrawerOpen(false);
+              handleEdit(opportunity);
+            }
+          }}
+          onDelete={() => {
+            setDrawerOpen(false);
+            handleDelete(drawerEntityId);
+          }}
+          onNavigate={handleDrawerNavigate}
+        />
     </>
   );
 }

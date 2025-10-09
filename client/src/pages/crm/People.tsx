@@ -78,6 +78,7 @@ import {
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspacePersonSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise, type CrmWorkspaceEnterprise, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
+import EntityDrawer from "@/components/crm/EntityDrawer";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
   { value: "invited", label: "Invited", color: "bg-blue-100 text-blue-800" },
@@ -130,6 +131,9 @@ export default function People() {
   const [selectedPersonForConnections, setSelectedPersonForConnections] = useState<CrmWorkspacePerson | null>(null);
   const [newConnectionEnterpriseId, setNewConnectionEnterpriseId] = useState<string>("");
   const [newConnectionRelationshipType, setNewConnectionRelationshipType] = useState<string>("employee");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("person");
+  const [drawerEntityId, setDrawerEntityId] = useState<string>("");
 
   const form = useForm<InsertCrmWorkspacePerson>({
     resolver: zodResolver(insertCrmWorkspacePersonSchema),
@@ -422,6 +426,17 @@ export default function People() {
     } else {
       createMutation.mutate(processedData);
     }
+  };
+
+  const handleOpenDrawer = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerNavigate = (type: "opportunity" | "person" | "enterprise", id: string) => {
+    setDrawerEntityType(type);
+    setDrawerEntityId(id);
   };
 
   const handleEdit = (person: CrmWorkspacePerson) => {
@@ -866,6 +881,16 @@ export default function People() {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="flex-1"
+                            onClick={() => handleOpenDrawer("person", person.id)}
+                            data-testid={`button-view-${person.id}`}
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1.5" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => {
                               setSelectedPersonForConnections(person);
                               setConnectionsDialogOpen(true);
@@ -891,13 +916,11 @@ export default function People() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1"
                             onClick={() => handleEdit(person)}
                             disabled={isFreeUser}
                             data-testid={`button-edit-${person.id}`}
                           >
-                            <Edit className="w-4 h-4 mr-1.5" />
-                            Edit
+                            <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="outline"
@@ -992,6 +1015,14 @@ export default function People() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDrawer("person", person.id)}
+                              data-testid={`button-view-${person.id}`}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1247,6 +1278,26 @@ export default function People() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Entity Drawer */}
+        <EntityDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          entityType={drawerEntityType}
+          entityId={drawerEntityId}
+          onEdit={() => {
+            const person = people.find(p => p.id === drawerEntityId);
+            if (person) {
+              setDrawerOpen(false);
+              handleEdit(person);
+            }
+          }}
+          onDelete={() => {
+            setDrawerOpen(false);
+            handleDelete(drawerEntityId);
+          }}
+          onNavigate={handleDrawerNavigate}
+        />
     </>
   );
 }
