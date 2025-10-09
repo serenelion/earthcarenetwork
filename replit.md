@@ -48,6 +48,12 @@ The application maintains a clear separation between a public-facing directory a
 ## Backend Architecture
 - **Framework**: Express.js with TypeScript (ESM).
 - **API**: RESTful API with route handlers in `/server/routes.ts`.
+- **Routing Convention**: All workspace CRM routes use `/api/crm/:enterpriseId/workspace/*` pattern:
+  - People: `/api/crm/:enterpriseId/workspace/people`
+  - Opportunities: `/api/crm/:enterpriseId/workspace/opportunities`
+  - Tasks: `/api/crm/:enterpriseId/workspace/tasks`
+  - Enterprises: `/api/crm/:enterpriseId/workspace/enterprises`
+  - Enterprise-People Connections: `/api/crm/:enterpriseId/workspace/enterprise-people-connections`
 - **Authentication**: Replit Auth integration with OpenID Connect, Express sessions with PostgreSQL storage.
 - **AI Integration**: OpenAI GPT-5 for lead scoring and intelligent suggestions.
 - **Web Scraping**: Cheerio-based service for bulk enterprise data import.
@@ -92,6 +98,12 @@ The application maintains a clear separation between a public-facing directory a
 - **People Management**: Contact management, status tracking, relationship mapping (scoped to workspace via `crm_workspace_people`)
 - **Opportunity Tracking**: Deal pipeline with stages, value, and AI lead scoring (scoped to workspace via `crm_workspace_opportunities`)
 - **Task Management**: Assignment, tracking, and due dates (scoped to workspace via `crm_workspace_tasks`)
+- **Entity Navigation System** (Apollo.io/Monday.com-inspired UX):
+  - **EntityDrawer Component**: Quick-view drawer with drawer-to-drawer navigation for opportunities, people, and enterprises
+  - **Relational Navigation**: Clickable entity links and count badges in all list views for seamless navigation
+  - **Advanced Filtering**: EnterpriseDirectoryModal with search, category, and location filtering
+  - **Contextual Quick Actions**: Create related items with pre-filled relationships directly from entity drawers
+  - **Cache Management**: Uses `refetchQueries` instead of `invalidateQueries` for immediate UI updates after mutations
 - **AI Copilot**: Lead scoring, intelligent suggestions, and automation (per-workspace context)
 - **Bulk Import**: Web scraping for enterprise data (imports scoped to current workspace)
 - **CSV Export**: Opportunities export with linked entity data
@@ -111,8 +123,8 @@ The application maintains a clear separation between a public-facing directory a
 - **Onboarding System**: Tier-specific guided tours with progress tracking
 - **Subscription & Tiers**: 4-tier pricing (Free, CRM Pro, Build Pro Bundle, Admin)
   - Stripe integration for payments
-  - Feature gating based on subscription tier
-  - Upgrade prompts throughout the application
+  - Feature gating based on subscription tier (admins have unlimited access regardless of subscription)
+  - Upgrade prompts throughout the application (hidden for admin users)
 - **Mobile Optimization**: Fully responsive design with card views for smaller screens
 
 # External Dependencies
