@@ -1156,14 +1156,13 @@ export default function CRMEnterprises() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Relationship Stage</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-relationship-stage">
                           <SelectValue placeholder="Select a relationship stage" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {relationshipStages.map((stage) => (
                           <SelectItem key={stage.value} value={stage.value}>
                             {stage.label}
