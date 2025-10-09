@@ -1477,6 +1477,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
+      }
+      
       const validatedData = insertCrmWorkspaceOpportunitySchema.parse({ ...body, workspaceId: enterpriseId });
       const opportunity = await storage.createWorkspaceOpportunity(validatedData);
       res.status(200).json(opportunity);
@@ -1493,6 +1506,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
+      }
+      
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
       }
       
       const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, body);
