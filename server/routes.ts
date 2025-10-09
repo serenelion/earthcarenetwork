@@ -1334,21 +1334,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
-      const body = { ...req.body };
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (req.body.workspaceEnterpriseId !== null && req.body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
         }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...body, workspaceId: enterpriseId });
+      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...req.body, workspaceId: enterpriseId });
       const person = await storage.createWorkspacePerson(validatedData);
       res.status(200).json(person);
     } catch (error) {
@@ -1361,21 +1356,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
-      const body = { ...req.body };
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
-        if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
-        }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
+      // Security: Block attempts to modify workspaceId
+      if (req.body.workspaceId && req.body.workspaceId !== enterpriseId) {
+        return res.status(403).json({ message: "Cannot change workspace" });
       }
       
-      const person = await storage.updateWorkspacePerson(enterpriseId, id, body);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (req.body.workspaceEnterpriseId !== null && req.body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
+        }
+      }
+      
+      // Validate update payload with Zod (partial schema for updates)
+      const updateSchema = insertCrmWorkspacePersonSchema.partial().omit({ workspaceId: true });
+      const validatedData = updateSchema.parse(req.body);
+      
+      const person = await storage.updateWorkspacePerson(enterpriseId, id, validatedData);
       res.json(person);
     } catch (error) {
       console.error("Error updating workspace person:", error);
@@ -1500,21 +1499,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/opportunities', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (body.workspaceEnterpriseId !== null && body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
         if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
         }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
       const validatedData = insertCrmWorkspaceOpportunitySchema.parse({ ...body, workspaceId: enterpriseId });
@@ -1530,24 +1525,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/opportunities/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
       const body = { ...req.body };
       if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
         body.expectedCloseDate = new Date(body.expectedCloseDate);
       }
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
-        if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
-        }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
+      // Security: Block attempts to modify workspaceId
+      if (body.workspaceId && body.workspaceId !== enterpriseId) {
+        return res.status(403).json({ message: "Cannot change workspace" });
       }
       
-      const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, body);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (body.workspaceEnterpriseId !== null && body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
+        }
+      }
+      
+      // Validate update payload with Zod (partial schema for updates)
+      const updateSchema = insertCrmWorkspaceOpportunitySchema.partial().omit({ workspaceId: true });
+      const validatedData = updateSchema.parse(body);
+      
+      const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, validatedData);
       res.json(opportunity);
     } catch (error) {
       console.error("Error updating workspace opportunity:", error);
@@ -1771,21 +1771,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
-      const body = { ...req.body };
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (req.body.workspaceEnterpriseId !== null && req.body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
         if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
         }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...body, workspaceId: enterpriseId });
+      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...req.body, workspaceId: enterpriseId });
       const task = await storage.createWorkspaceTask(validatedData);
       res.status(200).json(task);
     } catch (error) {
@@ -1798,21 +1793,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
-      const userId = (req.user as any)?.claims?.sub;
-      const body = { ...req.body };
       
-      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (body.workspaceEnterpriseId) {
-        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
-        if (!workspaceEnterprise) {
-          // Link the directory enterprise to the workspace
-          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
-        }
-        // Update to use the workspace enterprise ID (not the directory enterprise ID)
-        body.workspaceEnterpriseId = workspaceEnterprise.id;
+      // Security: Block attempts to modify workspaceId
+      if (req.body.workspaceId && req.body.workspaceId !== enterpriseId) {
+        return res.status(403).json({ message: "Cannot change workspace" });
       }
       
-      const task = await storage.updateWorkspaceTask(enterpriseId, id, body);
+      // Security: Validate workspace enterprise belongs to this workspace if provided
+      if (req.body.workspaceEnterpriseId !== null && req.body.workspaceEnterpriseId !== undefined) {
+        const workspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
+          return res.status(403).json({ message: "Invalid workspace enterprise ID - must belong to this workspace" });
+        }
+      }
+      
+      // Validate update payload with Zod (partial schema for updates)
+      const updateSchema = insertCrmWorkspaceTaskSchema.partial().omit({ workspaceId: true });
+      const validatedData = updateSchema.parse(req.body);
+      
+      const task = await storage.updateWorkspaceTask(enterpriseId, id, validatedData);
       res.json(task);
     } catch (error) {
       console.error("Error updating workspace task:", error);

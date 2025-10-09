@@ -850,7 +850,7 @@ export default function People() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">No Enterprise</SelectItem>
-                              {enterprises.map((enterprise) => (
+                              {workspaceEnterprises.map((enterprise) => (
                                 <SelectItem key={enterprise.id} value={enterprise.id}>
                                   {enterprise.name}
                                 </SelectItem>
