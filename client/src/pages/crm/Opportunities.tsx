@@ -104,6 +104,7 @@ import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
+import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
   { value: "qualified", label: "Qualified", color: "bg-blue-100 text-blue-800" },
@@ -141,7 +142,7 @@ export default function Opportunities() {
   const [isExporting, setIsExporting] = useState(false);
   const [viewingOpportunity, setViewingOpportunity] = useState<CrmWorkspaceOpportunity | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [enterprisePopoverOpen, setEnterprisePopoverOpen] = useState(false);
+  const [enterpriseDirectoryOpen, setEnterpriseDirectoryOpen] = useState(false);
   const [contactPopoverOpen, setContactPopoverOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("opportunity");
@@ -666,72 +667,36 @@ export default function Opportunities() {
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Enterprise</FormLabel>
-                          <Popover open={enterprisePopoverOpen} onOpenChange={setEnterprisePopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={enterprisePopoverOpen}
-                                  className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                  data-testid="select-opportunity-enterprise"
-                                >
-                                  {field.value
-                                    ? enterprises.find((e) => e.id === field.value)?.name
-                                    : field.value === null
-                                    ? "No Enterprise"
-                                    : "Select enterprise..."}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search enterprises..." />
-                                <CommandList>
-                                  <CommandEmpty>No enterprise found.</CommandEmpty>
-                                  <CommandGroup>
-                                    <CommandItem
-                                      value="none"
-                                      onSelect={() => {
-                                        form.setValue("workspaceEnterpriseId", null);
-                                        setEnterprisePopoverOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          field.value === null ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      No Enterprise
-                                    </CommandItem>
-                                    {enterprises.map((enterprise) => (
-                                      <CommandItem
-                                        key={enterprise.id}
-                                        value={enterprise.name}
-                                        onSelect={() => {
-                                          form.setValue("workspaceEnterpriseId", enterprise.id);
-                                          setEnterprisePopoverOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            enterprise.id === field.value ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        {enterprise.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              onClick={() => setEnterpriseDirectoryOpen(true)}
+                              data-testid="button-open-enterprise-directory"
+                            >
+                              {field.value
+                                ? enterprises.find((e) => e.id === field.value)?.name
+                                : "Browse Enterprises..."}
+                              <Building className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                          {field.value && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="mt-1"
+                              onClick={() => form.setValue("workspaceEnterpriseId", null)}
+                              data-testid="button-clear-enterprise"
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Clear Selection
+                            </Button>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1578,6 +1543,16 @@ export default function Opportunities() {
             handleDelete(drawerEntityId);
           }}
           onNavigate={handleDrawerNavigate}
+        />
+
+        {/* Enterprise Directory Modal */}
+        <EnterpriseDirectoryModal
+          open={enterpriseDirectoryOpen}
+          onOpenChange={setEnterpriseDirectoryOpen}
+          onSelect={(enterprise) => {
+            form.setValue("workspaceEnterpriseId", enterprise.id);
+          }}
+          selectedEnterpriseId={form.watch("workspaceEnterpriseId")}
         />
     </>
   );

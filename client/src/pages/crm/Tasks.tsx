@@ -76,10 +76,13 @@ import {
   Info,
   Shield,
   Users,
+  X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceTaskSchema, type CrmWorkspaceTask, type InsertCrmWorkspaceTask, type CrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceOpportunity } from "@shared/schema";
+import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
 const taskPriorities = [
   { value: "low", label: "Low", color: "bg-gray-100 text-gray-800" },
   { value: "medium", label: "Medium", color: "bg-blue-100 text-blue-800" },
@@ -106,6 +109,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CrmWorkspaceTask | null>(null);
+  const [enterpriseDirectoryOpen, setEnterpriseDirectoryOpen] = useState(false);
 
   const form = useForm<InsertCrmWorkspaceTask>({
     resolver: zodResolver(insertCrmWorkspaceTaskSchema),
@@ -551,23 +555,38 @@ export default function Tasks() {
                       control={form.control}
                       name="workspaceEnterpriseId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel>Related Enterprise</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-task-enterprise">
-                                <SelectValue placeholder="Select enterprise" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">No Enterprise</SelectItem>
-                              {enterprises.map((enterprise) => (
-                                <SelectItem key={enterprise.id} value={enterprise.id}>
-                                  {enterprise.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              onClick={() => setEnterpriseDirectoryOpen(true)}
+                              data-testid="button-open-enterprise-directory-task"
+                            >
+                              {field.value
+                                ? enterprises.find((e) => e.id === field.value)?.name || "Browse Enterprises..."
+                                : "Browse Enterprises..."}
+                              <Building className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                          {field.value && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="mt-1"
+                              onClick={() => form.setValue("workspaceEnterpriseId", null)}
+                              data-testid="button-clear-enterprise-task"
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Clear Selection
+                            </Button>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1003,6 +1022,16 @@ export default function Tasks() {
             )}
           </CardContent>
         </Card>
+
+        {/* Enterprise Directory Modal */}
+        <EnterpriseDirectoryModal
+          open={enterpriseDirectoryOpen}
+          onOpenChange={setEnterpriseDirectoryOpen}
+          onSelect={(enterprise) => {
+            form.setValue("workspaceEnterpriseId", enterprise.id);
+          }}
+          selectedEnterpriseId={form.watch("workspaceEnterpriseId")}
+        />
     </>
   );
 }
