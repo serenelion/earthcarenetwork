@@ -74,6 +74,8 @@ import {
   Info,
   Shield,
   Link2,
+  DollarSign,
+  ListTodo,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
@@ -211,6 +213,28 @@ export default function People() {
       return response.json();
     },
     enabled: !!selectedPersonForConnections && !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: allOpportunities = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"],
+    queryFn: async () => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/opportunities?limit=500`);
+      if (!response.ok) throw new Error("Failed to fetch opportunities");
+      return response.json();
+    },
+    enabled: isAuthenticated && !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"],
+    queryFn: async () => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/tasks?limit=500`);
+      if (!response.ok) throw new Error("Failed to fetch tasks");
+      return response.json();
+    },
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -960,12 +984,46 @@ export default function People() {
                     const invitationStatus = invitationStatuses.find(s => s.value === person.invitationStatus);
                     const claimStatus = claimStatuses.find(s => s.value === person.claimStatus);
                     const buildProStatus = buildProStatuses.find(s => s.value === person.buildProStatus);
+                    const opportunityCount = allOpportunities.filter(o => o.primaryContactId === person.id).length;
+                    const taskCount = allTasks.filter(t => t.workspacePersonId === person.id).length;
 
                     return (
                       <TableRow key={person.id} data-testid={`person-card-${person.id}`}>
                         <TableCell>
                           <div className="font-semibold text-foreground">
                             {person.firstName} {person.lastName}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {opportunityCount > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200" data-testid={`badge-opportunities-${person.id}`}>
+                                      <DollarSign className="w-3 h-3 mr-1" />
+                                      {opportunityCount} {opportunityCount === 1 ? 'opp' : 'opps'}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{opportunityCount} opportunit{opportunityCount === 1 ? 'y' : 'ies'} for this contact</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {taskCount > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 border-slate-200" data-testid={`badge-tasks-${person.id}`}>
+                                      <ListTodo className="w-3 h-3 mr-1" />
+                                      {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{taskCount} task{taskCount === 1 ? '' : 's'} assigned to this person</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -983,7 +1041,16 @@ export default function People() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {enterprise ? (
+                          {person.workspaceEnterpriseId ? (
+                            <button
+                              onClick={() => handleOpenDrawer("enterprise", person.workspaceEnterpriseId!)}
+                              className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer transition-colors"
+                              data-testid={`link-enterprise-${person.id}`}
+                            >
+                              <Building className="w-3 h-3 flex-shrink-0" />
+                              <span className="font-medium">{workspaceEnterprises.find(we => we.id === person.workspaceEnterpriseId)?.name || 'Enterprise'}</span>
+                            </button>
+                          ) : enterprise ? (
                             <Badge variant="outline" className="text-xs">
                               <Building className="w-3 h-3 mr-1" />
                               {enterprise.name}

@@ -86,6 +86,8 @@ import {
   Info,
   MessageSquare,
   Users,
+  DollarSign,
+  User,
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
@@ -304,6 +306,17 @@ export default function CRMEnterprises() {
     queryFn: async (): Promise<CrmWorkspacePerson[]> => {
       const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch workspace people");
+      return response.json();
+    },
+    enabled: !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: allOpportunities = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"],
+    queryFn: async () => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/opportunities?limit=500`);
+      if (!response.ok) throw new Error("Failed to fetch opportunities");
       return response.json();
     },
     enabled: !!enterpriseId,
@@ -797,6 +810,10 @@ export default function CRMEnterprises() {
                       const relationshipLabel = getRelationshipLabel(enterprise.relationshipStage);
                       const relationshipClass = enterprise.relationshipStage ? relationshipStageColors[enterprise.relationshipStage as keyof typeof relationshipStageColors] : "";
                       const isLinked = !!enterprise.directoryEnterpriseId;
+                      const peopleCount = workspacePeople.filter(p => p.workspaceEnterpriseId === enterprise.id).length;
+                      const enterpriseOpportunities = allOpportunities.filter(o => o.workspaceEnterpriseId === enterprise.id);
+                      const opportunityCount = enterpriseOpportunities.length;
+                      const totalValue = enterpriseOpportunities.reduce((sum, opp) => sum + (opp.value || 0), 0);
                       
                       return (
                         <TableRow key={enterprise.id} data-testid={`row-enterprise-${enterprise.id}`}>
@@ -835,6 +852,39 @@ export default function CRMEnterprises() {
                                     </Tooltip>
                                   </TooltipProvider>
                                 )}
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {peopleCount > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" data-testid={`badge-people-${enterprise.id}`}>
+                                            <User className="w-3 h-3 mr-1" />
+                                            {peopleCount} {peopleCount === 1 ? 'contact' : 'contacts'}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{peopleCount} contact{peopleCount === 1 ? '' : 's'} at this enterprise</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                  {opportunityCount > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200" data-testid={`badge-opportunities-${enterprise.id}`}>
+                                            <DollarSign className="w-3 h-3 mr-1" />
+                                            {opportunityCount} {opportunityCount === 1 ? 'opp' : 'opps'}
+                                            {totalValue > 0 && ` • $${totalValue.toLocaleString()}`}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{opportunityCount} opportunit{opportunityCount === 1 ? 'y' : 'ies'} • Total value: ${totalValue.toLocaleString()}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </TableCell>

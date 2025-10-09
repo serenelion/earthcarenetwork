@@ -77,6 +77,7 @@ import {
   Info,
   Shield,
   Users,
+  ListTodo,
 } from "lucide-react";
 import {
   Tooltip,
@@ -206,6 +207,17 @@ export default function Opportunities() {
     queryFn: async (): Promise<CrmWorkspacePerson[]> => {
       const response = await fetch(`/api/crm/${enterpriseId}/workspace/people?limit=200`);
       if (!response.ok) throw new Error("Failed to fetch people");
+      return response.json();
+    },
+    enabled: isAuthenticated && !!enterpriseId,
+    retry: false,
+  });
+
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"],
+    queryFn: async () => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/tasks?limit=500`);
+      if (!response.ok) throw new Error("Failed to fetch tasks");
       return response.json();
     },
     enabled: isAuthenticated && !!enterpriseId,
@@ -1127,6 +1139,7 @@ export default function Opportunities() {
                         const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
                         const contact = people.find(p => p.id === opportunity.primaryContactId);
                         const status = opportunityStatuses.find(s => s.value === opportunity.status);
+                        const taskCount = allTasks.filter(t => t.workspaceOpportunityId === opportunity.id).length;
 
                         return (
                           <TableRow key={opportunity.id} data-testid={`row-opportunity-${opportunity.id}`}>
@@ -1140,30 +1153,51 @@ export default function Opportunities() {
                                     {opportunity.description}
                                   </div>
                                 )}
-                                {opportunity.aiScore && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <TrendingUp className="w-3 h-3 text-purple-600" />
-                                    <span className="text-xs text-muted-foreground">
-                                      AI Score: {opportunity.aiScore}/100
-                                    </span>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {opportunity.aiScore && (
+                                    <div className="flex items-center gap-1">
+                                      <TrendingUp className="w-3 h-3 text-purple-600" />
+                                      <span className="text-xs text-muted-foreground">
+                                        AI Score: {opportunity.aiScore}/100
+                                      </span>
+                                    </div>
+                                  )}
+                                  {taskCount > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 border-slate-200" data-testid={`badge-tasks-${opportunity.id}`}>
+                                            <ListTodo className="w-3 h-3 mr-1" />
+                                            {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{taskCount} task{taskCount === 1 ? '' : 's'} for this opportunity</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
                               {enterprise ? (
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <Building className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-sm truncate" data-testid={`enterprise-name-${opportunity.id}`}>
-                                      {enterprise.name}
-                                    </span>
+                                <div className="min-w-0 space-y-1">
+                                  <button
+                                    onClick={() => handleOpenDrawer("enterprise", enterprise.id)}
+                                    className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer transition-colors"
+                                    data-testid={`link-enterprise-${opportunity.id}`}
+                                  >
+                                    <Building className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate font-medium">{enterprise.name}</span>
+                                  </button>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {enterprise.category && (
+                                      <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
+                                        {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
+                                      </Badge>
+                                    )}
                                   </div>
-                                  {enterprise.category && (
-                                    <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
-                                      {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
-                                    </Badge>
-                                  )}
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground text-sm">-</span>
@@ -1171,13 +1205,15 @@ export default function Opportunities() {
                             </TableCell>
                             <TableCell>
                               {contact ? (
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-sm truncate" data-testid={`contact-name-${opportunity.id}`}>
-                                      {contact.firstName} {contact.lastName}
-                                    </span>
-                                  </div>
+                                <div className="min-w-0 space-y-1">
+                                  <button
+                                    onClick={() => handleOpenDrawer("person", contact.id)}
+                                    className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer transition-colors"
+                                    data-testid={`link-contact-${opportunity.id}`}
+                                  >
+                                    <User className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate font-medium">{contact.firstName} {contact.lastName}</span>
+                                  </button>
                                   {contact.title && (
                                     <div className="text-xs text-muted-foreground truncate max-w-[150px]">
                                       {contact.title}
