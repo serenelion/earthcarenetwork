@@ -81,6 +81,7 @@ import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspacePersonSchema, insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise, type CrmWorkspaceEnterprise, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceOpportunity, type InsertCrmWorkspaceTask } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
+import EnterpriseSelector from "@/components/crm/EnterpriseSelector";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
   { value: "invited", label: "Invited", color: "bg-blue-100 text-blue-800" },
@@ -842,21 +843,13 @@ export default function People() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Enterprise</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-enterprise">
-                                <SelectValue placeholder="Select enterprise" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">No Enterprise</SelectItem>
-                              {workspaceEnterprises.map((enterprise) => (
-                                <SelectItem key={enterprise.id} value={enterprise.id}>
-                                  {enterprise.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <EnterpriseSelector
+                              value={field.value}
+                              onChange={field.onChange}
+                              workspaceEnterprises={workspaceEnterprises}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

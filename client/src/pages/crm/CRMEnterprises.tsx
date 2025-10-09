@@ -30,6 +30,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -94,6 +100,8 @@ import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceEnterpriseSchema, insertCrmWorkspacePersonSchema, insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson, type InsertCrmWorkspacePerson, type InsertCrmWorkspaceOpportunity } from "@shared/schema";
 import { format } from "date-fns";
 import EntityDrawer from "@/components/crm/EntityDrawer";
+import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
+import type { Enterprise } from "@shared/schema";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -151,6 +159,10 @@ export default function CRMEnterprises() {
   const [relationshipFilter, setRelationshipFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEnterprise, setEditingEnterprise] = useState<CrmWorkspaceEnterprise | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createActiveTab, setCreateActiveTab] = useState<string>("link");
+  const [selectedDirectoryEnterprise, setSelectedDirectoryEnterprise] = useState<Enterprise | null>(null);
+  const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [notesEnterpriseId, setNotesEnterpriseId] = useState<string | null>(null);
   const [newNoteBody, setNewNoteBody] = useState("");
@@ -463,6 +475,64 @@ export default function CRMEnterprises() {
     },
   });
 
+  const linkDirectoryEnterpriseMutation = useMutation({
+    mutationFn: async (directoryEnterpriseId: string) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprises`, {
+        mode: "link",
+        directoryEnterpriseId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      toast({
+        title: "Success",
+        description: "Enterprise linked to your workspace successfully",
+      });
+      setIsCreateDialogOpen(false);
+      setSelectedDirectoryEnterprise(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to link enterprise",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createNewEnterpriseMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceEnterprise) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/enterprises`, {
+        mode: "create",
+        name: data.name,
+        category: data.category,
+        description: data.description,
+        website: data.website,
+        location: data.location,
+        contactEmail: data.contactEmail,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/enterprises"] });
+      toast({
+        title: "Success",
+        description: "Enterprise created and linked to your workspace",
+      });
+      setIsCreateDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create enterprise",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleQuickAddPerson = (prefilledData: any) => {
     personForm.reset({ ...personForm.getValues(), workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "" });
     setQuickActionPersonDialogOpen(true);
@@ -474,7 +544,8 @@ export default function CRMEnterprises() {
   };
 
   const handleAddEnterprise = () => {
-    navigate(`/crm/${enterpriseId}/add-enterprise`);
+    setIsCreateDialogOpen(true);
+    setCreateActiveTab("link");
   };
 
   const handleEdit = (enterprise: CrmWorkspaceEnterprise) => {
@@ -540,6 +611,27 @@ export default function CRMEnterprises() {
     if (editingEnterprise) {
       updateMutation.mutate({ id: editingEnterprise.id, data: processedData });
     }
+  };
+
+  const onCreateSubmit = (data: InsertCrmWorkspaceEnterprise) => {
+    createNewEnterpriseMutation.mutate(data);
+  };
+
+  const handleLinkEnterprise = () => {
+    if (!selectedDirectoryEnterprise) {
+      toast({
+        title: "Error",
+        description: "Please select an enterprise to link",
+        variant: "destructive",
+      });
+      return;
+    }
+    linkDirectoryEnterpriseMutation.mutate(selectedDirectoryEnterprise.id);
+  };
+
+  const handleDirectoryEnterpriseSelect = (enterprise: Enterprise) => {
+    setSelectedDirectoryEnterprise(enterprise);
+    setIsDirectoryModalOpen(false);
   };
 
   const filteredEnterprises = workspaceEnterprises.filter(enterprise => {
@@ -1587,6 +1679,275 @@ export default function CRMEnterprises() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create/Link Enterprise Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Enterprise to Workspace</DialogTitle>
+            <DialogDescription>
+              Link an existing enterprise from the directory or create a new one
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={createActiveTab} onValueChange={setCreateActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2" data-testid="tabs-create-mode">
+              <TabsTrigger value="link" data-testid="tab-link-existing">
+                <Link2 className="w-4 h-4 mr-2" />
+                Link Existing Enterprise
+              </TabsTrigger>
+              <TabsTrigger value="create" data-testid="tab-create-new">
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Enterprise
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="link" className="space-y-4 mt-4" data-testid="content-link-tab">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Browse the global directory and link an existing enterprise to your workspace
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Enterprise</label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => setIsDirectoryModalOpen(true)}
+                    data-testid="button-browse-directory"
+                  >
+                    {selectedDirectoryEnterprise ? selectedDirectoryEnterprise.name : "Browse Directory..."}
+                    <Building className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </div>
+
+                {selectedDirectoryEnterprise && (
+                  <Card className="border-2 border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Selected Enterprise</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Building className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <h3 className="font-semibold" data-testid="text-selected-name">
+                            {selectedDirectoryEnterprise.name}
+                          </h3>
+                          <Badge className={categoryColors[selectedDirectoryEnterprise.category as keyof typeof categoryColors]}>
+                            {getCategoryLabel(selectedDirectoryEnterprise.category)}
+                          </Badge>
+                          {selectedDirectoryEnterprise.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {selectedDirectoryEnterprise.description}
+                            </p>
+                          )}
+                          {selectedDirectoryEnterprise.location && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="w-4 h-4" />
+                              <span>{selectedDirectoryEnterprise.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    setSelectedDirectoryEnterprise(null);
+                  }}
+                  data-testid="button-cancel-link"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleLinkEnterprise}
+                  disabled={!selectedDirectoryEnterprise || linkDirectoryEnterpriseMutation.isPending}
+                  data-testid="button-link-enterprise"
+                >
+                  {linkDirectoryEnterpriseMutation.isPending ? "Linking..." : "Link to Workspace"}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="create" className="mt-4" data-testid="content-create-tab">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onCreateSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enterprise name" 
+                            {...field} 
+                            data-testid="input-create-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-create-category">
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category.value} value={category.value}>
+                                {category.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enterprise description"
+                            className="min-h-[100px]"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="textarea-create-description"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://example.com" 
+                              {...field}
+                              value={field.value || ""}
+                              data-testid="input-create-website"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="City, Country" 
+                              {...field}
+                              value={field.value || ""}
+                              data-testid="input-create-location"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="contactEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="contact@example.com" 
+                            type="email"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-create-contact-email"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      This will create a new enterprise in the public directory and automatically link it to your workspace
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsCreateDialogOpen(false);
+                        form.reset();
+                      }}
+                      data-testid="button-cancel-create"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createNewEnterpriseMutation.isPending}
+                      data-testid="button-create-enterprise"
+                    >
+                      {createNewEnterpriseMutation.isPending ? "Creating..." : "Create & Link Enterprise"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Directory Browser Modal */}
+      <EnterpriseDirectoryModal
+        open={isDirectoryModalOpen}
+        onOpenChange={setIsDirectoryModalOpen}
+        onSelect={handleDirectoryEnterpriseSelect}
+        selectedEnterpriseId={selectedDirectoryEnterprise?.id}
+      />
 
       {/* Entity Drawer */}
       {/* Quick Action Dialogs */}

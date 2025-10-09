@@ -82,7 +82,7 @@ import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceTaskSchema, type CrmWorkspaceTask, type InsertCrmWorkspaceTask, type CrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceOpportunity } from "@shared/schema";
-import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
+import EnterpriseSelector from "@/components/crm/EnterpriseSelector";
 const taskPriorities = [
   { value: "low", label: "Low", color: "bg-gray-100 text-gray-800" },
   { value: "medium", label: "Medium", color: "bg-blue-100 text-blue-800" },
@@ -109,7 +109,6 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CrmWorkspaceTask | null>(null);
-  const [enterpriseDirectoryOpen, setEnterpriseDirectoryOpen] = useState(false);
 
   const form = useForm<InsertCrmWorkspaceTask>({
     resolver: zodResolver(insertCrmWorkspaceTaskSchema),
@@ -342,7 +341,7 @@ export default function Tasks() {
     }
   };
 
-  const handleStatusToggle = (task: Task) => {
+  const handleStatusToggle = (task: CrmWorkspaceTask) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
     updateMutation.mutate({
       id: task.id,
@@ -362,7 +361,7 @@ export default function Tasks() {
     return true;
   });
 
-  const isOverdue = (task: Task) => {
+  const isOverdue = (task: CrmWorkspaceTask) => {
     if (!task.dueDate || task.status === "completed") return false;
     return new Date(task.dueDate) < new Date();
   };
@@ -558,35 +557,12 @@ export default function Tasks() {
                         <FormItem className="flex flex-col">
                           <FormLabel>Related Enterprise</FormLabel>
                           <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              onClick={() => setEnterpriseDirectoryOpen(true)}
-                              data-testid="button-open-enterprise-directory-task"
-                            >
-                              {field.value
-                                ? enterprises.find((e) => e.id === field.value)?.name || "Browse Enterprises..."
-                                : "Browse Enterprises..."}
-                              <Building className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
+                            <EnterpriseSelector
+                              value={field.value}
+                              onChange={field.onChange}
+                              workspaceEnterprises={enterprises}
+                            />
                           </FormControl>
-                          {field.value && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="mt-1"
-                              onClick={() => form.setValue("workspaceEnterpriseId", null)}
-                              data-testid="button-clear-enterprise-task"
-                            >
-                              <X className="w-3 h-3 mr-1" />
-                              Clear Selection
-                            </Button>
-                          )}
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1022,16 +998,6 @@ export default function Tasks() {
             )}
           </CardContent>
         </Card>
-
-        {/* Enterprise Directory Modal */}
-        <EnterpriseDirectoryModal
-          open={enterpriseDirectoryOpen}
-          onOpenChange={setEnterpriseDirectoryOpen}
-          onSelect={(enterprise) => {
-            form.setValue("workspaceEnterpriseId", enterprise.id);
-          }}
-          selectedEnterpriseId={form.watch("workspaceEnterpriseId")}
-        />
     </>
   );
 }

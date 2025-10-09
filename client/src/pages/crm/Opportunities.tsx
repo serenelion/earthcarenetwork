@@ -103,9 +103,9 @@ import {
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson, type InsertCrmWorkspaceTask } from "@shared/schema";
+import { insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type CrmWorkspaceEnterprise, type CrmWorkspacePerson, type InsertCrmWorkspaceTask } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
-import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
+import EnterpriseSelector from "@/components/crm/EnterpriseSelector";
 import ClickableEntityLink from "@/components/crm/ClickableEntityLink";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
@@ -144,7 +144,6 @@ export default function Opportunities() {
   const [isExporting, setIsExporting] = useState(false);
   const [viewingOpportunity, setViewingOpportunity] = useState<CrmWorkspaceOpportunity | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [enterpriseDirectoryOpen, setEnterpriseDirectoryOpen] = useState(false);
   const [contactPopoverOpen, setContactPopoverOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("opportunity");
@@ -210,14 +209,14 @@ export default function Opportunities() {
     }
   }, [opportunitiesError, toast]);
 
-  const { data: enterprises = [] } = useQuery({
-    queryKey: ["/api/enterprises"],
-    queryFn: async (): Promise<Enterprise[]> => {
-      const response = await fetch("/api/enterprises?limit=200");
-      if (!response.ok) throw new Error("Failed to fetch enterprises");
+  const { data: workspaceEnterprises = [] } = useQuery({
+    queryKey: ["/api/crm", enterpriseId, "workspace", "enterprises"],
+    queryFn: async (): Promise<CrmWorkspaceEnterprise[]> => {
+      const response = await fetch(`/api/crm/${enterpriseId}/workspace/enterprises?limit=200`);
+      if (!response.ok) throw new Error("Failed to fetch workspace enterprises");
       return response.json();
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!enterpriseId,
     retry: false,
   });
 
@@ -711,35 +710,12 @@ export default function Opportunities() {
                         <FormItem className="flex flex-col">
                           <FormLabel>Enterprise</FormLabel>
                           <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              onClick={() => setEnterpriseDirectoryOpen(true)}
-                              data-testid="button-open-enterprise-directory"
-                            >
-                              {field.value
-                                ? enterprises.find((e) => e.id === field.value)?.name
-                                : "Browse Enterprises..."}
-                              <Building className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
+                            <EnterpriseSelector
+                              value={field.value}
+                              onChange={field.onChange}
+                              workspaceEnterprises={workspaceEnterprises}
+                            />
                           </FormControl>
-                          {field.value && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="mt-1"
-                              onClick={() => form.setValue("workspaceEnterpriseId", null)}
-                              data-testid="button-clear-enterprise"
-                            >
-                              <X className="w-3 h-3 mr-1" />
-                              Clear Selection
-                            </Button>
-                          )}
                           <FormMessage />
                         </FormItem>
                       )}
@@ -798,7 +774,7 @@ export default function Opportunities() {
                                       No Contact
                                     </CommandItem>
                                     {people.map((person) => {
-                                      const enterprise = enterprises.find(e => e.id === person.workspaceEnterpriseId);
+                                      const enterprise = workspaceEnterprises.find(e => e.id === person.workspaceEnterpriseId);
                                       const displayName = `${person.firstName} ${person.lastName}`;
                                       const searchValue = enterprise 
                                         ? `${displayName} ${enterprise.name}`
@@ -1001,8 +977,8 @@ export default function Opportunities() {
                 {/* Mobile Card View */}
                 <div className="block lg:hidden space-y-3">
                   {filteredOpportunities.map((opportunity) => {
-                    const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
-                    const contact = people.find(p => p.id === opportunity.primaryContactId);
+                    const enterprise = workspaceEnterprises.find(e => e.id === opportunity.workspaceEnterpriseId);
+                    const contact = people.find(p => p.id === opportunity.workspacePersonId);
                     const status = opportunityStatuses.find(s => s.value === opportunity.status);
 
                     return (
@@ -1150,8 +1126,8 @@ export default function Opportunities() {
                     </TableHeader>
                     <TableBody>
                       {filteredOpportunities.map((opportunity) => {
-                        const enterprise = enterprises.find(e => e.id === opportunity.enterpriseId);
-                        const contact = people.find(p => p.id === opportunity.primaryContactId);
+                        const enterprise = workspaceEnterprises.find(e => e.id === opportunity.workspaceEnterpriseId);
+                        const contact = people.find(p => p.id === opportunity.workspacePersonId);
                         const status = opportunityStatuses.find(s => s.value === opportunity.status);
                         const taskCount = allTasks.filter(t => t.workspaceOpportunityId === opportunity.id).length;
 
@@ -1322,8 +1298,8 @@ export default function Opportunities() {
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             {viewingOpportunity && (() => {
-              const enterprise = enterprises.find(e => e.id === viewingOpportunity.enterpriseId);
-              const contact = people.find(p => p.id === viewingOpportunity.primaryContactId);
+              const enterprise = workspaceEnterprises.find(e => e.id === viewingOpportunity.workspaceEnterpriseId);
+              const contact = people.find(p => p.id === viewingOpportunity.workspacePersonId);
               const status = opportunityStatuses.find(s => s.value === viewingOpportunity.status);
 
               return (
@@ -1603,16 +1579,6 @@ export default function Opportunities() {
           }}
           onNavigate={handleDrawerNavigate}
           onAddTask={handleQuickAddTask}
-        />
-
-        {/* Enterprise Directory Modal */}
-        <EnterpriseDirectoryModal
-          open={enterpriseDirectoryOpen}
-          onOpenChange={setEnterpriseDirectoryOpen}
-          onSelect={(enterprise) => {
-            form.setValue("workspaceEnterpriseId", enterprise.id);
-          }}
-          selectedEnterpriseId={form.watch("workspaceEnterpriseId")}
         />
     </>
   );
