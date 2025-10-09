@@ -1298,6 +1298,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Workspace People routes (used by frontend)
+  app.get('/api/crm/:enterpriseId/workspace/people', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const people = await storage.getWorkspacePeople(
+        enterpriseId,
+        {
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
+      );
+      res.json(people);
+    } catch (error) {
+      console.error("Error fetching workspace people:", error);
+      res.status(500).json({ message: "Failed to fetch people" });
+    }
+  });
+
+  app.get('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const person = await storage.getWorkspacePerson(enterpriseId, id);
+      if (!person) {
+        return res.status(404).json({ message: "Person not found" });
+      }
+      res.json(person);
+    } catch (error) {
+      console.error("Error fetching workspace person:", error);
+      res.status(500).json({ message: "Failed to fetch person" });
+    }
+  });
+
+  app.post('/api/crm/:enterpriseId/workspace/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const person = await storage.createWorkspacePerson(validatedData);
+      res.status(200).json(person);
+    } catch (error) {
+      console.error("Error creating workspace person:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create person", error: errorMessage });
+    }
+  });
+
+  app.put('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const person = await storage.updateWorkspacePerson(enterpriseId, id, req.body);
+      res.json(person);
+    } catch (error) {
+      console.error("Error updating workspace person:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update person", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      await storage.deleteWorkspacePerson(enterpriseId, id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting workspace person:", error);
+      res.status(500).json({ message: "Failed to delete person" });
+    }
+  });
+
   // Opportunities management
   app.get('/api/crm/:enterpriseId/opportunities', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
     try {
@@ -1362,6 +1431,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting opportunity:", error);
+      res.status(500).json({ message: "Failed to delete opportunity" });
+    }
+  });
+
+  // Workspace Opportunities routes (used by frontend)
+  app.get('/api/crm/:enterpriseId/workspace/opportunities', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const { status, limit = 50, offset = 0 } = req.query;
+      const opportunities = await storage.getWorkspaceOpportunities(
+        enterpriseId,
+        {
+          status: status as string,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
+      );
+      res.json(opportunities);
+    } catch (error) {
+      console.error("Error fetching workspace opportunities:", error);
+      res.status(500).json({ message: "Failed to fetch opportunities" });
+    }
+  });
+
+  app.get('/api/crm/:enterpriseId/workspace/opportunities/:id', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const opportunity = await storage.getWorkspaceOpportunity(enterpriseId, id);
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      res.json(opportunity);
+    } catch (error) {
+      console.error("Error fetching workspace opportunity:", error);
+      res.status(500).json({ message: "Failed to fetch opportunity" });
+    }
+  });
+
+  app.post('/api/crm/:enterpriseId/workspace/opportunities', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const body = { ...req.body };
+      if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
+        body.expectedCloseDate = new Date(body.expectedCloseDate);
+      }
+      
+      const validatedData = insertCrmWorkspaceOpportunitySchema.parse({ ...body, workspaceId: enterpriseId });
+      const opportunity = await storage.createWorkspaceOpportunity(validatedData);
+      res.status(200).json(opportunity);
+    } catch (error) {
+      console.error("Error creating workspace opportunity:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create opportunity", error: errorMessage });
+    }
+  });
+
+  app.put('/api/crm/:enterpriseId/workspace/opportunities/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const body = { ...req.body };
+      if (body.expectedCloseDate && typeof body.expectedCloseDate === 'string') {
+        body.expectedCloseDate = new Date(body.expectedCloseDate);
+      }
+      
+      const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, body);
+      res.json(opportunity);
+    } catch (error) {
+      console.error("Error updating workspace opportunity:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update opportunity", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/crm/:enterpriseId/workspace/opportunities/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      await storage.deleteWorkspaceOpportunity(enterpriseId, id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting workspace opportunity:", error);
       res.status(500).json({ message: "Failed to delete opportunity" });
     }
   });
@@ -1528,6 +1677,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Workspace Tasks routes (used by frontend)
+  app.get('/api/crm/:enterpriseId/workspace/tasks', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const { status, assignedToId, limit = 50, offset = 0 } = req.query;
+      const tasks = await storage.getWorkspaceTasks(
+        enterpriseId,
+        {
+          status: status as string,
+          assignedToId: assignedToId as string,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        }
+      );
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching workspace tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('viewer'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const task = await storage.getWorkspaceTask(enterpriseId, id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching workspace task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.post('/api/crm/:enterpriseId/workspace/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId } = req.params;
+      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const task = await storage.createWorkspaceTask(validatedData);
+      res.status(200).json(task);
+    } catch (error) {
+      console.error("Error creating workspace task:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to create task", error: errorMessage });
+    }
+  });
+
+  app.put('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      const task = await storage.updateWorkspaceTask(enterpriseId, id, req.body);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating workspace task:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ message: "Failed to update task", error: errorMessage });
+    }
+  });
+
+  app.delete('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
+    try {
+      const { enterpriseId, id } = req.params;
+      await storage.deleteWorkspaceTask(enterpriseId, id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting workspace task:", error);
       res.status(500).json({ message: "Failed to delete task" });
     }
   });
