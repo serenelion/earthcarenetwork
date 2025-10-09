@@ -97,12 +97,16 @@ The application maintains a clear separation between a public-facing directory a
   - Sync status tracking (synced, pending, error, never_synced)
 - **Enterprise Selection UX**: 
   - **EnterpriseSelector Component**: Reusable component providing consistent enterprise selection across all CRM forms
-  - Fetches workspace enterprises (not directory enterprises) to ensure data integrity
-  - Browse button opens EnterpriseDirectoryModal for visual selection
-  - Shows selected enterprise name with category badge
+  - **Automatic Linking**: When users select directory enterprises, the system automatically links them to the workspace behind the scenes
+  - Browse button opens EnterpriseDirectoryModal showing the full global directory
+  - On selection, checks if enterprise is already linked to workspace
+    - If already linked: Uses existing workspace enterprise ID instantly
+    - If not linked: Automatically calls link API and returns workspace enterprise ID
+  - Shows loading state ("Linking enterprise...") during automatic linking
+  - Displays selected enterprise name with category badge after selection
   - Clear selection button for removing enterprise associations
   - Used consistently across People, Opportunities, Tasks, and Enterprises forms
-  - Fixes previous 403 errors from mixing workspace/directory enterprise endpoints
+  - Eliminates 403 errors by ensuring forms always submit with workspace enterprise IDs
 - **People Management**: Contact management, status tracking, relationship mapping (scoped to workspace via `crm_workspace_people`)
 - **Opportunity Tracking**: Deal pipeline with stages, value, and AI lead scoring (scoped to workspace via `crm_workspace_opportunities`)
 - **Task Management**: Assignment, tracking, and due dates (scoped to workspace via `crm_workspace_tasks`)
