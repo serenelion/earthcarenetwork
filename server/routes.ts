@@ -1335,17 +1335,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId } = req.params;
       const userId = (req.user as any)?.claims?.sub;
+      const body = { ...req.body };
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+      if (body.workspaceEnterpriseId) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const validatedData = insertCrmWorkspacePersonSchema.parse({ ...body, workspaceId: enterpriseId });
       const person = await storage.createWorkspacePerson(validatedData);
       res.status(200).json(person);
     } catch (error) {
@@ -1359,17 +1362,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId, id } = req.params;
       const userId = (req.user as any)?.claims?.sub;
+      const body = { ...req.body };
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+      if (body.workspaceEnterpriseId) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const person = await storage.updateWorkspacePerson(enterpriseId, id, req.body);
+      const person = await storage.updateWorkspacePerson(enterpriseId, id, body);
       res.json(person);
     } catch (error) {
       console.error("Error updating workspace person:", error);
@@ -1502,11 +1508,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
       const validatedData = insertCrmWorkspaceOpportunitySchema.parse({ ...body, workspaceId: enterpriseId });
@@ -1530,11 +1538,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
       const opportunity = await storage.updateWorkspaceOpportunity(enterpriseId, id, body);
@@ -1762,17 +1772,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId } = req.params;
       const userId = (req.user as any)?.claims?.sub;
+      const body = { ...req.body };
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+      if (body.workspaceEnterpriseId) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...req.body, workspaceId: enterpriseId });
+      const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...body, workspaceId: enterpriseId });
       const task = await storage.createWorkspaceTask(validatedData);
       res.status(200).json(task);
     } catch (error) {
@@ -1786,17 +1799,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enterpriseId, id } = req.params;
       const userId = (req.user as any)?.claims?.sub;
+      const body = { ...req.body };
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
-      if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
-        if (!existingWorkspaceEnterprise) {
+      if (body.workspaceEnterpriseId) {
+        let workspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
+        if (!workspaceEnterprise) {
           // Link the directory enterprise to the workspace
-          await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
+          workspaceEnterprise = await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
         }
+        // Update to use the workspace enterprise ID (not the directory enterprise ID)
+        body.workspaceEnterpriseId = workspaceEnterprise.id;
       }
       
-      const task = await storage.updateWorkspaceTask(enterpriseId, id, req.body);
+      const task = await storage.updateWorkspaceTask(enterpriseId, id, body);
       res.json(task);
     } catch (error) {
       console.error("Error updating workspace task:", error);
