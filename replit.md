@@ -90,11 +90,19 @@ The application maintains a clear separation between a public-facing directory a
 
 ### CRM Features (Workspace-Scoped)
 - **Workspace Enterprise Management**: 
-  - Dual-mode creation: (1) Link existing directory enterprise to workspace, (2) Create new unclaimed enterprise
+  - Tab-based dialog with dual-mode creation: (1) "Link Existing Enterprise" - browse global directory and link, (2) "Create New Enterprise" - create in directory and auto-link
   - Each workspace maintains independent tracking records via `crm_workspace_enterprises`
   - Relationship stages (cold, warm, hot, prospect, active, partner, inactive, customer) tracked per-workspace
   - External data integration with JSONB storage for Apollo, Google Maps, Foursquare APIs
   - Sync status tracking (synced, pending, error, never_synced)
+- **Enterprise Selection UX**: 
+  - **EnterpriseSelector Component**: Reusable component providing consistent enterprise selection across all CRM forms
+  - Fetches workspace enterprises (not directory enterprises) to ensure data integrity
+  - Browse button opens EnterpriseDirectoryModal for visual selection
+  - Shows selected enterprise name with category badge
+  - Clear selection button for removing enterprise associations
+  - Used consistently across People, Opportunities, Tasks, and Enterprises forms
+  - Fixes previous 403 errors from mixing workspace/directory enterprise endpoints
 - **People Management**: Contact management, status tracking, relationship mapping (scoped to workspace via `crm_workspace_people`)
 - **Opportunity Tracking**: Deal pipeline with stages, value, and AI lead scoring (scoped to workspace via `crm_workspace_opportunities`)
 - **Task Management**: Assignment, tracking, and due dates (scoped to workspace via `crm_workspace_tasks`)
