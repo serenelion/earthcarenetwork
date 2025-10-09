@@ -721,6 +721,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async linkDirectoryEnterprise(workspaceId: string, directoryEnterpriseId: string, createdBy: string): Promise<CrmWorkspaceEnterprise> {
+    // Check if this directory enterprise is already linked to this workspace
+    const existingLink = await this.getWorkspaceEnterpriseByDirectoryId(workspaceId, directoryEnterpriseId);
+    if (existingLink) {
+      return existingLink;
+    }
+
     const [directoryEnterprise] = await db.select().from(enterprises)
       .where(eq(enterprises.id, directoryEnterpriseId));
     
