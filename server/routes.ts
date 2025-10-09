@@ -1334,6 +1334,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/people', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
+      
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (req.body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: req.body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
+      }
+      
       const validatedData = insertCrmWorkspacePersonSchema.parse({ ...req.body, workspaceId: enterpriseId });
       const person = await storage.createWorkspacePerson(validatedData);
       res.status(200).json(person);
@@ -1347,6 +1361,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/people/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
+      
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (req.body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: req.body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
+      }
+      
       const person = await storage.updateWorkspacePerson(enterpriseId, id, req.body);
       res.json(person);
     } catch (error) {
@@ -1745,6 +1773,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/crm/:enterpriseId/workspace/tasks', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId } = req.params;
+      
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (req.body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: req.body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
+      }
+      
       const validatedData = insertCrmWorkspaceTaskSchema.parse({ ...req.body, workspaceId: enterpriseId });
       const task = await storage.createWorkspaceTask(validatedData);
       res.status(200).json(task);
@@ -1758,6 +1800,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/crm/:enterpriseId/workspace/tasks/:id', isAuthenticated, requireEnterpriseRole('editor'), async (req: any, res) => {
     try {
       const { enterpriseId, id } = req.params;
+      
+      // Auto-add enterprise to workspace if linking to one that's not in workspace yet
+      if (req.body.workspaceEnterpriseId) {
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        if (!existingWorkspaceEnterprise) {
+          // Add the enterprise to the workspace first
+          await storage.createWorkspaceEnterprise({
+            workspaceId: enterpriseId,
+            enterpriseId: req.body.workspaceEnterpriseId,
+            relationshipStage: 'prospect'
+          });
+        }
+      }
+      
       const task = await storage.updateWorkspaceTask(enterpriseId, id, req.body);
       res.json(task);
     } catch (error) {
