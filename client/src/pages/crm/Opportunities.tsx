@@ -213,8 +213,8 @@ export default function Opportunities() {
       return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/opportunities`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Opportunity created successfully",
@@ -247,7 +247,7 @@ export default function Opportunities() {
       return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/opportunities/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       toast({
         title: "Success",
         description: "Opportunity updated successfully",
@@ -281,8 +281,8 @@ export default function Opportunities() {
       return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/opportunities/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Opportunity deleted successfully",
@@ -320,7 +320,7 @@ export default function Opportunities() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
       toast({
         title: "Success",
         description: "AI lead score generated successfully",

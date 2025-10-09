@@ -215,8 +215,8 @@ export default function People() {
       return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/people`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Person created successfully",
@@ -249,7 +249,7 @@ export default function People() {
       return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/people/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
       toast({
         title: "Success",
         description: "Person updated successfully",
@@ -283,8 +283,8 @@ export default function People() {
       return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/people/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Person deleted successfully",

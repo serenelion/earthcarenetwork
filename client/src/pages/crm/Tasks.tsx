@@ -189,8 +189,8 @@ export default function Tasks() {
       return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/tasks`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Task created successfully",
@@ -223,7 +223,7 @@ export default function Tasks() {
       return apiRequest("PUT", `/api/crm/${enterpriseId}/workspace/tasks/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -257,8 +257,8 @@ export default function Tasks() {
       return apiRequest("DELETE", `/api/crm/${enterpriseId}/workspace/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
       toast({
         title: "Success",
         description: "Task deleted successfully",
