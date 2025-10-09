@@ -79,7 +79,7 @@ import {
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspacePersonSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise, type CrmWorkspaceEnterprise, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
+import { insertCrmWorkspacePersonSchema, insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspacePerson, type InsertCrmWorkspacePerson, type Enterprise, type CrmWorkspaceEnterprise, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceOpportunity, type InsertCrmWorkspaceTask } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
 const invitationStatuses = [
   { value: "not_invited", label: "Not Invited", color: "bg-gray-100 text-gray-800" },
@@ -136,6 +136,9 @@ export default function People() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("person");
   const [drawerEntityId, setDrawerEntityId] = useState<string>("");
+  const [quickActionOpportunityDialogOpen, setQuickActionOpportunityDialogOpen] = useState(false);
+  const [quickActionTaskDialogOpen, setQuickActionTaskDialogOpen] = useState(false);
+  const [quickActionPrefilledData, setQuickActionPrefilledData] = useState<any>(null);
 
   const form = useForm<InsertCrmWorkspacePerson>({
     resolver: zodResolver(insertCrmWorkspacePersonSchema),
@@ -149,6 +152,36 @@ export default function People() {
       linkedinUrl: "",
       notes: "",
       workspaceId: enterpriseId,
+    },
+  });
+
+  const opportunityForm = useForm<InsertCrmWorkspaceOpportunity>({
+    resolver: zodResolver(insertCrmWorkspaceOpportunitySchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      value: 0,
+      status: "lead",
+      probability: 0,
+      workspaceEnterpriseId: "",
+      workspacePersonId: "",
+      notes: "",
+      workspaceId: enterpriseId,
+    },
+  });
+
+  const taskForm = useForm<InsertCrmWorkspaceTask>({
+    resolver: zodResolver(insertCrmWorkspaceTaskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      priority: "medium",
+      status: "pending",
+      assignedToId: "",
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: "",
+      workspacePersonId: "",
+      workspaceOpportunityId: "",
     },
   });
 
@@ -425,6 +458,74 @@ export default function People() {
     },
   });
 
+  const createOpportunityMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceOpportunity) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/opportunities`, data);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      toast({
+        title: "Success",
+        description: "Opportunity created successfully",
+      });
+      setQuickActionOpportunityDialogOpen(false);
+      opportunityForm.reset();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create opportunity",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceTask) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/tasks`, data);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "stats"] });
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+      setQuickActionTaskDialogOpen(false);
+      taskForm.reset();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -461,6 +562,61 @@ export default function People() {
   const handleDrawerNavigate = (type: "opportunity" | "person" | "enterprise", id: string) => {
     setDrawerEntityType(type);
     setDrawerEntityId(id);
+  };
+
+  const handleQuickAddOpportunity = (prefilledData: any) => {
+    opportunityForm.reset({
+      title: "",
+      description: "",
+      value: 0,
+      status: "lead",
+      probability: 0,
+      workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "",
+      workspacePersonId: prefilledData.workspacePersonId || "",
+      notes: "",
+      workspaceId: enterpriseId,
+    });
+    setQuickActionPrefilledData(prefilledData);
+    setQuickActionOpportunityDialogOpen(true);
+  };
+
+  const handleQuickAddTask = (prefilledData: any) => {
+    taskForm.reset({
+      title: "",
+      description: "",
+      priority: "medium",
+      status: "pending",
+      assignedToId: "",
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "",
+      workspacePersonId: prefilledData.workspacePersonId || "",
+      workspaceOpportunityId: prefilledData.workspaceOpportunityId || "",
+    });
+    setQuickActionPrefilledData(prefilledData);
+    setQuickActionTaskDialogOpen(true);
+  };
+
+  const handleSubmitOpportunity = (data: InsertCrmWorkspaceOpportunity) => {
+    const processedData = {
+      ...data,
+      workspaceId: enterpriseId,
+      workspaceEnterpriseId: data.workspaceEnterpriseId || null,
+      workspacePersonId: data.workspacePersonId || null,
+    };
+    createOpportunityMutation.mutate(processedData);
+  };
+
+  const handleSubmitTask = (data: InsertCrmWorkspaceTask) => {
+    const processedData = {
+      ...data,
+      workspaceId: enterpriseId,
+      assignedToId: data.assignedToId || null,
+      workspaceEnterpriseId: data.workspaceEnterpriseId || null,
+      workspacePersonId: data.workspacePersonId || null,
+      workspaceOpportunityId: data.workspaceOpportunityId || null,
+      dueDate: data.dueDate || null,
+    };
+    createTaskMutation.mutate(processedData);
   };
 
   const handleEdit = (person: CrmWorkspacePerson) => {
@@ -1346,6 +1502,96 @@ export default function People() {
           </DialogContent>
         </Dialog>
 
+        {/* Quick Action: Add Opportunity Dialog */}
+        <Dialog open={quickActionOpportunityDialogOpen} onOpenChange={setQuickActionOpportunityDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-lato">Create Opportunity</DialogTitle>
+            </DialogHeader>
+            <Form {...opportunityForm}>
+              <form onSubmit={opportunityForm.handleSubmit(handleSubmitOpportunity)} className="space-y-4">
+                <FormField
+                  control={opportunityForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter opportunity title" {...field} data-testid="input-opportunity-title" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={opportunityForm.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Value (in cents)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} data-testid="input-opportunity-value" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setQuickActionOpportunityDialogOpen(false)} data-testid="button-cancel-opportunity">Cancel</Button>
+                  <Button type="submit" disabled={createOpportunityMutation.isPending} data-testid="button-save-opportunity">
+                    {createOpportunityMutation.isPending ? "Creating..." : "Create Opportunity"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Quick Action: Add Task Dialog */}
+        <Dialog open={quickActionTaskDialogOpen} onOpenChange={setQuickActionTaskDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-lato">Create Task</DialogTitle>
+            </DialogHeader>
+            <Form {...taskForm}>
+              <form onSubmit={taskForm.handleSubmit(handleSubmitTask)} className="space-y-4">
+                <FormField
+                  control={taskForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Task Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter task title" {...field} data-testid="input-task-title" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={taskForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe the task" className="min-h-[100px]" {...field} value={field.value || ""} data-testid="textarea-task-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setQuickActionTaskDialogOpen(false)} data-testid="button-cancel-task">Cancel</Button>
+                  <Button type="submit" disabled={createTaskMutation.isPending} data-testid="button-save-task">
+                    {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
         {/* Entity Drawer */}
         <EntityDrawer
           open={drawerOpen}
@@ -1364,6 +1610,8 @@ export default function People() {
             handleDelete(drawerEntityId);
           }}
           onNavigate={handleDrawerNavigate}
+          onAddOpportunity={handleQuickAddOpportunity}
+          onAddTask={handleQuickAddTask}
         />
     </>
   );

@@ -102,7 +102,7 @@ import {
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson } from "@shared/schema";
+import { insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson, type InsertCrmWorkspaceTask } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
 import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
 const opportunityStatuses = [
@@ -147,6 +147,7 @@ export default function Opportunities() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("opportunity");
   const [drawerEntityId, setDrawerEntityId] = useState<string>("");
+  const [quickActionTaskDialogOpen, setQuickActionTaskDialogOpen] = useState(false);
 
   const form = useForm<InsertCrmWorkspaceOpportunity>({
     resolver: zodResolver(insertCrmWorkspaceOpportunitySchema),
@@ -159,6 +160,21 @@ export default function Opportunities() {
       workspaceEnterpriseId: "",
       workspacePersonId: "",
       notes: "",
+      workspaceId: enterpriseId,
+    },
+  });
+
+  const taskForm = useForm<InsertCrmWorkspaceTask>({
+    resolver: zodResolver(insertCrmWorkspaceTaskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "todo",
+      priority: "medium",
+      dueDate: "",
+      workspaceOpportunityId: "",
+      workspacePersonId: "",
+      workspaceEnterpriseId: "",
       workspaceId: enterpriseId,
     },
   });
@@ -362,6 +378,31 @@ export default function Opportunities() {
       });
     },
   });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceTask) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/tasks`, data);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "tasks"] });
+      toast({ title: "Success", description: "Task created successfully" });
+      setQuickActionTaskDialogOpen(false);
+      taskForm.reset();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create task", variant: "destructive" });
+    },
+  });
+
+  const handleQuickAddTask = (prefilledData: any) => {
+    taskForm.reset({
+      ...taskForm.getValues(),
+      workspaceOpportunityId: prefilledData.workspaceOpportunityId || "",
+      workspacePersonId: prefilledData.workspacePersonId || "",
+      workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "",
+    });
+    setQuickActionTaskDialogOpen(true);
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -1526,6 +1567,20 @@ export default function Opportunities() {
         </Dialog>
 
         {/* Entity Drawer */}
+        {/* Quick Action Task Dialog */}
+        <Dialog open={quickActionTaskDialogOpen} onOpenChange={setQuickActionTaskDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
+            <Form {...taskForm}>
+              <form onSubmit={taskForm.handleSubmit(data => createTaskMutation.mutate({...data, workspaceId: enterpriseId}))} className="space-y-4">
+                <FormField control={taskForm.control} name="title" render={({ field }) => (<FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={taskForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setQuickActionTaskDialogOpen(false)}>Cancel</Button><Button type="submit">Create</Button></div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
         <EntityDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
@@ -1543,6 +1598,7 @@ export default function Opportunities() {
             handleDelete(drawerEntityId);
           }}
           onNavigate={handleDrawerNavigate}
+          onAddTask={handleQuickAddTask}
         />
 
         {/* Enterprise Directory Modal */}

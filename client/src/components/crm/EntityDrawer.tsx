@@ -51,6 +51,9 @@ interface EntityDrawerProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onNavigate?: (type: EntityType, id: string) => void;
+  onAddOpportunity?: (prefilledData: any) => void;
+  onAddTask?: (prefilledData: any) => void;
+  onAddPerson?: (prefilledData: any) => void;
 }
 
 const opportunityStatuses = [
@@ -102,6 +105,9 @@ export default function EntityDrawer({
   onEdit,
   onDelete,
   onNavigate,
+  onAddOpportunity,
+  onAddTask,
+  onAddPerson,
 }: EntityDrawerProps) {
   const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const [internalOpen, setInternalOpen] = useState(open);
@@ -753,22 +759,119 @@ export default function EntityDrawer({
           </div>
         </ScrollArea>
 
-        {/* Quick Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t bg-background">
-          <div className="flex gap-2">
-            {onEdit && (
-              <Button variant="outline" onClick={onEdit} className="flex-1" data-testid="button-edit">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="outline" onClick={onDelete} data-testid="button-delete">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            )}
-          </div>
+        {/* Actions Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t bg-background space-y-3">
+          {/* Quick Actions */}
+          {(onAddOpportunity || onAddTask || onAddPerson) && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Actions</p>
+              <div className="flex gap-2 flex-wrap">
+                {/* Person Drawer: Add Opportunity, Add Task */}
+                {entityType === "person" && person && (
+                  <>
+                    {onAddOpportunity && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onAddOpportunity({
+                          workspacePersonId: person.id,
+                          workspaceEnterpriseId: person.workspaceEnterpriseId || "",
+                        })}
+                        data-testid="button-quick-add-opportunity"
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Add Opportunity
+                      </Button>
+                    )}
+                    {onAddTask && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onAddTask({
+                          workspacePersonId: person.id,
+                        })}
+                        data-testid="button-quick-add-task"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Add Task
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                {/* Enterprise Drawer: Add Person, Add Opportunity */}
+                {entityType === "enterprise" && enterprise && (
+                  <>
+                    {onAddPerson && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onAddPerson({
+                          workspaceEnterpriseId: enterprise.id,
+                        })}
+                        data-testid="button-quick-add-person"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Add Person
+                      </Button>
+                    )}
+                    {onAddOpportunity && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onAddOpportunity({
+                          workspaceEnterpriseId: enterprise.id,
+                        })}
+                        data-testid="button-quick-add-opportunity"
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Add Opportunity
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                {/* Opportunity Drawer: Add Task */}
+                {entityType === "opportunity" && opportunity && (
+                  <>
+                    {onAddTask && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onAddTask({
+                          workspaceOpportunityId: opportunity.id,
+                          workspacePersonId: opportunity.workspacePersonId || "",
+                          workspaceEnterpriseId: opportunity.workspaceEnterpriseId || "",
+                        })}
+                        data-testid="button-quick-add-task"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Add Task
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Edit/Delete Actions */}
+          {(onEdit || onDelete) && (
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button variant="outline" onClick={onEdit} className="flex-1" data-testid="button-edit">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="outline" onClick={onDelete} data-testid="button-delete">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

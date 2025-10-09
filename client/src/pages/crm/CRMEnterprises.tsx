@@ -91,7 +91,7 @@ import {
 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { insertCrmWorkspaceEnterpriseSchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson } from "@shared/schema";
+import { insertCrmWorkspaceEnterpriseSchema, insertCrmWorkspacePersonSchema, insertCrmWorkspaceOpportunitySchema, type CrmWorkspaceEnterprise, type InsertCrmWorkspaceEnterprise, type CrmWorkspacePerson, type CrmWorkspaceEnterprisePerson, type InsertCrmWorkspaceEnterprisePerson, type InsertCrmWorkspacePerson, type InsertCrmWorkspaceOpportunity } from "@shared/schema";
 import { format } from "date-fns";
 import EntityDrawer from "@/components/crm/EntityDrawer";
 
@@ -161,6 +161,9 @@ export default function CRMEnterprises() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerEntityType, setDrawerEntityType] = useState<"opportunity" | "person" | "enterprise">("enterprise");
   const [drawerEntityId, setDrawerEntityId] = useState<string>("");
+  const [quickActionPersonDialogOpen, setQuickActionPersonDialogOpen] = useState(false);
+  const [quickActionOpportunityDialogOpen, setQuickActionOpportunityDialogOpen] = useState(false);
+  const [quickActionPrefilledData, setQuickActionPrefilledData] = useState<any>(null);
 
   const form = useForm<InsertCrmWorkspaceEnterprise>({
     resolver: zodResolver(insertCrmWorkspaceEnterpriseSchema),
@@ -175,6 +178,36 @@ export default function CRMEnterprises() {
       tags: [],
       relationshipStage: undefined,
       ownerNotes: "",
+    },
+  });
+
+  const personForm = useForm<InsertCrmWorkspacePerson>({
+    resolver: zodResolver(insertCrmWorkspacePersonSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      title: "",
+      workspaceEnterpriseId: "",
+      linkedinUrl: "",
+      notes: "",
+      workspaceId: enterpriseId,
+    },
+  });
+
+  const opportunityForm = useForm<InsertCrmWorkspaceOpportunity>({
+    resolver: zodResolver(insertCrmWorkspaceOpportunitySchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      value: 0,
+      status: "lead",
+      probability: 0,
+      workspaceEnterpriseId: "",
+      workspacePersonId: "",
+      notes: "",
+      workspaceId: enterpriseId,
     },
   });
 
@@ -399,6 +432,46 @@ export default function CRMEnterprises() {
       });
     },
   });
+
+  const createPersonMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspacePerson) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/people`, data);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "people"] });
+      toast({ title: "Success", description: "Person created successfully" });
+      setQuickActionPersonDialogOpen(false);
+      personForm.reset();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create person", variant: "destructive" });
+    },
+  });
+
+  const createOpportunityMutation = useMutation({
+    mutationFn: async (data: InsertCrmWorkspaceOpportunity) => {
+      return apiRequest("POST", `/api/crm/${enterpriseId}/workspace/opportunities`, data);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/crm", enterpriseId, "workspace", "opportunities"] });
+      toast({ title: "Success", description: "Opportunity created successfully" });
+      setQuickActionOpportunityDialogOpen(false);
+      opportunityForm.reset();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create opportunity", variant: "destructive" });
+    },
+  });
+
+  const handleQuickAddPerson = (prefilledData: any) => {
+    personForm.reset({ ...personForm.getValues(), workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "" });
+    setQuickActionPersonDialogOpen(true);
+  };
+
+  const handleQuickAddOpportunity = (prefilledData: any) => {
+    opportunityForm.reset({ ...opportunityForm.getValues(), workspaceEnterpriseId: prefilledData.workspaceEnterpriseId || "" });
+    setQuickActionOpportunityDialogOpen(true);
+  };
 
   const handleAddEnterprise = () => {
     navigate(`/crm/${enterpriseId}/add-enterprise`);
@@ -1517,6 +1590,32 @@ export default function CRMEnterprises() {
       </Dialog>
 
       {/* Entity Drawer */}
+      {/* Quick Action Dialogs */}
+      <Dialog open={quickActionPersonDialogOpen} onOpenChange={setQuickActionPersonDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Create Person</DialogTitle></DialogHeader>
+          <Form {...personForm}>
+            <form onSubmit={personForm.handleSubmit(data => createPersonMutation.mutate({...data, workspaceId: enterpriseId}))} className="space-y-4">
+              <FormField control={personForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={personForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setQuickActionPersonDialogOpen(false)}>Cancel</Button><Button type="submit">Create</Button></div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={quickActionOpportunityDialogOpen} onOpenChange={setQuickActionOpportunityDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Create Opportunity</DialogTitle></DialogHeader>
+          <Form {...opportunityForm}>
+            <form onSubmit={opportunityForm.handleSubmit(data => createOpportunityMutation.mutate({...data, workspaceId: enterpriseId}))} className="space-y-4">
+              <FormField control={opportunityForm.control} name="title" render={({ field }) => (<FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={opportunityForm.control} name="value" render={({ field }) => (<FormItem><FormLabel>Value</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>)} />
+              <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setQuickActionOpportunityDialogOpen(false)}>Cancel</Button><Button type="submit">Create</Button></div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       <EntityDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
@@ -1534,6 +1633,8 @@ export default function CRMEnterprises() {
           handleDelete(drawerEntityId);
         }}
         onNavigate={handleDrawerNavigate}
+        onAddPerson={handleQuickAddPerson}
+        onAddOpportunity={handleQuickAddOpportunity}
       />
     </div>
   );
