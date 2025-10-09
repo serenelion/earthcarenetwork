@@ -78,6 +78,7 @@ import {
   Shield,
   Users,
   ListTodo,
+  X,
 } from "lucide-react";
 import {
   Tooltip,
