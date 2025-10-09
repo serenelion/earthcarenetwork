@@ -144,7 +144,7 @@ export default function CRMEnterprises() {
   const enterpriseId = params.enterpriseId || currentEnterprise?.id || '';
   const [, navigate] = useLocation();
   const { userSubscription } = useSubscription();
-  const isFreeUser = userSubscription?.currentPlanType === 'free';
+  const isFreeUser = userSubscription?.currentPlanType === 'free' && user?.role !== 'admin';
   const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);

@@ -117,8 +117,8 @@ export default function People() {
   const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { userSubscription } = useSubscription();
-  const isFreeUser = userSubscription?.currentPlanType === 'free';
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isFreeUser = userSubscription?.currentPlanType === 'free' && user?.role !== 'admin';
   const isAdmin = user?.role === 'admin';
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");

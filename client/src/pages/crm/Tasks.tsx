@@ -101,8 +101,8 @@ export default function Tasks() {
   const { enterpriseId } = useParams<{ enterpriseId: string }>();
   const { toast } = useToast();
   const { userSubscription } = useSubscription();
-  const isFreeUser = userSubscription?.currentPlanType === 'free';
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const isFreeUser = userSubscription?.currentPlanType === 'free' && user?.role !== 'admin';
   const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);

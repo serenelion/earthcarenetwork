@@ -28,7 +28,7 @@ export default function Dashboard() {
   const { isFlowComplete } = useOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(false);
   
-  const isFreeUser = userSubscription?.currentPlanType === 'free';
+  const isFreeUser = userSubscription?.currentPlanType === 'free' && user?.role !== 'admin';
   const isCrmProUser = userSubscription?.currentPlanType === 'crm_pro' || userSubscription?.currentPlanType === 'build_pro_bundle';
 
   const { data: stats, isLoading: statsLoading } = useQuery<CRMStats>({
