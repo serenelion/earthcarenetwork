@@ -685,6 +685,15 @@ export class DatabaseStorage implements IStorage {
     return enterprise;
   }
 
+  async getWorkspaceEnterpriseByDirectoryId(workspaceId: string, directoryEnterpriseId: string): Promise<CrmWorkspaceEnterprise | undefined> {
+    const [enterprise] = await db.select().from(crmWorkspaceEnterprises)
+      .where(and(
+        eq(crmWorkspaceEnterprises.workspaceId, workspaceId),
+        eq(crmWorkspaceEnterprises.directoryEnterpriseId, directoryEnterpriseId)
+      ));
+    return enterprise;
+  }
+
   /**
    * INTERNAL USE ONLY - DO NOT CALL DIRECTLY
    * 

@@ -100,6 +100,12 @@ The application maintains a clear separation between a public-facing directory a
 - **Task Management**: Assignment, tracking, and due dates (scoped to workspace via `crm_workspace_tasks`)
 - **Entity Navigation System** (Apollo.io/Monday.com-inspired UX):
   - **EntityDrawer Component**: Quick-view drawer with drawer-to-drawer navigation for opportunities, people, and enterprises
+  - **ClickableEntityLink Component**: Global reusable pattern for entity links with hover effects, tooltips, and visual indicators
+    - Interactive hover states with background highlight and icon animations
+    - External link icon appears on hover to signal clickability
+    - Tooltips explain that clicking opens side panel with entity details
+    - Responsive sizing (sm/md/lg) for different contexts
+    - Used consistently across all list views (opportunities, people, tasks, enterprises)
   - **Relational Navigation**: Clickable entity links and count badges in all list views for seamless navigation
   - **Advanced Filtering**: EnterpriseDirectoryModal with search, category, and location filtering
   - **Contextual Quick Actions**: Create related items with pre-filled relationships directly from entity drawers

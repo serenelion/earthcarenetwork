@@ -106,6 +106,7 @@ import UpgradePrompt from "@/components/UpgradePrompt";
 import { insertCrmWorkspaceOpportunitySchema, insertCrmWorkspaceTaskSchema, type CrmWorkspaceOpportunity, type InsertCrmWorkspaceOpportunity, type Enterprise, type CrmWorkspacePerson, type InsertCrmWorkspaceTask } from "@shared/schema";
 import EntityDrawer from "@/components/crm/EntityDrawer";
 import EnterpriseDirectoryModal from "@/components/crm/EnterpriseDirectoryModal";
+import ClickableEntityLink from "@/components/crm/ClickableEntityLink";
 const opportunityStatuses = [
   { value: "lead", label: "Lead", color: "bg-gray-100 text-gray-800" },
   { value: "qualified", label: "Qualified", color: "bg-blue-100 text-blue-800" },
@@ -1035,19 +1036,25 @@ export default function Opportunities() {
                             </div>
 
                             {enterprise && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Building className="w-4 h-4 text-muted-foreground" />
-                                <span className="truncate" data-testid={`enterprise-name-${opportunity.id}`}>{enterprise.name}</span>
-                              </div>
+                              <ClickableEntityLink
+                                type="enterprise"
+                                id={enterprise.id}
+                                name={enterprise.name}
+                                onClick={handleOpenDrawer}
+                                showTooltip={false}
+                                className="w-fit"
+                              />
                             )}
 
                             {contact && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <User className="w-4 h-4" />
-                                <span className="truncate" data-testid={`contact-name-${opportunity.id}`}>
-                                  {contact.firstName} {contact.lastName}
-                                </span>
-                              </div>
+                              <ClickableEntityLink
+                                type="person"
+                                id={contact.id}
+                                name={`${contact.firstName} ${contact.lastName}`}
+                                onClick={handleOpenDrawer}
+                                showTooltip={false}
+                                className="w-fit"
+                              />
                             )}
 
                             {opportunity.value && opportunity.value > 0 && (
@@ -1190,15 +1197,13 @@ export default function Opportunities() {
                             <TableCell>
                               {enterprise ? (
                                 <div className="min-w-0 space-y-1">
-                                  <button
-                                    onClick={() => handleOpenDrawer("enterprise", enterprise.id)}
-                                    className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer transition-colors"
-                                    data-testid={`link-enterprise-${opportunity.id}`}
-                                  >
-                                    <Building className="w-3 h-3 flex-shrink-0" />
-                                    <span className="truncate font-medium">{enterprise.name}</span>
-                                  </button>
-                                  <div className="flex items-center gap-1 flex-wrap">
+                                  <ClickableEntityLink
+                                    type="enterprise"
+                                    id={enterprise.id}
+                                    name={enterprise.name}
+                                    onClick={handleOpenDrawer}
+                                  />
+                                  <div className="flex items-center gap-1 flex-wrap ml-2">
                                     {enterprise.category && (
                                       <Badge className={`text-xs ${categoryColors[enterprise.category as keyof typeof categoryColors]}`}>
                                         {categoryLabels[enterprise.category as keyof typeof categoryLabels]}
@@ -1213,16 +1218,14 @@ export default function Opportunities() {
                             <TableCell>
                               {contact ? (
                                 <div className="min-w-0 space-y-1">
-                                  <button
-                                    onClick={() => handleOpenDrawer("person", contact.id)}
-                                    className="flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer transition-colors"
-                                    data-testid={`link-contact-${opportunity.id}`}
-                                  >
-                                    <User className="w-3 h-3 flex-shrink-0" />
-                                    <span className="truncate font-medium">{contact.firstName} {contact.lastName}</span>
-                                  </button>
+                                  <ClickableEntityLink
+                                    type="person"
+                                    id={contact.id}
+                                    name={`${contact.firstName} ${contact.lastName}`}
+                                    onClick={handleOpenDrawer}
+                                  />
                                   {contact.title && (
-                                    <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                    <div className="text-xs text-muted-foreground truncate max-w-[150px] ml-2">
                                       {contact.title}
                                     </div>
                                   )}

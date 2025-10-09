@@ -1338,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
@@ -1362,7 +1362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
@@ -1502,7 +1502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
@@ -1530,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, body.workspaceEnterpriseId, userId);
@@ -1765,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
@@ -1789,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-add enterprise to workspace if linking to one that's not in workspace yet
       if (req.body.workspaceEnterpriseId) {
-        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterprise(enterpriseId, req.body.workspaceEnterpriseId);
+        const existingWorkspaceEnterprise = await storage.getWorkspaceEnterpriseByDirectoryId(enterpriseId, req.body.workspaceEnterpriseId);
         if (!existingWorkspaceEnterprise) {
           // Link the directory enterprise to the workspace
           await storage.linkDirectoryEnterprise(enterpriseId, req.body.workspaceEnterpriseId, userId);
