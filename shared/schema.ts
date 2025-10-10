@@ -128,7 +128,10 @@ export const enterpriseCategoryEnum = pgEnum('enterprise_category', [
   'land_projects',
   'capital_sources', 
   'open_source_tools',
-  'network_organizers'
+  'network_organizers',
+  'homes_that_heal',
+  'landscapes_that_nourish',
+  'lifelong_learning_providers'
 ]);
 
 // User journey status tracking

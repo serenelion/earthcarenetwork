@@ -43,7 +43,7 @@ import {
 const createEnterpriseFormSchema = insertEnterpriseSchema.extend({
   name: z.string().min(1, "Enterprise name is required").max(255),
   description: z.string().optional(),
-  category: z.enum(["land_projects", "capital_sources", "open_source_tools", "network_organizers"]),
+  category: z.enum(["land_projects", "capital_sources", "open_source_tools", "network_organizers", "homes_that_heal", "landscapes_that_nourish", "lifelong_learning_providers"]),
   location: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   signPledge: z.boolean().optional().default(false),
@@ -62,6 +62,9 @@ const categoryLabels = {
   capital_sources: "Capital Sources",
   open_source_tools: "Open Source Tools",
   network_organizers: "Network Organizers",
+  homes_that_heal: "Homes that Heal",
+  landscapes_that_nourish: "Landscapes that Nourish",
+  lifelong_learning_providers: "Lifelong Learning",
 };
 
 const categoryDescriptions = {
@@ -69,6 +72,9 @@ const categoryDescriptions = {
   capital_sources: "Impact investment funds, grantmaking organizations",
   open_source_tools: "Digital tools for mapping, monitoring, and managing",
   network_organizers: "Organizations building communities and movements",
+  homes_that_heal: "Healing spaces, wellness centers, regenerative housing",
+  landscapes_that_nourish: "Regenerative agriculture, food systems, land stewardship",
+  lifelong_learning_providers: "Educational programs, training centers, knowledge sharing",
 };
 
 export default function CreateEnterpriseDialog({ 

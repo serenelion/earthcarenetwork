@@ -16,6 +16,9 @@ const categoryColors = {
   capital_sources: "bg-yellow-100 text-yellow-800", 
   open_source_tools: "bg-blue-100 text-blue-800",
   network_organizers: "bg-purple-100 text-purple-800",
+  homes_that_heal: "bg-rose-100 text-rose-800",
+  landscapes_that_nourish: "bg-emerald-100 text-emerald-800",
+  lifelong_learning_providers: "bg-indigo-100 text-indigo-800",
 };
 
 const categoryLabels = {
@@ -23,6 +26,9 @@ const categoryLabels = {
   capital_sources: "Capital Source",
   open_source_tools: "Open Source Tool", 
   network_organizers: "Network Organizer",
+  homes_that_heal: "Homes that Heal",
+  landscapes_that_nourish: "Landscapes that Nourish",
+  lifelong_learning_providers: "Lifelong Learning",
 };
 
 export default function EnterpriseCard({ enterprise, "data-testid": testId }: EnterpriseCardProps) {
@@ -67,6 +73,9 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
             {enterprise.category === 'capital_sources' && '💰'}
             {enterprise.category === 'open_source_tools' && '🔧'}
             {enterprise.category === 'network_organizers' && '🌐'}
+            {enterprise.category === 'homes_that_heal' && '🏡'}
+            {enterprise.category === 'landscapes_that_nourish' && '🌾'}
+            {enterprise.category === 'lifelong_learning_providers' && '📚'}
           </div>
         )}
       </div>

@@ -81,6 +81,9 @@ const categories = [
   { value: "capital_sources", label: "Capital Sources" },
   { value: "open_source_tools", label: "Open Source Tools" },
   { value: "network_organizers", label: "Network Organizers" },
+  { value: "homes_that_heal", label: "Homes that Heal" },
+  { value: "landscapes_that_nourish", label: "Landscapes that Nourish" },
+  { value: "lifelong_learning_providers", label: "Lifelong Learning" },
 ];
 
 const categoryColors = {
@@ -88,6 +91,9 @@ const categoryColors = {
   capital_sources: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   open_source_tools: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   network_organizers: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  homes_that_heal: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+  landscapes_that_nourish: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+  lifelong_learning_providers: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
 };
 
 const createEnterpriseSchema = insertEnterpriseSchema.omit({ 

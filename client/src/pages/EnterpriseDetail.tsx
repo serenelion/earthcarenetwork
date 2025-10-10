@@ -29,6 +29,9 @@ const categoryColors = {
   capital_sources: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400", 
   open_source_tools: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
   network_organizers: "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400",
+  homes_that_heal: "bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-400",
+  landscapes_that_nourish: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400",
+  lifelong_learning_providers: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400",
 };
 
 const categoryLabels = {
@@ -36,6 +39,9 @@ const categoryLabels = {
   capital_sources: "Capital Source",
   open_source_tools: "Open Source Tool", 
   network_organizers: "Network Organizer",
+  homes_that_heal: "Homes that Heal",
+  landscapes_that_nourish: "Landscapes that Nourish",
+  lifelong_learning_providers: "Lifelong Learning",
 };
 
 export default function EnterpriseDetail() {
@@ -164,6 +170,9 @@ export default function EnterpriseDetail() {
                 {enterprise.category === 'capital_sources' && '💰'}
                 {enterprise.category === 'open_source_tools' && '🔧'}
                 {enterprise.category === 'network_organizers' && '🌐'}
+                {enterprise.category === 'homes_that_heal' && '🏡'}
+                {enterprise.category === 'landscapes_that_nourish' && '🌾'}
+                {enterprise.category === 'lifelong_learning_providers' && '📚'}
               </div>
             )}
           </div>
