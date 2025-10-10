@@ -36,6 +36,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -744,10 +745,10 @@ export default function People() {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel>Who are you connecting with?</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter first name"
+                              placeholder="First name"
                               {...field}
                               data-testid="input-first-name"
                             />
@@ -762,10 +763,10 @@ export default function People() {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name</FormLabel>
+                          <FormLabel>&nbsp;</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter last name"
+                              placeholder="Last name"
                               {...field}
                               data-testid="input-last-name"
                             />
@@ -782,16 +783,19 @@ export default function People() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel>How can you reach them?</FormLabel>
                           <FormControl>
                             <Input
                               type="email"
-                              placeholder="email@example.com"
+                              placeholder="their@email.com"
                               {...field}
                               value={field.value || ""}
                               data-testid="input-email"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Email address for this contact
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -802,7 +806,7 @@ export default function People() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone</FormLabel>
+                          <FormLabel>Phone number</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="+1 (555) 123-4567"
@@ -811,6 +815,9 @@ export default function People() {
                               data-testid="input-phone"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Optional: Direct phone line
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -823,15 +830,18 @@ export default function People() {
                       name="title"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Job Title</FormLabel>
+                          <FormLabel>What's their role?</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter job title"
+                              placeholder="e.g., Founder, Impact Investor, Community Organizer"
                               {...field}
                               value={field.value || ""}
                               data-testid="input-title"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Their job title or role
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -842,7 +852,7 @@ export default function People() {
                       name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Enterprise</FormLabel>
+                          <FormLabel>Which enterprise?</FormLabel>
                           <FormControl>
                             <EnterpriseSelector
                               value={field.value}
@@ -851,6 +861,9 @@ export default function People() {
                               enterpriseId={enterpriseId}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Connect to their organization
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -862,15 +875,18 @@ export default function People() {
                     name="linkedinUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>LinkedIn URL</FormLabel>
+                        <FormLabel>LinkedIn profile</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="https://linkedin.com/in/username"
+                            placeholder="e.g., https://linkedin.com/in/username"
                             {...field}
                             value={field.value || ""}
                             data-testid="input-linkedin"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Optional: Link to their LinkedIn profile
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -881,16 +897,19 @@ export default function People() {
                     name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notes</FormLabel>
+                        <FormLabel>Your notes about this person</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Add notes about this person"
+                            placeholder="Capture important details about this person and your relationship..."
                             className="min-h-[80px]"
                             {...field}
                             value={field.value || ""}
                             data-testid="textarea-notes"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Track conversations, interests, and connection details
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -979,11 +998,15 @@ export default function People() {
           <Card>
             <CardContent className="p-12 text-center">
               <Users className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No people found</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {searchQuery || statusFilter
+                  ? "No matches yet"
+                  : "Every great partnership starts with one person"}
+              </h3>
               <p className="text-muted-foreground mb-4">
                 {searchQuery || statusFilter
-                  ? "Try adjusting your search or filters"
-                  : "Get started by adding your first contact"}
+                  ? "Try adjusting your filters or search"
+                  : "Add your first contact!"}
               </p>
               <Button onClick={openCreateDialog} data-testid="button-add-first-person">
                 <Plus className="w-4 h-4 mr-2" />

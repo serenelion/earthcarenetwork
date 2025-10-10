@@ -111,7 +111,7 @@ export default function Enterprises() {
                 {getCategoryLabel()}
               </h1>
             </div>
-            {isAuthenticated && hasRole(user, ["enterprise_owner", "admin"]) && (
+            {isAuthenticated && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -127,8 +127,8 @@ export default function Enterprises() {
           </div>
           <p className="text-lg text-muted-foreground">
             {selectedCategory 
-              ? `Explore ${categories.find(c => c.value === selectedCategory)?.label.toLowerCase()} in our regenerative network`
-              : "Discover regenerative enterprises, projects, and organizations"
+              ? `Explore inspiring ${categories.find(c => c.value === selectedCategory)?.label.toLowerCase()} that are creating positive change`
+              : "Discover inspiring enterprises and projects creating a regenerative future together"
             }
           </p>
         </div>
@@ -191,11 +191,11 @@ export default function Enterprises() {
           <Card>
             <CardContent className="p-12 text-center">
               <Building className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No enterprises found</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">We're still discovering enterprises in this area</h3>
               <p className="text-muted-foreground mb-4">
                 {searchQuery || selectedCategory
-                  ? "Try adjusting your search or filters"
-                  : "Check back soon as we add more enterprises to the directory"}
+                  ? "Try different keywords or explore other categories to find enterprises aligned with your mission"
+                  : "New enterprises join our community regularly - check back soon to discover more changemakers"}
               </p>
               {(searchQuery || selectedCategory) && (
                 <Button 

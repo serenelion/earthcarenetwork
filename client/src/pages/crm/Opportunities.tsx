@@ -36,6 +36,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -604,14 +605,17 @@ export default function Opportunities() {
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Opportunity Title</FormLabel>
+                        <FormLabel>What's this opportunity about?</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter opportunity title"
+                            placeholder="e.g., Partnership with Green Energy Co-op, Grant application for community fund"
                             {...field}
                             data-testid="input-opportunity-title"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Give this opportunity a clear, memorable title
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -622,16 +626,19 @@ export default function Opportunities() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Tell us more about this opportunity</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Describe the opportunity"
+                            placeholder="What makes this exciting? What value could it bring to your mission..."
                             className="min-h-[100px]"
                             {...field}
                             value={field.value || ""}
                             data-testid="textarea-opportunity-description"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Describe the potential and what success looks like
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -643,17 +650,20 @@ export default function Opportunities() {
                       name="value"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Value ($)</FormLabel>
+                          <FormLabel>Potential value ($)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
-                              placeholder="0"
+                              placeholder="e.g., 50000"
                               {...field}
                               value={field.value || ""}
                               onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                               data-testid="input-opportunity-value"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Estimated financial impact
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -664,11 +674,11 @@ export default function Opportunities() {
                       name="status"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Status</FormLabel>
+                          <FormLabel>Current stage</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-opportunity-status">
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder="Where is this?" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -679,6 +689,9 @@ export default function Opportunities() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            Track where this is in your pipeline
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -689,19 +702,22 @@ export default function Opportunities() {
                       name="probability"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Probability (%)</FormLabel>
+                          <FormLabel>How likely? (%)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min="0"
                               max="100"
-                              placeholder="0"
+                              placeholder="e.g., 75"
                               {...field}
                               value={field.value || ""}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                               data-testid="input-opportunity-probability"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Chance of success (0-100%)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -714,7 +730,7 @@ export default function Opportunities() {
                       name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Enterprise</FormLabel>
+                          <FormLabel>Which enterprise is this with?</FormLabel>
                           <FormControl>
                             <EnterpriseSelector
                               value={field.value}
@@ -723,6 +739,9 @@ export default function Opportunities() {
                               enterpriseId={enterpriseId}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Link to the related enterprise
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -733,7 +752,7 @@ export default function Opportunities() {
                       name="workspacePersonId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Primary Contact</FormLabel>
+                          <FormLabel>Who's your main contact?</FormLabel>
                           <Popover open={contactPopoverOpen} onOpenChange={setContactPopoverOpen}>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -750,11 +769,11 @@ export default function Opportunities() {
                                   {field.value
                                     ? (() => {
                                         const person = people.find((p) => p.id === field.value);
-                                        return person ? `${person.firstName} ${person.lastName}` : "Select contact...";
+                                        return person ? `${person.firstName} ${person.lastName}` : "Choose contact...";
                                       })()
                                     : field.value === null
                                     ? "No Contact"
-                                    : "Select contact..."}
+                                    : "Choose contact..."}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </FormControl>
@@ -818,6 +837,9 @@ export default function Opportunities() {
                               </Command>
                             </PopoverContent>
                           </Popover>
+                          <FormDescription>
+                            Connect to the key person for this opportunity
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -829,7 +851,7 @@ export default function Opportunities() {
                     name="expectedCloseDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Expected Close Date</FormLabel>
+                        <FormLabel>When do you expect to close this?</FormLabel>
                         <FormControl>
                           <Input
                             type="date"
@@ -839,6 +861,9 @@ export default function Opportunities() {
                             data-testid="input-opportunity-close-date"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Target date to seal the deal
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -849,16 +874,19 @@ export default function Opportunities() {
                     name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notes</FormLabel>
+                        <FormLabel>Your notes and strategy</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Add notes about this opportunity"
+                            placeholder="Track conversations, next steps, key insights, or things to remember..."
                             className="min-h-[80px]"
                             {...field}
                             value={field.value || ""}
                             data-testid="textarea-opportunity-notes"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Keep important details about this opportunity here
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -966,11 +994,15 @@ export default function Opportunities() {
             ) : filteredOpportunities.length === 0 ? (
               <div className="text-center py-12">
                 <Handshake className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No opportunities found</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchQuery || statusFilter
+                    ? "No matches yet"
+                    : "Your pipeline awaits!"}
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   {searchQuery || statusFilter
-                    ? "Try adjusting your search or filters"
-                    : "Create your first opportunity to get started"}
+                    ? "Try adjusting your filters or search"
+                    : "Create your first opportunity and watch your impact grow."}
                 </p>
                 {!searchQuery && !statusFilter && (
                   <Button onClick={openCreateDialog} data-testid="button-add-first-opportunity">

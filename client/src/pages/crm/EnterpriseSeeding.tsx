@@ -243,7 +243,7 @@ export default function EnterpriseSeeding() {
             <TabsContent value="discover" className="space-y-4">
               <Alert>
                 <AlertDescription>
-                  Automatically discover enterprises from regenerative sources
+                  Let AI discover regenerative enterprises for you from trusted sources and networks
                 </AlertDescription>
               </Alert>
               <Button
@@ -268,11 +268,14 @@ export default function EnterpriseSeeding() {
             <TabsContent value="custom" className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="urls" className="text-sm font-medium">
-                  Enter URLs (one per line)
+                  Which enterprise websites would you like to seed?
                 </label>
+                <p className="text-sm text-muted-foreground">
+                  Add URLs of regenerative enterprises to automatically discover and populate their information (one per line)
+                </p>
                 <Textarea
                   id="urls"
-                  placeholder="https://example.com/enterprise1&#10;https://example.com/enterprise2&#10;https://example.com/enterprise3"
+                  placeholder="e.g.,&#10;https://regenerative-farms-collective.org&#10;https://community-solar-coop.com&#10;https://local-land-trust.org"
                   value={urls}
                   onChange={(e) => setUrls(e.target.value)}
                   className="min-h-[200px] font-mono text-sm"

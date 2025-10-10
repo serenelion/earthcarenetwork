@@ -100,7 +100,7 @@ export default function EnterpriseCard({ enterprise, "data-testid": testId }: En
         </h3>
         
         <p className="text-muted-foreground mb-4 line-clamp-3">
-          {enterprise.description || "No description available"}
+          {enterprise.description || "This enterprise is just getting started on their journey. Check back soon for more details!"}
         </p>
         
         <div className="flex items-center justify-between">

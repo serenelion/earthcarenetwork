@@ -345,7 +345,7 @@ export default function Search() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 text-foreground" data-testid="page-title">Search</h1>
           <p className="text-muted-foreground" data-testid="page-description">
-            Search across enterprises, people, opportunities, tasks, and documentation
+            Discover meaningful connections across our regenerative community - find enterprises, people, opportunities, and more
           </p>
         </div>
 
@@ -356,7 +356,7 @@ export default function Search() {
             <Input
               id="search-input"
               type="text"
-              placeholder="Search enterprises, people, opportunities..."
+              placeholder="Discover enterprises aligned with your mission..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full h-14 pl-14 pr-12 text-lg border-2 focus:ring-2 focus:ring-primary"
@@ -420,9 +420,9 @@ export default function Search() {
             <Card data-testid="search-error">
               <CardContent className="p-12 text-center">
                 <SearchIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">Search Failed</h3>
+                <h3 className="text-lg font-semibold mb-2">Oops! Something went wrong</h3>
                 <p className="text-muted-foreground">
-                  We couldn't complete your search. Please try again.
+                  Please try again - your search is important to us. We're here to help you find what you're looking for.
                 </p>
               </CardContent>
             </Card>
@@ -434,7 +434,7 @@ export default function Search() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Clock className="w-5 h-5" />
-                    Recent Searches
+                    Your Recent Searches
                   </h2>
                   <Button
                     variant="ghost"
@@ -467,12 +467,12 @@ export default function Search() {
             <Card data-testid="no-results">
               <CardContent className="p-12 text-center">
                 <SearchIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                <h3 className="text-lg font-semibold mb-2">We couldn't find a match yet</h3>
                 <p className="text-muted-foreground mb-4">
-                  We couldn't find anything matching "{query}"
+                  No results for "{query}" - but your next meaningful connection might be just a search away
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Try searching for enterprises, people, or opportunities with different keywords.
+                  Try different keywords or explore our categories to discover enterprises, people, and opportunities in our community.
                 </p>
               </CardContent>
             </Card>
@@ -500,9 +500,9 @@ export default function Search() {
             <Card data-testid="search-prompt">
               <CardContent className="p-12 text-center">
                 <SearchIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h2 className="text-2xl font-semibold mb-2">Search across everything</h2>
+                <h2 className="text-2xl font-semibold mb-2">Discover your community of changemakers</h2>
                 <p className="text-muted-foreground mb-6">
-                  Find enterprises, people, opportunities, and tasks instantly.
+                  Find meaningful connections with enterprises, people, and opportunities that align with your mission.
                 </p>
                 <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -511,7 +511,7 @@ export default function Search() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>Recent searches</span>
+                    <span>Your recent searches</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />

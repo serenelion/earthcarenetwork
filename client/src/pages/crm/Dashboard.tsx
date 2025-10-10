@@ -145,13 +145,13 @@ export default function Dashboard() {
         <div className="mb-6 md:mb-8">
           <UpgradePrompt
             feature="full CRM capabilities"
-            title="Supercharge Your Network Management"
+            title="Ready to Amplify Your Impact?"
             benefits={[
-              "Create unlimited opportunities, tasks, and contacts",
-              "AI-powered lead scoring and intelligent insights",
-              "Advanced analytics and reporting",
-              "Export data to CSV and integrations",
-              "Team collaboration features",
+              "You'll manage unlimited opportunities and contacts—no limits on your growth",
+              "You'll get AI insights that help you prioritize what matters most",
+              "You'll see your progress with powerful analytics and reports",
+              "You'll export data seamlessly and connect with your favorite tools",
+              "You'll collaborate effortlessly with your entire team",
             ]}
           />
         </div>
@@ -163,8 +163,8 @@ export default function Dashboard() {
           <OnboardingChecklist
             flowKey="crm_pro"
             steps={crmProFlow.steps}
-            title="CRM Pro Setup"
-            description="Complete these steps to unlock the full power of your CRM"
+            title="Let's Get You Started"
+            description="We're here to support your success every step of the way"
           />
         </div>
       )}

@@ -28,21 +28,21 @@ export default function About() {
     {
       icon: Sprout,
       title: "Earth Care",
-      description: "Operating in harmony with nature, minimizing environmental impact, and promoting ecological sustainability for generations to come.",
+      description: "Your enterprise operates in harmony with nature. By choosing regenerative practices, you're creating a business that heals the planet while it grows—proving that profit and ecological restoration can thrive together.",
       color: "text-green-600 dark:text-green-400",
       bgColor: "bg-green-50 dark:bg-green-950/20"
     },
     {
       icon: Heart,
       title: "People Care",
-      description: "Fostering positive, equitable environments for employees, partners, and communities. Putting human wellbeing at the center.",
+      description: "You put people first—your team, your partners, your community. When you build with people care, you create workplaces where everyone can flourish, fostering wellbeing and genuine human connection in everything you do.",
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-50 dark:bg-blue-950/20"
     },
     {
       icon: Handshake,
       title: "Fair Share",
-      description: "Transparent, ethical business practices ensuring fair distribution of resources and opportunities across all stakeholders.",
+      description: "You believe in doing business the right way. Through transparent practices and equitable resource sharing, you're building trust with every stakeholder and proving that fairness isn't just ethical—it's good business.",
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-50 dark:bg-purple-950/20"
     }
@@ -52,12 +52,12 @@ export default function About() {
     {
       icon: Building2,
       title: "For Social Enterprises",
-      description: "Get discovered by aligned partners, investors, and collaborators. Access a full CRM suite to manage your relationships and grow your impact.",
+      description: "You're building something that matters. Get discovered by partners who share your values, manage all your relationships in one place, and scale your impact with tools designed specifically for regenerative businesses.",
       benefits: [
-        "Global directory presence",
-        "Full-featured CRM workspace",
-        "Team collaboration tools",
-        "Partnership opportunities"
+        "Amplify your visibility to aligned partners globally",
+        "Organize everything with your own CRM workspace",
+        "Collaborate seamlessly with your growing team",
+        "Unlock partnership opportunities that accelerate growth"
       ],
       cta: "Activate Your Enterprise",
       ctaLink: isAuthenticated ? "/dashboard" : "/api/login"
@@ -65,12 +65,12 @@ export default function About() {
     {
       icon: Coins,
       title: "For Impact Investors",
-      description: "Discover vetted regenerative enterprises committed to earth care, people care, and fair share. Connect directly with founders building the future.",
+      description: "You want your capital to create real change. Discover enterprises that have pledged to regenerative principles and connect directly with the visionary founders building a better future.",
       benefits: [
-        "Curated enterprise directory",
-        "Pledge-verified organizations",
-        "Direct partnership channels",
-        "Impact measurement tools"
+        "Find vetted enterprises aligned with your values",
+        "Verify commitment through our pledge system",
+        "Connect directly with founders and teams",
+        "Track real impact alongside financial returns"
       ],
       cta: "Explore Enterprises",
       ctaLink: "/#categories"
@@ -78,12 +78,12 @@ export default function About() {
     {
       icon: Network,
       title: "For Network Builders",
-      description: "Leverage open source tools to build your own regenerative network. Fork, customize, and deploy your own instance of Earth Care Network.",
+      description: "You're creating movements, not just organizations. Use our open source toolkit to launch your own regenerative network, customized to your community's unique needs while staying connected to the global ecosystem.",
       benefits: [
-        "Open source codebase",
-        "Federated architecture",
-        "API access",
-        "Self-hosting options"
+        "Deploy your own branded network instance",
+        "Connect to the federated global network",
+        "Customize with full API access",
+        "Own your data with self-hosting"
       ],
       cta: "View Documentation",
       ctaLink: "/docs"
@@ -94,22 +94,22 @@ export default function About() {
     {
       icon: Globe,
       title: "Open Source & Federated",
-      description: "Built on open principles. Deploy your own instance or join the global network."
+      description: "You own your tools and your data. Deploy your own instance or join our global network—freedom to choose, power to scale."
     },
     {
       icon: Code,
       title: "Developer-Friendly APIs",
-      description: "RESTful APIs for seamless integration with your existing tools and workflows."
+      description: "Connect seamlessly with the tools you already use. Our RESTful APIs make integration effortless, so you can work your way."
     },
     {
       icon: Zap,
       title: "Powerful CRM Suite",
-      description: "Manage contacts, opportunities, tasks, and partnerships all in one place."
+      description: "Keep your relationships thriving. Manage contacts, track opportunities, and nurture partnerships—all in one intuitive workspace."
     },
     {
       icon: Target,
       title: "Impact-Focused",
-      description: "Built specifically for organizations committed to regenerative principles."
+      description: "Every feature is designed for changemakers like you. Focus on what matters: building enterprises that make a real difference."
     }
   ];
 
@@ -122,19 +122,19 @@ export default function About() {
           <div className="text-center space-y-8 md:space-y-10">
             <Badge className="bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30 px-5 py-2 text-base backdrop-blur-sm" data-testid="badge-open-source">
               <Code className="w-4 h-4 mr-2 inline" />
-              Open Source Social Enterprise Toolkit
+              Join the Regenerative Enterprise Movement
             </Badge>
             
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-tight tracking-tight">
-              The Digital White Pages for
+              Build Your Social Enterprise
               <span className="block mt-3 text-[#D4AF37]">
-                Regenerative Enterprises
+                With a Global Community Behind You
               </span>
             </h1>
             
             <p className="text-xl sm:text-2xl md:text-3xl text-[#F5F5F0]/90 max-w-4xl mx-auto leading-relaxed font-light">
-              Earth Care Network is where social enterprise creators discover each other, 
-              build meaningful partnerships, and activate their next level together.
+              You don't have to build alone. Connect with fellow changemakers, access powerful tools, 
+              and get the support you need to create real impact. Your regenerative enterprise starts here.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
@@ -144,7 +144,7 @@ export default function About() {
                 onClick={() => window.location.href = isAuthenticated ? "/dashboard" : "/api/login"}
                 data-testid="button-get-started"
               >
-                Get Started Free
+                Start Building Today
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button 
@@ -154,7 +154,7 @@ export default function About() {
                 onClick={() => document.getElementById('pillars')?.scrollIntoView({ behavior: 'smooth' })}
                 data-testid="button-learn-more"
               >
-                Learn More
+                See How It Works
               </Button>
             </div>
           </div>
@@ -169,7 +169,8 @@ export default function About() {
               Our Three Pillars
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              The foundation of every enterprise in our network is a commitment to these core values
+              When you join Earth Care Network, you're joining a community united by shared values. 
+              Together, we're proving that business can be a force for good.
             </p>
           </div>
 
@@ -198,10 +199,11 @@ export default function About() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 md:mb-20">
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight">
-              Built for the Regenerative Economy
+              Everything You Need to Succeed
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Whether you're building, investing, or organizing—we have tools for your journey
+              Whether you're launching your first enterprise, seeking aligned partners, or building the next great network—
+              we've got the tools and community to help you thrive
             </p>
           </div>
 
@@ -248,10 +250,10 @@ export default function About() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 md:mb-20">
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight">
-              Powerful Tools, Open Foundation
+              Professional Tools, Zero Compromise
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Enterprise-grade features with the freedom of open source
+              You get enterprise-grade power with complete freedom. Build your way, on your terms.
             </p>
           </div>
 
@@ -280,14 +282,15 @@ export default function About() {
           <div className="space-y-6">
             <Sparkles className="w-16 h-16 text-[#D4AF37] mx-auto" />
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight">
-              Open Source, Open Future
+              Join Something Bigger
             </h2>
           </div>
           
           <p className="text-xl md:text-2xl text-[#F5F5F0]/90 leading-relaxed max-w-4xl mx-auto font-light">
-            Earth Care Network is built on the principle that the tools for regeneration should be 
-            accessible to all. Our open source codebase and federated architecture mean you can fork, 
-            customize, and deploy your own instance—or join our growing global network.
+            We believe the tools for creating a regenerative future should belong to everyone. 
+            That's why Earth Care Network is 100% open source. Fork our code, customize it for your community, 
+            or join our global network as-is. Your contribution—whether code, ideas, or connections—helps 
+            us all grow stronger together.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 pt-12">
@@ -311,11 +314,11 @@ export default function About() {
       <section className="py-20 md:py-32 bg-background">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10">
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight">
-            Ready to Activate Your Next Level?
+            Your Journey Starts Now
           </h2>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Join thousands of regenerative enterprises building the future together. 
-            Create your free profile in minutes and start making meaningful connections.
+            Thousands of changemakers are already here, building the regenerative future together. 
+            Join us today—it's free, it's fast, and you'll immediately connect with people who believe in what you're creating.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
@@ -326,7 +329,7 @@ export default function About() {
               data-testid="button-cta-activate"
             >
               <Building2 className="mr-2 h-6 w-6" />
-              Activate Your Enterprise
+              Start Building Free
             </Button>
             <Link href="/#categories">
               <Button 
@@ -336,7 +339,7 @@ export default function About() {
                 data-testid="button-cta-explore"
               >
                 <Globe className="mr-2 h-6 w-6" />
-                Explore Directory
+                Explore the Community
               </Button>
             </Link>
           </div>

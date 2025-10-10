@@ -36,6 +36,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -418,14 +419,17 @@ export default function Tasks() {
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Task Title</FormLabel>
+                        <FormLabel>What needs to be done?</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter task title"
+                            placeholder="e.g., Schedule call with potential partner, Follow up on grant proposal"
                             {...field}
                             data-testid="input-task-title"
                           />
                         </FormControl>
+                        <FormDescription>
+                          A clear title helps your team understand the task at a glance
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -436,16 +440,19 @@ export default function Tasks() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Add context and details</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Describe the task"
+                            placeholder="What's the background? What outcomes are you looking for? Any specific details the team should know..."
                             className="min-h-[100px]"
                             {...field}
                             value={field.value || ""}
                             data-testid="textarea-task-description"
                           />
                         </FormControl>
+                        <FormDescription>
+                          Share the context to help everyone understand why this task matters
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -457,11 +464,11 @@ export default function Tasks() {
                       name="priority"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Priority</FormLabel>
+                          <FormLabel>How urgent is this?</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-priority">
-                                <SelectValue placeholder="Select priority" />
+                                <SelectValue placeholder="Set priority" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -472,6 +479,9 @@ export default function Tasks() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            High priority tasks appear at the top of your list
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -482,11 +492,11 @@ export default function Tasks() {
                       name="status"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Status</FormLabel>
+                          <FormLabel>Current status</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-status">
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder="Set status" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -497,6 +507,9 @@ export default function Tasks() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            Track your progress from to-do to done
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -507,7 +520,7 @@ export default function Tasks() {
                       name="dueDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Due Date</FormLabel>
+                          <FormLabel>When should this be completed?</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
@@ -517,6 +530,9 @@ export default function Tasks() {
                               data-testid="input-task-due-date"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Setting deadlines helps you stay on track
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -528,11 +544,11 @@ export default function Tasks() {
                     name="assignedToId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Assigned To</FormLabel>
+                        <FormLabel>Who's responsible for this?</FormLabel>
                         <Select onValueChange={(value) => field.onChange(value === "unassigned" ? null : value)} value={field.value || "unassigned"}>
                           <FormControl>
                             <SelectTrigger data-testid="select-task-assignee">
-                              <SelectValue placeholder="Select assignee" />
+                              <SelectValue placeholder="Assign to team member" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -544,6 +560,9 @@ export default function Tasks() {
                             )}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Assign tasks to make sure they get done
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -555,7 +574,7 @@ export default function Tasks() {
                       name="workspaceEnterpriseId"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Related Enterprise</FormLabel>
+                          <FormLabel>Which enterprise is this for?</FormLabel>
                           <FormControl>
                             <EnterpriseSelector
                               value={field.value}
@@ -564,6 +583,9 @@ export default function Tasks() {
                               enterpriseId={enterpriseId}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Optional: Link to an enterprise
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -574,11 +596,11 @@ export default function Tasks() {
                       name="workspacePersonId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Related Person</FormLabel>
+                          <FormLabel>Related contact</FormLabel>
                           <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-person">
-                                <SelectValue placeholder="Select person" />
+                                <SelectValue placeholder="Link to contact" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -590,6 +612,9 @@ export default function Tasks() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            Optional: Connect to a person
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -600,11 +625,11 @@ export default function Tasks() {
                       name="workspaceOpportunityId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Related Opportunity</FormLabel>
+                          <FormLabel>Related opportunity</FormLabel>
                           <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || "none"}>
                             <FormControl>
                               <SelectTrigger data-testid="select-task-opportunity">
-                                <SelectValue placeholder="Select opportunity" />
+                                <SelectValue placeholder="Link to opportunity" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -616,6 +641,9 @@ export default function Tasks() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            Optional: Connect to an opportunity
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -740,11 +768,15 @@ export default function Tasks() {
             ) : filteredTasks.length === 0 ? (
               <div className="text-center py-12">
                 <CheckSquare className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No tasks found</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchQuery || statusFilter || priorityFilter
+                    ? "No matches yet"
+                    : "Let's get organized!"}
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   {searchQuery || statusFilter || priorityFilter
-                    ? "Try adjusting your search or filters"
-                    : "Get started by adding your first task"}
+                    ? "Try adjusting your filters or search"
+                    : "Add your first task to start building momentum."}
                 </p>
                 <Button onClick={openCreateDialog} disabled={isFreeUser} data-testid="button-add-first-task">
                   <Plus className="w-4 h-4 mr-2" />

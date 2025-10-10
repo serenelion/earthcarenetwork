@@ -23,6 +23,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -385,14 +386,17 @@ export default function Copilot() {
                       name="focusAreasText"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Focus Areas</FormLabel>
+                          <FormLabel>What are your top priorities right now?</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="land projects, carbon credits, regenerative farming (comma-separated)"
+                              placeholder="e.g., regenerative agriculture, carbon credits, community land trusts"
                               {...field}
                               data-testid="input-focus-areas"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Separate focus areas with commas to help the AI understand your priorities
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -403,7 +407,7 @@ export default function Copilot() {
                       name="leadScoringText"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Lead Scoring Criteria (JSON)</FormLabel>
+                          <FormLabel>What matters most when evaluating opportunities?</FormLabel>
                           <FormControl>
                             <Textarea
                               placeholder='{"location": "high_value", "category": "land_projects", "verification": "required"}'
@@ -412,6 +416,9 @@ export default function Copilot() {
                               data-testid="textarea-lead-scoring"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Set criteria to help AI score and prioritize leads (JSON format)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -422,7 +429,7 @@ export default function Copilot() {
                       name="automationText"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Automation Rules (JSON)</FormLabel>
+                          <FormLabel>How can AI help you save time?</FormLabel>
                           <FormControl>
                             <Textarea
                               placeholder='{"auto_score": true, "follow_up_days": 7, "priority_threshold": 80}'
@@ -431,6 +438,9 @@ export default function Copilot() {
                               data-testid="textarea-automation-rules"
                             />
                           </FormControl>
+                          <FormDescription>
+                            Configure automation rules to streamline your workflow (JSON format)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

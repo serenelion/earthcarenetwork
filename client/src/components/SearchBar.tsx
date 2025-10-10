@@ -28,7 +28,7 @@ export default function SearchBar({ value, onChange, onCategorySelect, "data-tes
       <div className="relative">
         <Input
           type="text"
-          placeholder="Search for enterprises, projects, or tools..."
+          placeholder="Discover enterprises aligned with your mission..."
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={handleKeyPress}

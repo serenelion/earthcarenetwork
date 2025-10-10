@@ -82,10 +82,10 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="heading-welcome">
-                Activate Your Enterprise
+                Welcome to Your Journey!
               </h1>
               <p className="text-lg text-muted-foreground mb-6">
-                Join the regenerative economy with your free enterprise profile and full-featured CRM workspace
+                You're one step away from powerful tools to grow your regenerative enterprise. Let's get you started with everything you need to succeed.
               </p>
             </div>
 
@@ -93,20 +93,20 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
             <div className="bg-card border border-border rounded-lg p-6 mb-8">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                What you'll get:
+                You're about to unlock:
               </h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground"><strong>Global visibility:</strong> A public profile in the regenerative enterprise directory</span>
+                  <span className="text-muted-foreground"><strong>Your global presence:</strong> Be discovered by partners and collaborators in our regenerative directory</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground"><strong>Relationship management:</strong> Private CRM tools to track contacts, opportunities, and partnerships</span>
+                  <span className="text-muted-foreground"><strong>Powerful relationship tools:</strong> Nurture connections and grow partnerships with your private CRM workspace</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground"><strong>Team collaboration:</strong> Invite team members and manage your workspace together</span>
+                  <span className="text-muted-foreground"><strong>Team collaboration:</strong> Invite your team to build and grow together</span>
                 </li>
               </ul>
             </div>
@@ -120,7 +120,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 data-testid="button-create-first-workspace"
               >
                 <Building2 className="mr-2 h-5 w-5" />
-                Activate My Enterprise
+                Start Your Enterprise
               </Button>
               
               <Button
@@ -138,7 +138,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
             {/* Help Text */}
             <div className="mt-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                <strong>New to Earth Care Network?</strong> Activation is instant and free forever. Get your enterprise online in minutes.
+                <strong>New to Earth Care Network?</strong> Your journey starts now—it's instant, free, and you'll be up and running in minutes.
               </p>
               <p className="text-sm text-muted-foreground">
                 <strong>Already in our directory?</strong>{" "}
@@ -149,7 +149,7 @@ export default function EnterpriseAccessGuard({ children }: EnterpriseAccessGuar
                 >
                   Claim your profile
                 </button>{" "}
-                to activate your workspace and start managing partnerships.
+                to unlock your workspace and start building powerful partnerships.
               </p>
             </div>
           </div>

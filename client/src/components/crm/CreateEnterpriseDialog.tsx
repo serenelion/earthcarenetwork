@@ -179,28 +179,28 @@ export default function CreateEnterpriseDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Activate Your Enterprise
+            Start Your Regenerative Enterprise
           </DialogTitle>
           <DialogDescription className="text-base">
-            Join the regenerative economy by activating your free enterprise profile. Get global visibility and access powerful tools to grow meaningful partnerships.
+            Join a movement of changemakers building a better future. Your free enterprise profile connects you with the global regenerative community and gives you powerful tools to grow meaningful partnerships.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* What You Get */}
           <div className="bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg p-4 space-y-3 border border-primary/20">
-            <h3 className="font-semibold text-sm">Activation Benefits (Free Forever):</h3>
+            <h3 className="font-semibold text-sm">You'll Be Able To:</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <Globe className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Global Presence:</span> Appear in the regenerative enterprise directory where partners, investors, and collaborators discover aligned organizations.
+                  <span className="font-semibold">Be discovered globally:</span> Show up where partners, investors, and collaborators look for regenerative organizations like yours.
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <span className="font-semibold">Full CRM Suite:</span> Track contacts, opportunities, and partnerships. Invite your team to collaborate and grow together.
+                  <span className="font-semibold">Grow your network effortlessly:</span> Track relationships, nurture opportunities, and collaborate with your team—all in one place.
                 </div>
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function CreateEnterpriseDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Enterprise Name *</FormLabel>
+                    <FormLabel>What's your enterprise called? *</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="e.g., Green Valley Farm, Regenerative Fund" 
@@ -265,17 +265,17 @@ export default function CreateEnterpriseDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Tell your story</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Tell us about your enterprise and mission..."
+                        placeholder="What's your mission? What impact are you creating?"
                         className="min-h-[100px]"
                         {...field}
                         data-testid="textarea-enterprise-description"
                       />
                     </FormControl>
                     <FormDescription>
-                      Share what makes your enterprise unique
+                      Help others understand what makes your work special
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -383,12 +383,12 @@ export default function CreateEnterpriseDialog({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Activating...
+                      Launching...
                     </>
                   ) : (
                     <>
                       <Building2 className="mr-2 h-4 w-4" />
-                      Activate My Enterprise
+                      Launch My Enterprise
                     </>
                   )}
                 </Button>

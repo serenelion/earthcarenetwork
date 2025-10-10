@@ -52,6 +52,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -791,11 +792,15 @@ export default function CRMEnterprises() {
           ) : filteredEnterprises.length === 0 ? (
             <div className="text-center py-12">
               <Building className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No enterprises found</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {searchQuery || categoryFilter || relationshipFilter
+                  ? "No matches yet"
+                  : "Your network starts here!"}
+              </h3>
               <p className="text-muted-foreground mb-4">
                 {searchQuery || categoryFilter || relationshipFilter
-                  ? "Try adjusting your search or filters"
-                  : "Add your first enterprise to start tracking relationships"}
+                  ? "Try adjusting your filters or search"
+                  : "Add enterprises you want to connect with and start building meaningful partnerships."}
               </p>
               {!searchQuery && !categoryFilter && !relationshipFilter && (
                 <Button onClick={handleAddEnterprise} disabled={isFreeUser}>
@@ -1210,14 +1215,17 @@ export default function CRMEnterprises() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name *</FormLabel>
+                    <FormLabel>Which enterprise are you tracking? *</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Enterprise name" 
+                        placeholder="e.g., Regenerative Farms Collective, Community Solar Co-op" 
                         {...field} 
                         data-testid="input-name"
                       />
                     </FormControl>
+                    <FormDescription>
+                      Give this enterprise a clear, memorable name
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1228,11 +1236,11 @@ export default function CRMEnterprises() {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category *</FormLabel>
+                    <FormLabel>What type of enterprise is this? *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-category">
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Choose the best fit category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1243,6 +1251,9 @@ export default function CRMEnterprises() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      Categories help you organize and find enterprises quickly
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1253,11 +1264,11 @@ export default function CRMEnterprises() {
                 name="relationshipStage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Relationship Stage</FormLabel>
+                    <FormLabel>How would you describe your connection?</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-relationship-stage">
-                          <SelectValue placeholder="Select a relationship stage" />
+                          <SelectValue placeholder="Set relationship stage" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1268,6 +1279,9 @@ export default function CRMEnterprises() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      Track the stage of your relationship to stay organized
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1278,16 +1292,19 @@ export default function CRMEnterprises() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>What does this enterprise do?</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enterprise description"
+                        placeholder="Share what makes this enterprise unique and what impact they're creating..."
                         className="min-h-[100px]"
                         {...field}
                         value={field.value || ""}
                         data-testid="textarea-description"
                       />
                     </FormControl>
+                    <FormDescription>
+                      Describe their mission, products, or services to remember what they're about
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1298,16 +1315,19 @@ export default function CRMEnterprises() {
                 name="ownerNotes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Private Notes</FormLabel>
+                    <FormLabel>Your private notes</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Your private notes about this enterprise relationship"
+                        placeholder="Track your interactions, insights, and next steps for this partnership..."
                         className="min-h-[80px]"
                         {...field}
                         value={field.value || ""}
                         data-testid="textarea-owner-notes"
                       />
                     </FormControl>
+                    <FormDescription>
+                      Keep your personal observations and strategy notes here (only you can see these)
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1319,15 +1339,18 @@ export default function CRMEnterprises() {
                   name="website"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Website</FormLabel>
+                      <FormLabel>Website URL</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="https://example.com" 
+                          placeholder="e.g., https://regenerative-farms.org" 
                           {...field}
                           value={field.value || ""}
                           data-testid="input-website"
                         />
                       </FormControl>
+                      <FormDescription>
+                        Quick access to their online presence
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1338,15 +1361,18 @@ export default function CRMEnterprises() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>Where are they based?</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="City, Country" 
+                          placeholder="e.g., Portland, Oregon or Remote" 
                           {...field}
                           value={field.value || ""}
                           data-testid="input-location"
                         />
                       </FormControl>
+                      <FormDescription>
+                        Know where to find them
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1357,16 +1383,19 @@ export default function CRMEnterprises() {
                   name="contactEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
+                      <FormLabel>How can you reach them?</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="contact@example.com" 
+                          placeholder="e.g., hello@enterprise.com" 
                           type="email"
                           {...field}
                           value={field.value || ""}
                           data-testid="input-contact-email"
                         />
                       </FormControl>
+                      <FormDescription>
+                        Main contact email for the enterprise
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1378,16 +1407,19 @@ export default function CRMEnterprises() {
                 name="tags"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tags</FormLabel>
+                    <FormLabel>Add tags to organize and find this enterprise</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="sustainability, renewable energy, carbon neutral (comma-separated)"
+                        placeholder="e.g., regenerative agriculture, community-owned, seeking investment"
                         {...field}
                         value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ""}
                         onChange={(e) => field.onChange(e.target.value)}
                         data-testid="input-tags"
                       />
                     </FormControl>
+                    <FormDescription>
+                      Separate tags with commas to make searching easier
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1795,10 +1827,10 @@ export default function CRMEnterprises() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name *</FormLabel>
+                        <FormLabel>Which enterprise are you creating? *</FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="Enterprise name" 
+                            placeholder="e.g., Regenerative Farms Collective, Community Solar Co-op" 
                             {...field} 
                             data-testid="input-create-name"
                           />
@@ -1813,11 +1845,11 @@ export default function CRMEnterprises() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category *</FormLabel>
+                        <FormLabel>What type of enterprise is this? *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-create-category">
-                              <SelectValue placeholder="Select a category" />
+                              <SelectValue placeholder="Choose the best fit category" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -1838,10 +1870,10 @@ export default function CRMEnterprises() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>What does this enterprise do?</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Enterprise description"
+                            placeholder="Share what makes this enterprise unique and what impact they're creating..."
                             className="min-h-[100px]"
                             {...field}
                             value={field.value || ""}
@@ -1859,10 +1891,10 @@ export default function CRMEnterprises() {
                       name="website"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Website</FormLabel>
+                          <FormLabel>Website URL</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="https://example.com" 
+                              placeholder="e.g., https://regenerative-farms.org" 
                               {...field}
                               value={field.value || ""}
                               data-testid="input-create-website"
@@ -1878,10 +1910,10 @@ export default function CRMEnterprises() {
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Location</FormLabel>
+                          <FormLabel>Where are they based?</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="City, Country" 
+                              placeholder="e.g., Portland, Oregon or Remote" 
                               {...field}
                               value={field.value || ""}
                               data-testid="input-create-location"
@@ -1898,10 +1930,10 @@ export default function CRMEnterprises() {
                     name="contactEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Email</FormLabel>
+                        <FormLabel>How can you reach them?</FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="contact@example.com" 
+                            placeholder="e.g., hello@enterprise.com" 
                             type="email"
                             {...field}
                             value={field.value || ""}
