@@ -109,27 +109,29 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
 
       {/* Hero Section */}
-      <section className="hero-gradient earth-pattern text-white py-24">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-[#000000]">
+      <section className="hero-gradient earth-pattern text-white py-32 md:py-40">
+        <div className="max-w-5xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10">
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 text-white tracking-tight">
             Earth Care Network
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-gray-800 font-medium">
+          <p className="text-xl md:text-2xl mb-12 text-[#F5F5F0]/90 font-light max-w-3xl mx-auto leading-relaxed">
             An open source directory + CRM for new earth enterprise sales optimization
           </p>
           
           {/* Search Bar */}
-          <SearchBar 
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onCategorySelect={setSelectedCategory}
-            data-testid="hero-search"
-          />
+          <div className="mb-12">
+            <SearchBar 
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onCategorySelect={setSelectedCategory}
+              data-testid="hero-search"
+            />
+          </div>
           
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              className="bg-secondary hover:bg-secondary/90 text-white px-8 py-3"
+              className="gold-button text-[#0A0E0D] px-10 py-6 text-lg font-semibold border-0 hover:border-0"
               data-testid="button-add-enterprise"
               onClick={handleAddEnterpriseClick}
             >
@@ -137,7 +139,7 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline" 
-              className="bg-white/90 backdrop-blur text-gray-900 border-white hover:bg-white px-8 py-3 font-semibold"
+              className="bg-transparent backdrop-blur-sm text-[#F5F5F0] border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] px-10 py-6 text-lg font-medium transition-all duration-300"
               data-testid="button-explore-directory"
               onClick={() => {
                 document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' });
@@ -150,13 +152,13 @@ export default function Landing() {
       </section>
 
       {/* Categories Section */}
-      <section id="categories" className="py-16 md:py-20 bg-background">
+      <section id="categories" className="py-20 md:py-28 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+          <div className="text-center mb-16 md:mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-foreground tracking-tight">
               Explore 7 Categories of Regenerative Enterprise
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Discover aligned partners, investors, and collaborators committed to earth care, people care, and fair share
             </p>
           </div>
@@ -174,10 +176,10 @@ export default function Landing() {
       </section>
 
       {/* Featured Enterprises */}
-      <section id="featured" className="py-16 bg-muted">
+      <section id="featured" className="py-20 md:py-28 bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-12">
-            <h2 className="text-3xl font-bold text-foreground">
+          <div className="flex items-center justify-between mb-16">
+            <h2 className="text-4xl font-bold text-foreground tracking-tight">
               {selectedCategory 
                 ? `${categories.find(c => c.id === selectedCategory)?.title} Enterprises`
                 : "Featured Enterprises"
@@ -239,9 +241,9 @@ export default function Landing() {
           )}
 
           {enterprises.length > 0 && (
-            <div className="text-center mt-12">
+            <div className="text-center mt-16">
               <Button 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3"
+                className="gold-button text-[#0A0E0D] px-10 py-6 text-lg font-semibold"
                 data-testid="button-explore-all"
                 onClick={() => window.location.href = "/api/login"}
               >
@@ -253,25 +255,25 @@ export default function Landing() {
       </section>
 
       {/* Sponsor Section */}
-      <section className="py-16 bg-card">
+      <section className="py-20 md:py-28 bg-card border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold mb-4 text-foreground font-lato">Founding Sponsor</h2>
-            <div className="flex justify-center items-center space-x-4 mb-4">
-              <div className="text-4xl text-primary">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground tracking-tight">Founding Sponsor</h2>
+            <div className="flex justify-center items-center space-x-6 mb-6">
+              <div className="text-5xl text-primary">
                 <Globe />
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-foreground font-lato">TerraLux</h3>
-                <p className="text-muted-foreground">Illuminating sustainable futures</p>
+              <div className="text-left">
+                <h3 className="text-3xl font-bold text-foreground">TerraLux</h3>
+                <p className="text-muted-foreground text-lg">Illuminating sustainable futures</p>
               </div>
             </div>
-            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+            <p className="text-muted-foreground mt-6 max-w-2xl mx-auto text-lg leading-relaxed">
               Proudly sponsored by TerraLux - pioneering innovative solutions for regenerative enterprises worldwide.
             </p>
-            <div className="mt-6 space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
+            <div className="mt-10 space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
               <Button 
-                className="bg-secondary hover:bg-secondary/90 text-white px-6 py-3"
+                className="gold-button text-[#0A0E0D] px-8 py-4 text-base font-semibold"
                 data-testid="button-become-sponsor"
                 onClick={() => window.open("https://terra-lux.org/terraluxtech/", "_blank")}
               >
@@ -279,7 +281,7 @@ export default function Landing() {
               </Button>
               <Button 
                 variant="outline"
-                className="px-6 py-3"
+                className="px-8 py-4 text-base border-primary/30 hover:border-primary hover:bg-primary/5 transition-all duration-300"
                 data-testid="button-learn-more-terralux"
                 onClick={() => window.open("https://terra-lux.org/", "_blank")}
               >
@@ -291,15 +293,16 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold mb-4 font-lato">Join the Regenerative Ecosystem</h2>
-          <p className="text-xl mb-8 text-primary-foreground">
+      <section className="py-20 md:py-32 bg-gradient-to-br from-[#0A0E0D] via-[#1E3A3A] to-[#2D4A3E] text-white relative overflow-hidden">
+        <div className="absolute inset-0 earth-pattern opacity-30"></div>
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">Join the Regenerative Ecosystem</h2>
+          <p className="text-xl md:text-2xl mb-12 text-[#F5F5F0]/90 font-light max-w-3xl mx-auto leading-relaxed">
             Are you working on a regenerative project? Add your enterprise to our directory and connect with a global community of changemakers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              className="bg-white text-primary hover:bg-gray-100 px-8 py-3"
+              className="gold-button text-[#0A0E0D] px-10 py-6 text-lg font-semibold"
               data-testid="button-add-enterprise-cta"
               onClick={handleAddEnterpriseClick}
             >
@@ -307,19 +310,19 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline"
-              className="bg-white/90 border-white text-gray-900 hover:bg-white px-8 py-3 font-semibold"
+              className="bg-transparent backdrop-blur-sm text-[#F5F5F0] border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] px-10 py-6 text-lg font-medium transition-all duration-300"
               data-testid="button-claim-profile"
               onClick={() => window.open("https://thespatialnetwork.net", "_blank")}
             >
               Claim Your Profile
             </Button>
           </div>
-          <p className="mt-6 text-sm text-primary-foreground opacity-90">
+          <p className="mt-10 text-sm text-[#F5F5F0]/80 leading-relaxed">
             Powered by <a 
               href="https://terra-lux.org/terraluxtech/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="underline hover:text-primary-foreground hover:opacity-100"
+              className="text-[#D4AF37] hover:text-[#C9A961] underline transition-colors"
               data-testid="link-terralux-powered"
             >
               TerraLux Technology
@@ -327,7 +330,7 @@ export default function Landing() {
               href="https://thespatialnetwork.net"
               target="_blank"
               rel="noopener noreferrer" 
-              className="underline hover:text-primary-foreground hover:opacity-100"
+              className="text-[#D4AF37] hover:text-[#C9A961] underline transition-colors"
               data-testid="link-spatial-network"
             >
               The Spatial Network

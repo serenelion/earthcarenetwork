@@ -1,103 +1,112 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;600;700&family=Fira+Code:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: hsl(210, 40%, 96%);
-  --foreground: hsl(222.2, 84%, 4.9%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(222.2, 84%, 4.9%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(222.2, 84%, 4.9%);
-  --primary: hsl(208, 100%, 40%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(220, 15%, 35%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --muted: hsl(210, 40%, 93%);
-  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
-  --accent: hsl(158, 82%, 39%);
-  --accent-foreground: hsl(0, 0%, 100%);
+  /* Eco-Luxury Color Palette - Light Mode */
+  --eco-luxury-charcoal: #1A1F1E;
+  --eco-luxury-sage: #4A5F4E;
+  --eco-luxury-gold: #D4AF37;
+  --eco-luxury-teal: #1E3A3A;
+  --eco-luxury-cream: #F5F5F0;
+  --eco-luxury-dark-charcoal: #0A0E0D;
+  
+  --background: hsl(30, 5%, 96%);
+  --foreground: hsl(150, 15%, 15%);
+  --card: hsl(30, 10%, 98%);
+  --card-foreground: hsl(150, 15%, 15%);
+  --popover: hsl(30, 10%, 98%);
+  --popover-foreground: hsl(150, 15%, 15%);
+  --primary: hsl(45, 65%, 53%);
+  --primary-foreground: hsl(150, 15%, 15%);
+  --secondary: hsl(160, 20%, 35%);
+  --secondary-foreground: hsl(30, 5%, 96%);
+  --muted: hsl(30, 10%, 92%);
+  --muted-foreground: hsl(150, 10%, 45%);
+  --accent: hsl(45, 65%, 53%);
+  --accent-foreground: hsl(150, 15%, 15%);
   --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --border: hsl(214.3, 31.8%, 91.4%);
-  --input: hsl(214.3, 31.8%, 91.4%);
-  --ring: hsl(208, 100%, 40%);
-  --chart-1: hsl(208, 100%, 40%);
-  --chart-2: hsl(158, 82%, 39%);
-  --chart-3: hsl(45, 93%, 52%);
-  --chart-4: hsl(158, 89%, 30%);
-  --chart-5: hsl(341.4894, 75.2%, 50.9804%);
-  --sidebar: hsl(210, 40%, 93%);
-  --sidebar-foreground: hsl(222.2, 84%, 4.9%);
-  --sidebar-primary: hsl(208, 100%, 40%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(211.5789, 51.3514%, 92.7451%);
-  --sidebar-accent-foreground: hsl(208, 100%, 40%);
-  --sidebar-border: hsl(205, 25%, 90.5882%);
-  --sidebar-ring: hsl(208, 100%, 40%);
+  --destructive-foreground: hsl(30, 5%, 96%);
+  --border: hsl(45, 25%, 85%);
+  --input: hsl(45, 20%, 88%);
+  --ring: hsl(45, 65%, 53%);
+  --chart-1: hsl(45, 65%, 53%);
+  --chart-2: hsl(160, 40%, 45%);
+  --chart-3: hsl(35, 70%, 50%);
+  --chart-4: hsl(160, 60%, 35%);
+  --chart-5: hsl(25, 75%, 55%);
+  --sidebar: hsl(30, 10%, 94%);
+  --sidebar-foreground: hsl(150, 15%, 15%);
+  --sidebar-primary: hsl(45, 65%, 53%);
+  --sidebar-primary-foreground: hsl(150, 15%, 15%);
+  --sidebar-accent: hsl(45, 40%, 90%);
+  --sidebar-accent-foreground: hsl(150, 15%, 15%);
+  --sidebar-border: hsl(45, 20%, 88%);
+  --sidebar-ring: hsl(45, 65%, 53%);
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono: 'Fira Code', Menlo, monospace;
   --radius: 0.5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 2px 4px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 4px 6px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 8px 10px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
-  --tracking-normal: 0em;
+  --shadow-2xs: 0px 1px 2px 0px rgba(212, 175, 55, 0.05);
+  --shadow-xs: 0px 1px 3px 0px rgba(212, 175, 55, 0.1);
+  --shadow-sm: 0px 2px 4px -1px rgba(212, 175, 55, 0.1), 0px 1px 2px -1px rgba(212, 175, 55, 0.06);
+  --shadow: 0px 4px 6px -1px rgba(212, 175, 55, 0.1), 0px 2px 4px -1px rgba(212, 175, 55, 0.06);
+  --shadow-md: 0px 6px 12px -2px rgba(212, 175, 55, 0.12), 0px 3px 6px -2px rgba(212, 175, 55, 0.08);
+  --shadow-lg: 0px 10px 20px -4px rgba(212, 175, 55, 0.15), 0px 4px 8px -2px rgba(212, 175, 55, 0.1);
+  --shadow-xl: 0px 20px 25px -5px rgba(212, 175, 55, 0.18), 0px 8px 10px -3px rgba(212, 175, 55, 0.1);
+  --shadow-2xl: 0px 25px 50px -12px rgba(212, 175, 55, 0.25);
+  --tracking-normal: -0.01em;
   --spacing: 0.25rem;
 }
 
 .dark {
-  --background: hsl(0, 0%, 0%);
-  --foreground: hsl(200, 6.6667%, 91.1765%);
-  --card: hsl(228, 9.8039%, 10%);
-  --card-foreground: hsl(0, 0%, 85.098%);
-  --popover: hsl(0, 0%, 0%);
-  --popover-foreground: hsl(200, 6.6667%, 91.1765%);
-  --primary: hsl(208, 100%, 40%);
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(220, 15%, 35%);
-  --secondary-foreground: hsl(0, 0%, 100%);
-  --muted: hsl(0, 0%, 9.4118%);
-  --muted-foreground: hsl(210, 3.3898%, 46.2745%);
-  --accent: hsl(158, 82%, 39%);
-  --accent-foreground: hsl(0, 0%, 100%);
+  /* Eco-Luxury Color Palette - Dark Mode */
+  --background: hsl(150, 15%, 8%);
+  --foreground: hsl(30, 5%, 96%);
+  --card: hsl(150, 12%, 12%);
+  --card-foreground: hsl(30, 5%, 94%);
+  --popover: hsl(150, 15%, 10%);
+  --popover-foreground: hsl(30, 5%, 96%);
+  --primary: hsl(45, 65%, 53%);
+  --primary-foreground: hsl(150, 15%, 10%);
+  --secondary: hsl(160, 20%, 25%);
+  --secondary-foreground: hsl(30, 5%, 96%);
+  --muted: hsl(150, 12%, 15%);
+  --muted-foreground: hsl(30, 5%, 65%);
+  --accent: hsl(45, 65%, 53%);
+  --accent-foreground: hsl(150, 15%, 10%);
   --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --border: hsl(210, 5.2632%, 14.902%);
-  --input: hsl(207.6923, 27.6596%, 18.4314%);
-  --ring: hsl(208, 100%, 40%);
-  --chart-1: hsl(208, 100%, 40%);
-  --chart-2: hsl(158, 82%, 39%);
-  --chart-3: hsl(45, 93%, 52%);
-  --chart-4: hsl(158, 89%, 30%);
-  --chart-5: hsl(341.4894, 75.2%, 50.9804%);
-  --sidebar: hsl(228, 9.8039%, 10%);
-  --sidebar-foreground: hsl(0, 0%, 85.098%);
-  --sidebar-primary: hsl(208, 100%, 40%);
-  --sidebar-primary-foreground: hsl(0, 0%, 100%);
-  --sidebar-accent: hsl(205.7143, 70%, 7.8431%);
-  --sidebar-accent-foreground: hsl(208, 100%, 40%);
-  --sidebar-border: hsl(205.7143, 15.7895%, 26.0784%);
-  --sidebar-ring: hsl(208, 100%, 40%);
+  --destructive-foreground: hsl(30, 5%, 96%);
+  --border: hsl(150, 15%, 20%);
+  --input: hsl(150, 12%, 18%);
+  --ring: hsl(45, 65%, 53%);
+  --chart-1: hsl(45, 65%, 53%);
+  --chart-2: hsl(160, 40%, 45%);
+  --chart-3: hsl(35, 70%, 50%);
+  --chart-4: hsl(160, 60%, 35%);
+  --chart-5: hsl(25, 75%, 55%);
+  --sidebar: hsl(150, 12%, 12%);
+  --sidebar-foreground: hsl(30, 5%, 94%);
+  --sidebar-primary: hsl(45, 65%, 53%);
+  --sidebar-primary-foreground: hsl(150, 15%, 10%);
+  --sidebar-accent: hsl(150, 15%, 18%);
+  --sidebar-accent-foreground: hsl(45, 65%, 53%);
+  --sidebar-border: hsl(150, 15%, 20%);
+  --sidebar-ring: hsl(45, 65%, 53%);
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono: 'Fira Code', Menlo, monospace;
   --radius: 0.5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 2px 4px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 4px 6px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 8px 10px -1px hsl(142, 76%, 36% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
+  --shadow-2xs: 0px 1px 2px 0px rgba(212, 175, 55, 0.15);
+  --shadow-xs: 0px 1px 3px 0px rgba(212, 175, 55, 0.2);
+  --shadow-sm: 0px 2px 4px -1px rgba(212, 175, 55, 0.25), 0px 1px 2px -1px rgba(212, 175, 55, 0.15);
+  --shadow: 0px 4px 6px -1px rgba(212, 175, 55, 0.3), 0px 2px 4px -1px rgba(212, 175, 55, 0.2);
+  --shadow-md: 0px 6px 12px -2px rgba(212, 175, 55, 0.35), 0px 3px 6px -2px rgba(212, 175, 55, 0.25);
+  --shadow-lg: 0px 10px 20px -4px rgba(212, 175, 55, 0.4), 0px 4px 8px -2px rgba(212, 175, 55, 0.3);
+  --shadow-xl: 0px 20px 25px -5px rgba(212, 175, 55, 0.45), 0px 8px 10px -3px rgba(212, 175, 55, 0.35);
+  --shadow-2xl: 0px 25px 50px -12px rgba(212, 175, 55, 0.5);
 }
 
 @layer base {
@@ -107,18 +116,62 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-weight: 700;
+  }
+
+  p {
+    line-height: 1.7;
   }
 }
 
 .hero-gradient {
-  background: linear-gradient(135deg, hsl(208, 100%, 25%) 0%, hsl(190, 80%, 35%) 100%);
+  background: linear-gradient(135deg, #0A0E0D 0%, #1E3A3A 50%, #2D4A3E 100%);
+  position: relative;
+}
+
+.hero-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .earth-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M20 20c0 11.046-8.954 20-20 20v20h40V20H20z'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23D4AF37' fill-opacity='0.03'%3E%3Cpath d='M30 30c0 16.569-13.431 30-30 30v30h60V30H30z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.gold-button {
+  background: linear-gradient(135deg, #D4AF37 0%, #C9A961 100%);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
+
+.gold-button:hover {
+  background: linear-gradient(135deg, #C9A961 0%, #B89F56 100%);
+  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4);
+  transform: translateY(-2px);
+}
+
+.premium-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.premium-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(212, 175, 55, 0.2);
+  border-color: rgba(212, 175, 55, 0.3);
 }

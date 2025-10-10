@@ -8,6 +8,13 @@
       "when": 1759714870619,
       "tag": "0000_absent_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760060400000,
+      "tag": "0001_add_enterprise_categories",
+      "breakpoints": true
     }
   ]
 }
