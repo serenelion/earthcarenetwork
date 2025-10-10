@@ -1,6 +1,21 @@
 # Overview
 
-Earth Care Network is a **federated, open-source CRM and directory platform** for regenerative enterprises. It offers free self-hosting for customizable instances and paid professional hosting with full CRM features and AI Sales Autopilot. The platform enables federated discovery of enterprises globally via the Murmurations protocol and provides an enterprise directory for various regenerative sectors. The business vision is to empower users to self-host and rebrand the platform while contributing to a global directory, mimicking Ghost.org's sustainable funding model.
+Earth Care Network is a **federated, open-source CRM and directory platform** for regenerative enterprises. Positioned as "the digital white pages for social enterprises committed to earth care, people care, and fair share," it serves as an open source social enterprise toolkit. The platform offers free self-hosting for customizable instances and paid professional hosting with full CRM features and AI Sales Autopilot. It enables federated discovery of enterprises globally via the Murmurations protocol and provides a comprehensive enterprise directory for various regenerative sectors. The business vision is to empower users to self-host and rebrand the platform while contributing to a global directory, mimicking Ghost.org's sustainable funding model.
+
+## Brand Positioning
+- **Mission**: Open source social enterprise toolkit
+- **Tagline**: The digital white pages for regenerative enterprises
+- **Core Values**: Earth Care, People Care, Fair Share
+- **Purpose**: Empowering social enterprise creators to activate their next level together
+
+## Enterprise Categories (7 Total)
+1. **Land Projects**: Regenerative farms, food forests, permaculture sites
+2. **Capital Sources**: Impact investment funds, grantmaking organizations
+3. **Open Source Tools**: Digital tools for mapping, monitoring, and managing
+4. **Network Organizers**: Organizations building communities and movements
+5. **Homes that Heal**: Eco luxury home design and manufacturing partners
+6. **Landscapes that Nourish**: Landscape designers, urban planners, food forest installers
+7. **Lifelong Learning Providers**: Holistic educational programs for human development
 
 # User Preferences
 
