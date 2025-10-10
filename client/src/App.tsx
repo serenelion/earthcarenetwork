@@ -15,6 +15,7 @@ import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Link } from "wouter";
 import Landing from "@/pages/Landing";
+import About from "@/pages/About";
 import Dashboard from "@/pages/Dashboard";
 import MemberDashboard from "@/pages/MemberDashboard";
 import EnterpriseOwnerDashboard from "@/pages/EnterpriseOwnerDashboard";
@@ -85,6 +86,7 @@ function Router() {
         <Switch>
           {/* Public routes - accessible to all */}
           <Route path="/" component={Landing} />
+          <Route path="/about" component={About} />
           <Route path="/search" component={Search} />
           <Route path="/partners" component={Partners} />
           <Route path="/member-benefits" component={MemberBenefits} />

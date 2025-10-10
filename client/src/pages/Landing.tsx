@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, Sprout, Coins, Wrench, Network, Search, User, ExternalLink } from "lucide-react";
+import { Globe, Sprout, Coins, Wrench, Network, Search, User, ExternalLink, Home, TreePine, GraduationCap } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import EnterpriseCard from "@/components/directory/EnterpriseCard";
 import CategorySection from "@/components/directory/CategorySection";
@@ -57,30 +57,51 @@ export default function Landing() {
     {
       id: "land_projects",
       title: "Land Projects",
-      description: "Explore regenerative farms, food forests, permaculture sites, and other land-based projects.",
+      description: "Regenerative farms, food forests, permaculture sites, and land-based projects.",
       icon: Sprout,
       count: enterprises.filter(e => e.category === "land_projects").length,
     },
     {
       id: "capital_sources",
       title: "Capital Sources", 
-      description: "Find impact investment funds, grantmaking organizations, and regenerative financial institutions.",
+      description: "Impact investment funds, grantmaking organizations, and regenerative financial institutions.",
       icon: Coins,
       count: enterprises.filter(e => e.category === "capital_sources").length,
     },
     {
       id: "open_source_tools",
       title: "Open Source Tools",
-      description: "Discover digital tools for mapping, monitoring, and managing regenerative projects.",
+      description: "Digital tools for mapping, monitoring, and managing regenerative projects.",
       icon: Wrench,
       count: enterprises.filter(e => e.category === "open_source_tools").length,
     },
     {
       id: "network_organizers", 
       title: "Network Organizers",
-      description: "Connect with organizations building communities, networks, and movements for regeneration.",
+      description: "Organizations building communities, networks, and movements for regeneration.",
       icon: Network,
       count: enterprises.filter(e => e.category === "network_organizers").length,
+    },
+    {
+      id: "homes_that_heal",
+      title: "Homes that Heal",
+      description: "Eco luxury home design and manufacturing partners for regenerative living spaces.",
+      icon: Home,
+      count: enterprises.filter(e => e.category === "homes_that_heal").length,
+    },
+    {
+      id: "landscapes_that_nourish",
+      title: "Landscapes that Nourish",
+      description: "Landscape designers, urban planners, and food forest installers creating thriving ecosystems.",
+      icon: TreePine,
+      count: enterprises.filter(e => e.category === "landscapes_that_nourish").length,
+    },
+    {
+      id: "lifelong_learning_providers",
+      title: "Lifelong Learning",
+      description: "Holistic educational programs for human development and regenerative practices.",
+      icon: GraduationCap,
+      count: enterprises.filter(e => e.category === "lifelong_learning_providers").length,
     },
   ];
 
@@ -129,13 +150,18 @@ export default function Landing() {
       </section>
 
       {/* Categories Section */}
-      <section id="categories" className="py-16 bg-background">
+      <section id="categories" className="py-16 md:py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12 text-foreground">
-            Explore by Category
-          </h2>
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+              Explore 7 Categories of Regenerative Enterprise
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Discover aligned partners, investors, and collaborators committed to earth care, people care, and fair share
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
             {categories.map((category) => (
               <CategorySection
                 key={category.id}

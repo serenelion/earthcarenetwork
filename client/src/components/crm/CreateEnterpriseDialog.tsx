@@ -72,9 +72,9 @@ const categoryDescriptions = {
   capital_sources: "Impact investment funds, grantmaking organizations",
   open_source_tools: "Digital tools for mapping, monitoring, and managing",
   network_organizers: "Organizations building communities and movements",
-  homes_that_heal: "Healing spaces, wellness centers, regenerative housing",
-  landscapes_that_nourish: "Regenerative agriculture, food systems, land stewardship",
-  lifelong_learning_providers: "Educational programs, training centers, knowledge sharing",
+  homes_that_heal: "Eco luxury home design and manufacturing partners",
+  landscapes_that_nourish: "Landscape designers, urban planners, food forest installers",
+  lifelong_learning_providers: "Holistic educational programs for human development",
 };
 
 export default function CreateEnterpriseDialog({ 

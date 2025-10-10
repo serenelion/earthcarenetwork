@@ -26,11 +26,11 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  href="/" 
+                  href="/about" 
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   data-testid="footer-link-about"
                 >
-                  About Earth Network
+                  About Earth Care Network
                 </Link>
               </li>
               <li>
