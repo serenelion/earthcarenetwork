@@ -8,16 +8,16 @@ export default function MemberBenefits() {
     <div className="min-h-screen bg-background">
 
       {/* Hero Section - Emphasizing Free & Open Source */}
-      <section className="hero-gradient earth-pattern text-white py-24">
+      <section className="hero-gradient earth-pattern text-on-hero py-24">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <Badge className="bg-white/20 text-white border-white/30 mb-6" data-testid="badge-free-open-source">
+          <Badge className="bg-on-hero/15 text-on-hero border-on-hero/30 mb-6" data-testid="badge-free-open-source">
             <Zap className="w-4 h-4 mr-2" />
             Free & Open Source Forever
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-on-hero">
             Unlock the Power of Earth Network
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-white/90">
+          <p className="text-xl md:text-2xl mb-8 text-on-hero-muted">
             Join our regenerative community and access exclusive tools, networks, and opportunities—completely free.
           </p>
           
@@ -33,7 +33,7 @@ export default function MemberBenefits() {
             </Button>
             <Button 
               variant="outline" 
-              className="bg-white hover:bg-white/90 text-primary border-white px-8 py-3 text-lg font-semibold"
+              className="bg-on-hero text-on-dark border-on-hero px-8 py-3 text-lg font-semibold hover:bg-on-hero/90 hover:border-on-hero/80 hover:text-on-dark"
               data-testid="button-join-member-hero"
               onClick={() => window.location.href = "/api/login"}
             >
@@ -42,7 +42,7 @@ export default function MemberBenefits() {
             </Button>
           </div>
           
-          <p className="mt-6 text-white/70 text-sm">
+          <p className="mt-6 text-on-hero-muted text-sm">
             Free forever • Instant access • No credit card required
           </p>
         </div>

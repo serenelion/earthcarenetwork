@@ -37,6 +37,9 @@ export default {
           DEFAULT: "var(--accent)",
           foreground: "var(--accent-foreground)",
         },
+        "on-hero": "var(--on-hero)",
+        "on-hero-muted": "var(--on-hero-muted)",
+        "on-dark": "var(--on-dark)",
         destructive: {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
