@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserFavorite, Enterprise } from "@shared/schema";
+import { fetchWithGateway } from "@/lib/apiGateway";
 
 // Types for favorites context
 interface FavoriteStats {
@@ -61,7 +62,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
   } = useQuery({
     queryKey: ["/api/favorites"],
     queryFn: async (): Promise<FavoriteWithEnterprise[]> => {
-      const response = await fetch("/api/favorites");
+      const response = await fetchWithGateway("/api/favorites");
       if (!response.ok) {
         throw new Error("Failed to fetch favorites");
       }
@@ -80,7 +81,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
   } = useQuery({
     queryKey: ["/api/favorites/stats"],
     queryFn: async (): Promise<FavoriteStats> => {
-      const response = await fetch("/api/favorites/stats");
+      const response = await fetchWithGateway("/api/favorites/stats");
       if (!response.ok) {
         throw new Error("Failed to fetch favorites stats");
       }

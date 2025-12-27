@@ -4,6 +4,7 @@ import { Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { fetchWithGateway } from "@/lib/apiGateway";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ export default function FavoriteButton({
   const { data: favoriteStatus, isLoading: isCheckingStatus } = useQuery({
     queryKey: ["/api/enterprises", enterpriseId, "favorite-status"],
     queryFn: async (): Promise<{ isFavorited: boolean }> => {
-      const response = await fetch(`/api/enterprises/${enterpriseId}/favorite-status`);
+      const response = await fetchWithGateway(`/api/enterprises/${enterpriseId}/favorite-status`);
       if (!response.ok) throw new Error("Failed to check favorite status");
       return response.json();
     },

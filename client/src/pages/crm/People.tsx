@@ -7,6 +7,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { fetchWithGateway } from "@/lib/apiGateway";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   Card,
@@ -219,7 +220,7 @@ export default function People() {
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],
     queryFn: async (): Promise<Enterprise[]> => {
-      const response = await fetch("/api/enterprises?limit=200");
+      const response = await fetchWithGateway("/api/enterprises?limit=200");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },

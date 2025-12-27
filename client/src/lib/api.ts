@@ -8,6 +8,7 @@ import type {
   SubscriptionPlan,
   UserFavorite
 } from "@shared/schema";
+import { fetchWithGateway } from "./apiGateway";
 
 export type TeamMemberRole = 'viewer' | 'editor' | 'admin' | 'owner';
 
@@ -82,7 +83,7 @@ export async function fetchEnterprises(
   params.append("limit", limit.toString());
   params.append("offset", offset.toString());
 
-  const response = await fetch(`/api/enterprises?${params}`);
+  const response = await fetchWithGateway(`/api/enterprises?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch enterprises: ${response.statusText}`);
   }
@@ -209,7 +210,7 @@ export async function fetchUserFavorites(
   params.append("limit", limit.toString());
   params.append("offset", offset.toString());
 
-  const response = await fetch(`/api/favorites?${params}`);
+  const response = await fetchWithGateway(`/api/favorites?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch favorites: ${response.statusText}`);
   }
@@ -217,7 +218,7 @@ export async function fetchUserFavorites(
 }
 
 export async function fetchFavoritesStats(): Promise<FavoritesStats> {
-  const response = await fetch("/api/favorites/stats");
+  const response = await fetchWithGateway("/api/favorites/stats");
   if (!response.ok) {
     throw new Error(`Failed to fetch favorites stats: ${response.statusText}`);
   }
@@ -225,7 +226,7 @@ export async function fetchFavoritesStats(): Promise<FavoritesStats> {
 }
 
 export async function checkFavoriteStatus(enterpriseId: string): Promise<{ isFavorited: boolean }> {
-  const response = await fetch(`/api/enterprises/${enterpriseId}/favorite-status`);
+  const response = await fetchWithGateway(`/api/enterprises/${enterpriseId}/favorite-status`);
   if (!response.ok) {
     throw new Error(`Failed to check favorite status: ${response.statusText}`);
   }
