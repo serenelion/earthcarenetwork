@@ -13,6 +13,7 @@ import CreateEnterpriseDialog from "@/components/crm/CreateEnterpriseDialog";
 import { freeMemberFlow } from "@/lib/onboardingFlows";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { fetchWithGateway } from "@/lib/apiGateway";
 import type { Enterprise } from "@shared/schema";
 
 export default function Landing() {
@@ -46,7 +47,7 @@ export default function Landing() {
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "12");
       
-      const response = await fetch(`/api/enterprises?${params}`);
+      const response = await fetchWithGateway(`/api/enterprises?${params}`);
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       const data: Enterprise[] = await response.json();
       return data;

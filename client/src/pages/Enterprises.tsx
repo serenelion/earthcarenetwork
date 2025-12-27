@@ -30,6 +30,7 @@ import FavoriteButton from "@/components/FavoriteButton";
 import { type Enterprise } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { hasRole } from "@/lib/authUtils";
+import { fetchWithGateway } from "@/lib/apiGateway";
 
 const categories = [
   { value: "land_projects", label: "Land Projects" },
@@ -86,7 +87,7 @@ export default function Enterprises() {
       if (searchQuery) params.append("search", searchQuery);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/enterprises?${params}`);
+      const response = await fetchWithGateway(`/api/enterprises?${params}`);
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },

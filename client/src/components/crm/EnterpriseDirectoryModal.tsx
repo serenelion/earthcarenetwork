@@ -28,6 +28,7 @@ import {
   Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchWithGateway } from "@/lib/apiGateway";
 import type { Enterprise } from "@shared/schema";
 
 const categoryColors = {
@@ -72,7 +73,7 @@ export default function EnterpriseDirectoryModal({
   const { data: enterprises = [], isLoading } = useQuery({
     queryKey: ["/api/enterprises"],
     queryFn: async (): Promise<Enterprise[]> => {
-      const response = await fetch("/api/enterprises?limit=500");
+      const response = await fetchWithGateway("/api/enterprises?limit=500");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },

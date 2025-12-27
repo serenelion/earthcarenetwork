@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { fetchWithGateway } from "@/lib/apiGateway";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   Card,
@@ -154,7 +155,7 @@ export default function Copilot() {
   const { data: enterprises = [] } = useQuery({
     queryKey: ["/api/enterprises"],
     queryFn: async () => {
-      const response = await fetch("/api/enterprises?limit=100");
+      const response = await fetchWithGateway("/api/enterprises?limit=100");
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       return response.json();
     },
